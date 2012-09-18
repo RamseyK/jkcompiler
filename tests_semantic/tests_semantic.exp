@@ -1,0 +1,605 @@
+# Fail after an infinite loop
+set timeout 5
+
+
+
+set test "Binary compiled"
+spawn ./test_compiled.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Missing program class"
+spawn ./test_missing_program_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Missing base class"
+spawn ./test_missing_base_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Simple, valid class definition"
+spawn ./test_valid_class_definition.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Simple, invalid class definition: underscores"
+spawn ./test_invalid_class_definition_underscores.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Simple, invalid class definition: undeclared variables"
+spawn ./test_invalid_class_definition_undeclared_vars.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Datatype already defined"
+spawn ./test_datatype_defined.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Datatype is not defined"
+spawn ./test_datatype_not_defined.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Type mismatch of integer"
+spawn ./test_type_mismatch_integer.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Type mismatch of an integer element in an array"
+spawn ./test_type_mismatch_array_integer.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Variable already declared"
+spawn ./test_variable_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Variable not declared"
+spawn ./test_variable_not_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Variable not declared in a complex expression"
+spawn ./test_variable_not_declared_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid variable name (True/False)"
+spawn ./test_variable_invalid_name_tf.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid boolean assignment"
+spawn ./test_boolean_assignment_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid boolean assignment"
+spawn ./test_boolean_assignment_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Indexed variable is not an array"
+spawn ./test_indexed_variable_not_array.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Array index is a boolean"
+spawn ./test_array_index_boolean.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Array index is a boolean variable"
+spawn ./test_array_index_boolean_variable.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Array index is a class"
+spawn ./test_array_index_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Array, 2-dimensional"
+spawn ./test_array_dim2.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Array, 4-dimensional"
+spawn ./test_array_dim4.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Too many (invalid) signs"
+spawn ./test_many_signs.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Too many (valid) NOTs"
+spawn ./test_many_nots.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function list"
+spawn ./test_function_list.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Variable name same as function name"
+spawn ./test_function_variable_same.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid set of return value of a function"
+spawn ./test_function_return_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid set of return value of a function "
+spawn ./test_function_return_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid, complex set of return value of a function "
+spawn ./test_function_return_invalid_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function already declared"
+spawn ./test_function_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function not declared"
+spawn ./test_function_not_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function not declared, complex"
+spawn ./test_function_not_declared_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable declared"
+spawn ./test_function_local_variable_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable not declared"
+spawn ./test_function_local_variable_not_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable not declared (but declared in other function with same name)"
+spawn ./test_function_local_variable_not_declared_other_function.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable declared in base class"
+spawn ./test_function_local_variable_declared_base_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable masks global variable"
+spawn ./test_variable_declared_global.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function local variable masks global variable from base class"
+spawn ./test_variable_declared_global_extend.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function, local variable list"
+spawn ./test_function_local_variable_list.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Class global variable declared in base class"
+spawn ./test_variable_declared_base_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+# Function calls with no arguments are not supported in the
+# grammar. They should be
+#
+# set test "Function call within class, with no arguments"
+# spawn ./test_function_call_class_noargs.sh
+# expect {
+#     -re "PASSED" { pass $test }
+#     default      { fail $test }
+# }
+
+set test "Function call within class"
+spawn ./test_function_call_class.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call within class, with multiple arguments"
+spawn ./test_function_call_multi.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call within class, pass-by-reference"
+spawn ./test_function_call_class_byref.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call on other object"
+spawn ./test_function_call_object.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call on other object that extended a class"
+spawn ./test_function_call_object_extend.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call (missing) on other object"
+spawn ./test_function_call_object_missing.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Function call on base class"
+spawn ./test_function_call_base.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+# Arrays as function arguments are not supported by the grammar. They
+# should be.
+#
+# set test "Function call, array as argument"
+# spawn ./test_function_call_arg_array.sh
+# expect {
+#     -re "PASSED" { pass $test }
+#     default      { fail $test }
+# }
+
+set test "Function call, object as argument"
+spawn ./test_function_call_arg_object.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "If then else"
+spawn ./test_if_then_else.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "While do"
+spawn ./test_while_do.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Simple expression"
+spawn ./test_expression_simple.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Complex expression"
+spawn ./test_expression_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Complex expression 2"
+spawn ./test_expression_complex2.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid array bounds"
+spawn ./test_array_bounds_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid array bounds"
+spawn ./test_array_bounds_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid array bounds declaration"
+spawn ./test_array_bounds_declare_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid multidimensional array bounds"
+spawn ./test_array_multi_bounds_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid multidimensional array bounds"
+spawn ./test_array_multi_bounds_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Too few function arguments"
+spawn ./test_function_args_few.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "this.variable disambiguation"
+spawn ./test_this_variable_disambiguation.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "this.variable disambiguation when a class was extended"
+spawn ./test_this_variable_disambiguation_extend.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "this.variable not declared"
+spawn ./test_this_variable_not_declared.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "this global variable, valid"
+spawn ./test_this_global_variable_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "this global variable, invalid"
+spawn ./test_this_global_variable_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid class assignment of base type"
+spawn ./test_class_assignment_base_type_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid class assignment of base type"
+spawn ./test_class_assignment_base_type_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid structural class equivalence"
+spawn ./test_class_equivalence_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid class equivalence (different order of variables)"
+spawn ./test_class_equivalence_invalid_order.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid class equivalence (different types of variables)"
+spawn ./test_class_equivalence_invalid_types.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid array assignment"
+spawn ./test_array_assignment_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid array assignment"
+spawn ./test_array_assignment_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid class use before class declaration"
+spawn ./test_class_preuse_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Invalid class use before class declaration"
+spawn ./test_class_preuse_invalid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid class use before class declaration with assignment"
+spawn ./test_class_preuse_assignment_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Valid class use before class declaration with function call"
+spawn ./test_class_preuse_function_valid.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "New object instantiation"
+spawn ./test_object_instantiation.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Attribute designator access, simple"
+spawn ./test_attribute_designator_simple.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Attribute designator access, complex"
+spawn ./test_attribute_designator_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Attribute designator access, multi-level"
+spawn ./test_attribute_designator_multi.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Attribute designator access, multi-level with this"
+spawn ./test_attribute_designator_multi_this.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Indexed variable access, complex"
+spawn ./test_indexed_variable_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Method designator access, complex"
+spawn ./test_method_designator_complex.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}
+
+set test "Method designator access, complex with this"
+spawn ./test_method_designator_complex_this.sh
+expect {
+    -re "PASSED" { pass $test }
+    default      { fail $test }
+}

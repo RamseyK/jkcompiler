@@ -1,0 +1,31 @@
+This document summarizes the types of verifications the test cases aim
+to exercise.
+
+
+Semantic analysis:
+------------------
+
+- Identifying references to missing classes
+- Identifying use of undeclared variables
+- Identifying use of undefined datatypes
+- Identifying type mismatch in variable assignments
+- Identifying declarations of variables with a name that is a reserved
+  keyword (e.g. True/False or function names)
+- Identifying array indices that are not integers
+- Identifying use of multiple +/- signs
+- Allowing setting the return value of a function
+- Identifying redeclaration of functions
+- Identifying redeclaration of variables
+- Identifying calls to functions that do not exist
+- Identifying invalid array bounds
+- Identifying a wrong number of parameters in calls to functions
+- Support control flow statements
+- Support expressions
+- Support the "this" keyword
+- Identify invalid array equivalence
+- Identify invalid class equivalence
+- Support use of classes that are defined after they are used
+- Support the "new" keyword for object instantiation
+- Support attribute designators
+- Support method designators
+

@@ -1,0 +1,4 @@
+ERROR:13:Array index 27 is out of the range (28,38)
+ERROR:16:Array index 3 is out of the range (4,9)
+ERROR:16:Array index 39 is out of the range (28,38)
+Errors detected. Exiting.
