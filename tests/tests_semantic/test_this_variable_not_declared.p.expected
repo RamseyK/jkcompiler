@@ -1,0 +1,4 @@
+ERROR:14:Variable "someVar" not declared
+ERROR:16:Variable "someVar" not declared
+ERROR:19:Variable "someVar" not declared
+Errors detected. Exiting.

@@ -1,0 +1,271 @@
+Test Run By ramsey on Tue Sep 18 19:58:24 2012
+Native configuration is x86_64-unknown-linux-gnu
+
+		=== opc tests ===
+
+Schedule of variations:
+    unix
+
+Running target unix
+Using /usr/share/dejagnu/baseboards/unix.exp as board description file for target.
+Using /usr/share/dejagnu/config/unix.exp as generic interface file for target.
+WARNING: Couldn't find tool config file for unix, using default.
+Running ./tests_semantic.exp ...
+spawn ./test_compiled.sh
+pwd
+opc: Usage: opc [-v] [-exitsem] [-O] [-ir] [-free] [-fcf] [-fvn] [-fgre] [--help]
+[: 11: 3: unexpected operator
+FAILED
+FAIL: Binary compiled
+spawn ./test_missing_program_class.sh
+./test_missing_program_class.sh: 5: test_diff_sem: not found
+FAIL: Missing program class
+spawn ./test_missing_base_class.sh
+./test_missing_base_class.sh: 5: test_diff_sem: not found
+FAIL: Missing base class
+spawn ./test_valid_class_definition.sh
+./test_valid_class_definition.sh: 5: test_diff_sem: not found
+FAIL: Simple, valid class definition
+spawn ./test_invalid_class_definition_underscores.sh
+./test_invalid_class_definition_underscores.sh: 5: test_diff_sem: not found
+FAIL: Simple, invalid class definition: underscores
+spawn ./test_invalid_class_definition_undeclared_vars.sh
+./test_invalid_class_definition_undeclared_vars.sh: 5: test_diff_sem: not found
+FAIL: Simple, invalid class definition: undeclared variables
+spawn ./test_datatype_defined.sh
+./test_datatype_defined.sh: 5: test_diff_sem: not found
+FAIL: Datatype already defined
+spawn ./test_datatype_not_defined.sh
+./test_datatype_not_defined.sh: 5: test_diff_sem: not found
+FAIL: Datatype is not defined
+spawn ./test_type_mismatch_integer.sh
+./test_type_mismatch_integer.sh: 5: test_diff_sem: not found
+FAIL: Type mismatch of integer
+spawn ./test_type_mismatch_array_integer.sh
+./test_type_mismatch_array_integer.sh: 5: test_diff_sem: not found
+FAIL: Type mismatch of an integer element in an array
+spawn ./test_variable_declared.sh
+./test_variable_declared.sh: 5: test_diff_sem: not found
+FAIL: Variable already declared
+spawn ./test_variable_not_declared.sh
+./test_variable_not_declared.sh: 5: test_diff_sem: not found
+FAIL: Variable not declared
+spawn ./test_variable_not_declared_complex.sh
+./test_variable_not_declared_complex.sh: 5: test_diff_sem: not found
+FAIL: Variable not declared in a complex expression
+spawn ./test_variable_invalid_name_tf.sh
+./test_variable_invalid_name_tf.sh: 5: test_diff_sem: not found
+FAIL: Invalid variable name (True/False)
+spawn ./test_boolean_assignment_valid.sh
+./test_boolean_assignment_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid boolean assignment
+spawn ./test_boolean_assignment_invalid.sh
+./test_boolean_assignment_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid boolean assignment
+spawn ./test_indexed_variable_not_array.sh
+./test_indexed_variable_not_array.sh: 5: test_diff_sem: not found
+FAIL: Indexed variable is not an array
+spawn ./test_array_index_boolean.sh
+./test_array_index_boolean.sh: 5: test_diff_sem: not found
+FAIL: Array index is a boolean
+spawn ./test_array_index_boolean_variable.sh
+./test_array_index_boolean_variable.sh: 5: test_diff_sem: not found
+FAIL: Array index is a boolean variable
+spawn ./test_array_index_class.sh
+./test_array_index_class.sh: 5: test_diff_sem: not found
+FAIL: Array index is a class
+spawn ./test_array_dim2.sh
+./test_array_dim2.sh: 5: test_diff_sem: not found
+FAIL: Array, 2-dimensional
+spawn ./test_array_dim4.sh
+./test_array_dim4.sh: 5: test_diff_sem: not found
+FAIL: Array, 4-dimensional
+spawn ./test_many_signs.sh
+./test_many_signs.sh: 5: test_diff_sem: not found
+FAIL: Too many (invalid) signs
+spawn ./test_many_nots.sh
+./test_many_nots.sh: 5: test_diff_sem: not found
+FAIL: Too many (valid) NOTs
+spawn ./test_function_list.sh
+./test_function_list.sh: 5: test_diff_sem: not found
+FAIL: Function list
+spawn ./test_function_variable_same.sh
+./test_function_variable_same.sh: 5: test_diff_sem: not found
+FAIL: Variable name same as function name
+spawn ./test_function_return_valid.sh
+./test_function_return_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid set of return value of a function
+spawn ./test_function_return_invalid.sh
+./test_function_return_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid set of return value of a function 
+spawn ./test_function_return_invalid_complex.sh
+./test_function_return_invalid_complex.sh: 5: test_diff_sem: not found
+FAIL: Invalid, complex set of return value of a function 
+spawn ./test_function_declared.sh
+./test_function_declared.sh: 5: test_diff_sem: not found
+FAIL: Function already declared
+spawn ./test_function_not_declared.sh
+./test_function_not_declared.sh: 5: test_diff_sem: not found
+FAIL: Function not declared
+spawn ./test_function_not_declared_complex.sh
+./test_function_not_declared_complex.sh: 5: test_diff_sem: not found
+FAIL: Function not declared, complex
+spawn ./test_function_local_variable_declared.sh
+./test_function_local_variable_declared.sh: 5: test_diff_sem: not found
+FAIL: Function local variable declared
+spawn ./test_function_local_variable_not_declared.sh
+./test_function_local_variable_not_declared.sh: 5: test_diff_sem: not found
+FAIL: Function local variable not declared
+spawn ./test_function_local_variable_not_declared_other_function.sh
+./test_function_local_variable_not_declared_other_function.sh: 5: test_diff_sem: not found
+FAIL: Function local variable not declared (but declared in other function with same name)
+spawn ./test_function_local_variable_declared_base_class.sh
+./test_function_local_variable_declared_base_class.sh: 5: test_diff_sem: not found
+FAIL: Function local variable declared in base class
+spawn ./test_variable_declared_global.sh
+./test_variable_declared_global.sh: 5: test_diff_sem: not found
+FAIL: Function local variable masks global variable
+spawn ./test_variable_declared_global_extend.sh
+./test_variable_declared_global_extend.sh: 5: test_diff_sem: not found
+FAIL: Function local variable masks global variable from base class
+spawn ./test_function_local_variable_list.sh
+./test_function_local_variable_list.sh: 5: test_diff_sem: not found
+FAIL: Function, local variable list
+spawn ./test_variable_declared_base_class.sh
+./test_variable_declared_base_class.sh: 5: test_diff_sem: not found
+FAIL: Class global variable declared in base class
+spawn ./test_function_call_class.sh
+./test_function_call_class.sh: 5: test_diff_sem: not found
+FAIL: Function call within class
+spawn ./test_function_call_multi.sh
+./test_function_call_multi.sh: 5: test_diff_sem: not found
+FAIL: Function call within class, with multiple arguments
+spawn ./test_function_call_class_byref.sh
+./test_function_call_class_byref.sh: 5: test_diff_sem: not found
+FAIL: Function call within class, pass-by-reference
+spawn ./test_function_call_object.sh
+./test_function_call_object.sh: 5: test_diff_sem: not found
+FAIL: Function call on other object
+spawn ./test_function_call_object_extend.sh
+./test_function_call_object_extend.sh: 5: test_diff_sem: not found
+FAIL: Function call on other object that extended a class
+spawn ./test_function_call_object_missing.sh
+./test_function_call_object_missing.sh: 5: test_diff_sem: not found
+FAIL: Function call (missing) on other object
+spawn ./test_function_call_base.sh
+./test_function_call_base.sh: 5: test_diff_sem: not found
+FAIL: Function call on base class
+spawn ./test_function_call_arg_object.sh
+./test_function_call_arg_object.sh: 5: test_diff_sem: not found
+FAIL: Function call, object as argument
+spawn ./test_if_then_else.sh
+./test_if_then_else.sh: 5: test_diff_sem: not found
+FAIL: If then else
+spawn ./test_while_do.sh
+./test_while_do.sh: 5: test_diff_sem: not found
+FAIL: While do
+spawn ./test_expression_simple.sh
+./test_expression_simple.sh: 5: test_diff_sem: not found
+FAIL: Simple expression
+spawn ./test_expression_complex.sh
+./test_expression_complex.sh: 5: test_diff_sem: not found
+FAIL: Complex expression
+spawn ./test_expression_complex2.sh
+./test_expression_complex2.sh: 5: test_diff_sem: not found
+FAIL: Complex expression 2
+spawn ./test_array_bounds_valid.sh
+./test_array_bounds_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid array bounds
+spawn ./test_array_bounds_invalid.sh
+./test_array_bounds_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid array bounds
+spawn ./test_array_bounds_declare_invalid.sh
+./test_array_bounds_declare_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid array bounds declaration
+spawn ./test_array_multi_bounds_valid.sh
+./test_array_multi_bounds_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid multidimensional array bounds
+spawn ./test_array_multi_bounds_invalid.sh
+./test_array_multi_bounds_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid multidimensional array bounds
+spawn ./test_function_args_few.sh
+./test_function_args_few.sh: 5: test_diff_sem: not found
+FAIL: Too few function arguments
+spawn ./test_this_variable_disambiguation.sh
+./test_this_variable_disambiguation.sh: 5: test_diff_sem: not found
+FAIL: this.variable disambiguation
+spawn ./test_this_variable_disambiguation_extend.sh
+./test_this_variable_disambiguation_extend.sh: 5: test_diff_sem: not found
+FAIL: this.variable disambiguation when a class was extended
+spawn ./test_this_variable_not_declared.sh
+./test_this_variable_not_declared.sh: 5: test_diff_sem: not found
+FAIL: this.variable not declared
+spawn ./test_this_global_variable_valid.sh
+./test_this_global_variable_valid.sh: 5: test_diff_sem: not found
+FAIL: this global variable, valid
+spawn ./test_this_global_variable_invalid.sh
+./test_this_global_variable_invalid.sh: 5: test_diff_sem: not found
+FAIL: this global variable, invalid
+spawn ./test_class_assignment_base_type_valid.sh
+./test_class_assignment_base_type_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid class assignment of base type
+spawn ./test_class_assignment_base_type_invalid.sh
+./test_class_assignment_base_type_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid class assignment of base type
+spawn ./test_class_equivalence_valid.sh
+./test_class_equivalence_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid structural class equivalence
+spawn ./test_class_equivalence_invalid_order.sh
+./test_class_equivalence_invalid_order.sh: 5: test_diff_sem: not found
+FAIL: Invalid class equivalence (different order of variables)
+spawn ./test_class_equivalence_invalid_types.sh
+./test_class_equivalence_invalid_types.sh: 5: test_diff_sem: not found
+FAIL: Invalid class equivalence (different types of variables)
+spawn ./test_array_assignment_valid.sh
+./test_array_assignment_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid array assignment
+spawn ./test_array_assignment_invalid.sh
+./test_array_assignment_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid array assignment
+spawn ./test_class_preuse_valid.sh
+./test_class_preuse_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid class use before class declaration
+spawn ./test_class_preuse_invalid.sh
+./test_class_preuse_invalid.sh: 5: test_diff_sem: not found
+FAIL: Invalid class use before class declaration
+spawn ./test_class_preuse_assignment_valid.sh
+./test_class_preuse_assignment_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid class use before class declaration with assignment
+spawn ./test_class_preuse_function_valid.sh
+./test_class_preuse_function_valid.sh: 5: test_diff_sem: not found
+FAIL: Valid class use before class declaration with function call
+spawn ./test_object_instantiation.sh
+./test_object_instantiation.sh: 5: test_diff_sem: not found
+FAIL: New object instantiation
+spawn ./test_attribute_designator_simple.sh
+./test_attribute_designator_simple.sh: 5: test_diff_sem: not found
+FAIL: Attribute designator access, simple
+spawn ./test_attribute_designator_complex.sh
+./test_attribute_designator_complex.sh: 5: test_diff_sem: not found
+FAIL: Attribute designator access, complex
+spawn ./test_attribute_designator_multi.sh
+./test_attribute_designator_multi.sh: 5: test_diff_sem: not found
+FAIL: Attribute designator access, multi-level
+spawn ./test_attribute_designator_multi_this.sh
+./test_attribute_designator_multi_this.sh: 5: test_diff_sem: not found
+FAIL: Attribute designator access, multi-level with this
+spawn ./test_indexed_variable_complex.sh
+./test_indexed_variable_complex.sh: 5: test_diff_sem: not found
+FAIL: Indexed variable access, complex
+spawn ./test_method_designator_complex.sh
+./test_method_designator_complex.sh: 5: test_diff_sem: not found
+FAIL: Method designator access, complex
+spawn ./test_method_designator_complex_this.sh
+./test_method_designator_complex_this.sh: 5: test_diff_sem: not found
+FAIL: Method designator access, complex with this
+testcase ./tests_semantic.exp completed in 0 seconds
+
+		=== opc Summary ===
+
+# of unexpected failures	83
+runtest completed at Tue Sep 18 19:58:24 2012

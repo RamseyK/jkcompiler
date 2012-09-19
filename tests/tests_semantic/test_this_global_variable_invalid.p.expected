@@ -1,0 +1,2 @@
+ERROR:15:Type mismatch between "testThisGlobalVariableInvalid" and "integer"
+Errors detected. Exiting.

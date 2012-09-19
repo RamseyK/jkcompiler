@@ -1,56 +1,74 @@
 # Makefile for jkcompiler
 
-CC = gcc
-BINARY = opc
-LEX = flex
-YACC = bison
-DIFF = diff
+# Tools
+CC := gcc
+LEX := flex
+YACC := bison
+DIFF := diff
 
+# Directories
+SRCDIR := src
+BINDIR := bin
+BUILDDIR := build
+TESTSDIR := tests
+TARGET := opc
 
-# Flags
-CFLAGS = -g -Wall
-YACCFLAGS = -d -y -v 
+# GCC Debug Flags
+DEBUGFLAGS := -g3 -O0 -Wall -pg
+RTCHECKS := -fmudflap -fstack-check -gnato
+# GCC Production Flags
+PRODFLAGS := -Wall -O3
+# Active Flags
+CFLAGS := -std=gnu99 $(DEBUGFLAGS)
+LINK := $(DEBUGFLAGS)
 
-OBJECTS = \
-	main.o \
-	symtab.o usrdef.o shared.o rulefuncs.o error.o \
-	semantic.o \
+# Bison Flags (-d = defines, -y = yacc behavior, -v = verbose)
+YACCFLAGS := -d -y -v
 
+# File paths
+SRCEXT := c
+SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
+OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 
-all:    yacc lex $(OBJECTS) tests_prepare
-	$(CC) -o $(BINARY) $(CFLAGS) y.tab.c lex.yy.c $(OBJECTS)
+# Targets
+
+all: yacc lex $(OBJECTS) tests_prepare
+	@echo " Linking..."; $(CC) $(LINK) $(OBJECTS) -o $(BINDIR)/$(TARGET)
+ 
+$(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
+	@mkdir -p $(BUILDDIR)
+	@echo " CC $<"; $(CC) $(CFLAGS) -c -o $@ $<
 
 lex:
-	$(LEX) pascal.l
+	@cd $(SRCDIR); $(LEX) pascal.l
 
 yacc:
-	$(YACC) $(YACCFLAGS) pascal.y
-	@# Play tricks with yacc to prepend our shared definitions
-	echo "#include \"shared.h\"" >> y.tab.h.tmp
-	cat y.tab.h >> y.tab.h.tmp
-	rm y.tab.h
-	mv y.tab.h.tmp y.tab.h
-
-.c.o:
-	$(CC) -c $(CFLAGS) $<
+	cd $(SRCDIR); $(YACC) $(YACCFLAGS) pascal.y
+	echo "#include \"shared.h\"" >> $(SRCDIR)/y.tab.h.tmp
+	cat $(SRCDIR)/y.tab.h >> $(SRCDIR)/y.tab.h.tmp
+	rm $(SRCDIR)/y.tab.h
+	mv $(SRCDIR)/y.tab.h.tmp $(SRCDIR)/y.tab.h
+	
 clean:
-	-rm -f core $(BINARY) out.c *~
-	-rm -f lex.yy.c y.tab.c y.tab.h y.tab.h.tmp y.output
-	-rm -f $(OBJECTS)
-	-rm -f tests_lib_shared_auto.inc
-	-rm -f tests_semantic/results/$(BINARY).{log,sum}
-	-rm -f tests_semantic/*.output
-	-rm -f tests_semantic/out.c
-	-rm -f tests_semantic/a.out
+	echo " Cleaning...";
+	rm -r $(BUILDDIR) $(BINDIR)/$(TARGET)
+	cd $(SRCDIR); rm -f lex.yy.c y.tab.c y.tab.h y.tab.h.tmp y.output
+	rm -f $(TESTSDIR)/tests_lib.inc
+	rm -f $(TESTSDIR)/tests_semantic/results/$(TARGET).{log,sum}
+	rm -f $(TESTSDIR)/tests_semantic/*.output
+	rm -f $(TESTSDIR)/tests_semantic/out.c
+	rm -f $(TESTSDIR)/tests_semantic/a.out
 
 tests: tests_semantic tests_opt tests_gen
 
 tests_semantic: tests_prepare
 	# "runtest" comes from DejaGNU
-	mkdir -p tests_semantic/results
-	(cd tests_semantic; runtest --all --output results --tool $(BINARY) tests_semantic.exp)
+	mkdir -p $(TESTSDIR)/tests_semantic/results
+	(cd $(TESTSDIR)/tests_semantic; runtest --all --output results --tool $(TARGET) tests_semantic.exp)
 
 tests_prepare:
-	@echo "BINARY=../$(BINARY)" > tests_lib_shared_auto.inc
+	@echo "BINARY=../../$(BINDIR)/$(TARGET)" > $(TESTSDIR)/tests_lib.inc
 
 .PHONY: all lex yacc clean tests
+
+

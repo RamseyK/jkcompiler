@@ -1,0 +1,3 @@
+ERROR:13:Array index 3 is out of the range (4,9)
+ERROR:17:Array index 10 is out of the range (4,9)
+Errors detected. Exiting.

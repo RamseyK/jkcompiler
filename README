@@ -5,5 +5,8 @@ https://github.com/RamseyK/jkcompiler
 
 An Object Pascal Compiler
 
+Prerequisites: gcc, autotools, bison, flex, dejaGNU
+
+
 License:
 See LICENSE.TXT

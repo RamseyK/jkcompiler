@@ -1,0 +1,2 @@
+ERROR:9:Variable name "testFunctionReturnInvalidComplex" is reserved for use as a function return value
+Errors detected. Exiting.
