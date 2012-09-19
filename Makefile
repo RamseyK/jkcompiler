@@ -43,7 +43,7 @@ lex:
 	@cd $(SRCDIR); $(LEX) pascal.l
 
 yacc:
-	cd $(SRCDIR); $(YACC) $(YACCFLAGS) pascal.y
+	(cd $(SRCDIR); $(YACC) $(YACCFLAGS) pascal.y)
 	echo "#include \"shared.h\"" >> $(SRCDIR)/y.tab.h.tmp
 	cat $(SRCDIR)/y.tab.h >> $(SRCDIR)/y.tab.h.tmp
 	rm $(SRCDIR)/y.tab.h
@@ -52,7 +52,7 @@ yacc:
 clean:
 	echo " Cleaning...";
 	rm -r $(BUILDDIR) $(BINDIR)/$(TARGET)
-	cd $(SRCDIR); rm -f lex.yy.c y.tab.c y.tab.h y.tab.h.tmp y.output
+	cd $(SRCDIR); rm -f y.tab.h.tmp y.output
 	rm -f $(TESTSDIR)/tests_lib.inc
 	rm -f $(TESTSDIR)/tests_semantic/results/$(TARGET).{log,sum}
 	rm -f $(TESTSDIR)/tests_semantic/*.output
