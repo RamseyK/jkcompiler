@@ -131,7 +131,7 @@
 
 %%
 
-program : program_heading semicolon class_list DOT
+program : program_heading SEMICOLON class_list DOT
 	{
 
 	}
@@ -139,41 +139,64 @@ program : program_heading semicolon class_list DOT
 
 program_heading : PROGRAM identifier
 	{
-
 	}
  | PROGRAM identifier LPAREN identifier_list RPAREN
 	{
-
 	}
  ;
 
 identifier_list : identifier_list comma identifier
         {
-
+        	// Check the identifier against the outer scope's identifier_list
+			// Create identifier_list_t (create the identifier node)
+			// Add identifier to $$ (current identifier_list node):
+				// Set line number
+				// Set element count
+				// Set next to $1 (the next identifier list node)
         }
  | identifier
         {
-
+			// Check the identifier against the outer scope's identifier_list
+			// Create identifier_list_t (create the identifier node)
+			// Add identifier to $$ (current identifier_list node):
+				// Set line number
+				// Set element count
+				// Set next to NULL
         }
  ;
 
 class_list: class_list class_identification PBEGIN class_block END
 	{
-
+		// Create class_list node
+		// Set class_identification (node->ci = $2)
+		// Set class_block (node->cb = $4)
+		// Set next to $1 (the next class_list node)
 	}
  | class_identification PBEGIN class_block END
 	{
-
+		// Create class_list node
+		// Set class_identification (node->ci = $1)
+		// Set class_block (node->cb = $3)
+		// Set next to NULL
 	}
  ;
 
 class_identification : CLASS identifier
 	{
-
+		// Check the class_identification against the class_list
+		// Create class_identification node and set to $$
+			// Set identifier to $2
+			// Set extend to NULL
+			// Set line number
+		
 	}
 | CLASS identifier EXTENDS identifier
 	{
-
+		// Check the class_identification against the class_list
+		// Create class_identification node and set to $$
+			// Set identifier to $2
+			// Set extend to $4
+			// Set line number
 	}
 ;
 

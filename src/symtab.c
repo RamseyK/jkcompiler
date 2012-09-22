@@ -15,8 +15,8 @@
  */
 void symtab_init()
 {
-
-
+	// Init global identifier list
+	// Init class list
 }
 
 

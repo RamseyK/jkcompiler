@@ -17,7 +17,7 @@ TARGET := opc
 DEBUGFLAGS := -g3 -O0 -Wall -pg
 RTCHECKS := -fmudflap -fstack-check -gnato
 # GCC Production Flags
-PRODFLAGS := -Wall -O3
+PRODFLAGS := -Wall -O2
 # Active Flags
 CFLAGS := -std=gnu99 $(DEBUGFLAGS)
 LINK := $(DEBUGFLAGS)
@@ -51,7 +51,7 @@ yacc:
 	
 clean:
 	echo " Cleaning...";
-	rm -r $(BUILDDIR) $(BINDIR)/$(TARGET)
+	rm -r $(BUILDDIR) $(BINDIR)/$(TARGET)*
 	cd $(SRCDIR); rm -f y.tab.h.tmp y.output
 	rm -f $(TESTSDIR)/tests_lib.inc
 	rm -f $(TESTSDIR)/tests_semantic/results/$(TARGET).{log,sum}

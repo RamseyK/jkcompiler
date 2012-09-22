@@ -1,4 +1,4 @@
-Test Run By ramsey on Tue Sep 18 19:58:24 2012
+Test Run By ramsey on Fri Sep 21 23:04:29 2012
 Native configuration is x86_64-unknown-linux-gnu
 
 		=== opc tests ===
@@ -12,9 +12,8 @@ Using /usr/share/dejagnu/config/unix.exp as generic interface file for target.
 WARNING: Couldn't find tool config file for unix, using default.
 Running ./tests_semantic.exp ...
 spawn ./test_compiled.sh
-pwd
-opc: Usage: opc [-v] [-exitsem] [-O] [-ir] [-free] [-fcf] [-fvn] [-fgre] [--help]
-[: 11: 3: unexpected operator
+./test_compiled.sh: 5: ../../bin/opc: not found
+[: 11: 127: unexpected operator
 FAILED
 FAIL: Binary compiled
 spawn ./test_missing_program_class.sh
@@ -263,9 +262,9 @@ FAIL: Method designator access, complex
 spawn ./test_method_designator_complex_this.sh
 ./test_method_designator_complex_this.sh: 5: test_diff_sem: not found
 FAIL: Method designator access, complex with this
-testcase ./tests_semantic.exp completed in 0 seconds
+testcase ./tests_semantic.exp completed in 1 seconds
 
 		=== opc Summary ===
 
 # of unexpected failures	83
-runtest completed at Tue Sep 18 19:58:24 2012
+runtest completed at Fri Sep 21 23:04:30 2012
