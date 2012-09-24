@@ -68,6 +68,20 @@ long identifier_list_count(struct identifier_list_t *il)
   return count;
 }
 
+/* ----------------------------------------------------------------------- 
+ * Returns a reference to the identifier_list node whose id matches the id parameter
+ * ----------------------------------------------------------------------- 
+ */
+struct identifier_list_t *get_identifier(struct identifier_list_t *il, char *id) {
+	struct identifier_list_t *temp_il = il;
+	
+	while(temp_il != NULL) {
+		if(strcmp(temp_il->id, id) == 0)
+			return temp_il;
+		temp_il = temp_il->next;
+	}
+	return NULL;
+}
 
 /* ----------------------------------------------------------------------- 
  * Returns a pointer to a new identifier

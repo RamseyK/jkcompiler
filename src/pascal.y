@@ -147,37 +147,35 @@ program_heading : PROGRAM identifier
 
 identifier_list : identifier_list comma identifier
         {
-        	// Check the identifier against the outer scope's identifier_list
-			// Create identifier_list_t (create the identifier node)
-			// Add identifier to $$ (current identifier_list node):
-				// Set line number
-				// Set element count
-				// Set next to $1 (the next identifier list node)
+        	// Check the identifier against the current identifier_list for duplicates
+        	struct identifier_list_t *matched_il = get_identifier($1, $3);
+        	if(matched_il != NULL) {
+        		error_variable_already_declared(line_number, matched_il->id, line_number-1);
+        	}
+        	
+			// Add the identifier node to the identifier_list
+			add_to_identifier_list(&$1, $3);
         }
  | identifier
         {
-			// Check the identifier against the outer scope's identifier_list
-			// Create identifier_list_t (create the identifier node)
+        	// Check the identifier against the current identifier_list for duplicates
+        
+        	// Create and add first identifier node
+        	$$ = new_identifier_list();
+
 			// Add identifier to $$ (current identifier_list node):
-				// Set line number
-				// Set element count
-				// Set next to NULL
+			add_to_identifier_list(&$$, $1);
         }
  ;
 
-class_list: class_list class_identification PBEGIN class_block END
+class_list : class_list class_identification PBEGIN class_block END
 	{
-		// Create class_list node
-		// Set class_identification (node->ci = $2)
-		// Set class_block (node->cb = $4)
-		// Set next to $1 (the next class_list node)
+		// add_to_class_list(class_list($1), class_identification($2), class_block($4))
 	}
  | class_identification PBEGIN class_block END
 	{
-		// Create class_list node
-		// Set class_identification (node->ci = $1)
-		// Set class_block (node->cb = $3)
-		// Set next to NULL
+		// Create the tail of the class list, $$ = new_class_list
+		// add_to_class_list($$, class_identification($1), class_block($3))
 	}
  ;
 
@@ -648,7 +646,7 @@ relop : EQUAL
 
 identifier : IDENTIFIER
 	{
-
+		$$ = new_identifier(yytext);
 	}
  ;
 

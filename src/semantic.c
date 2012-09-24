@@ -23,6 +23,7 @@ void semantic_analysis(struct program_t *p)
 
   temp_cl = p->cl;
   while (temp_cl != NULL) {
+  	// If temp_cl->extend != null, check if extend is in p->cl
 
     /* process the variable_declaration_list */
 

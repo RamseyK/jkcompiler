@@ -51,7 +51,7 @@ yacc:
 	
 clean:
 	echo " Cleaning...";
-	rm -r $(BUILDDIR) $(BINDIR)/$(TARGET)*
+	rm -rf $(BUILDDIR) $(BINDIR)/$(TARGET)*
 	cd $(SRCDIR); rm -f y.tab.h.tmp y.output
 	rm -f $(TESTSDIR)/tests_lib.inc
 	rm -f $(TESTSDIR)/tests_semantic/results/$(TARGET).{log,sum}

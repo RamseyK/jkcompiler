@@ -21,6 +21,7 @@
 struct identifier_list_t *new_identifier_list();
 void add_to_identifier_list(struct identifier_list_t **il, char *id);
 long identifier_list_count(struct identifier_list_t *il);
+struct identifier_list_t *get_identifier(struct identifier_list_t *il, char *id);
 char *new_identifier(char *text);
 struct class_list_t *new_class_list();
 void add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *b);
