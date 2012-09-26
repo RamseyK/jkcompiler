@@ -37,52 +37,52 @@
 /* Tokens.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
-   /* Put the tokens into the symbol table, so that GDB and other debuggers
-      know about them.  */
-   enum yytokentype {
-     AND = 258,
-     ARRAY = 259,
-     ASSIGNMENT = 260,
-     CLASS = 261,
-     COLON = 262,
-     COMMA = 263,
-     DIGSEQ = 264,
-     DO = 265,
-     DOT = 266,
-     DOTDOT = 267,
-     ELSE = 268,
-     END = 269,
-     EQUAL = 270,
-     EXTENDS = 271,
-     FUNCTION = 272,
-     GE = 273,
-     GT = 274,
-     IDENTIFIER = 275,
-     IF = 276,
-     LBRAC = 277,
-     LE = 278,
-     LPAREN = 279,
-     LT = 280,
-     MINUS = 281,
-     MOD = 282,
-     NEW = 283,
-     NOT = 284,
-     NOTEQUAL = 285,
-     OF = 286,
-     OR = 287,
-     PBEGIN = 288,
-     PLUS = 289,
-     PRINT = 290,
-     PROGRAM = 291,
-     RBRAC = 292,
-     RPAREN = 293,
-     SEMICOLON = 294,
-     SLASH = 295,
-     STAR = 296,
-     THEN = 297,
-     VAR = 298,
-     WHILE = 299
-   };
+/* Put the tokens into the symbol table, so that GDB and other debuggers
+   know about them.  */
+enum yytokentype {
+    AND = 258,
+    ARRAY = 259,
+    ASSIGNMENT = 260,
+    CLASS = 261,
+    COLON = 262,
+    COMMA = 263,
+    DIGSEQ = 264,
+    DO = 265,
+    DOT = 266,
+    DOTDOT = 267,
+    ELSE = 268,
+    END = 269,
+    EQUAL = 270,
+    EXTENDS = 271,
+    FUNCTION = 272,
+    GE = 273,
+    GT = 274,
+    IDENTIFIER = 275,
+    IF = 276,
+    LBRAC = 277,
+    LE = 278,
+    LPAREN = 279,
+    LT = 280,
+    MINUS = 281,
+    MOD = 282,
+    NEW = 283,
+    NOT = 284,
+    NOTEQUAL = 285,
+    OF = 286,
+    OR = 287,
+    PBEGIN = 288,
+    PLUS = 289,
+    PRINT = 290,
+    PROGRAM = 291,
+    RBRAC = 292,
+    RPAREN = 293,
+    SEMICOLON = 294,
+    SLASH = 295,
+    STAR = 296,
+    THEN = 297,
+    VAR = 298,
+    WHILE = 299
+};
 #endif
 /* Tokens.  */
 #define AND 258
@@ -135,51 +135,51 @@
 typedef union YYSTYPE
 #line 88 "pascal.y"
 {
-  struct type_denoter_t *tden;
-  char *id;
-  struct identifier_list_t *idl;
-  struct function_designator_t *fdes;
-  struct actual_parameter_list_t *apl;
-  struct actual_parameter_t *ap;
-  struct variable_declaration_list_t *vdl;
-  struct variable_declaration_t *vd;
-  struct range_t *r;
-  struct unsigned_number_t *un;
-  struct formal_parameter_section_list_t *fpsl;
-  struct formal_parameter_section_t *fps;
-  struct variable_access_t *va;
-  struct assignment_statement_t *as;
-  struct object_instantiation_t *os;
-  struct print_statement_t *ps;
-  struct expression_t *e;
-  struct statement_t *s;
-  struct statement_sequence_t *ss;
-  struct if_statement_t *is;
-  struct while_statement_t *ws;
-  struct indexed_variable_t *iv;
-  struct attribute_designator_t *ad;
-  struct method_designator_t *md;
-  struct index_expression_list_t *iel;
-  struct simple_expression_t *se;
-  struct term_t *t;
-  struct factor_t *f;
-  int *i;
-  struct primary_t *p;
-  struct array_type_t *at;
-  struct class_block_t *cb;
-  struct func_declaration_list_t *fdl;
-  struct function_declaration_t *funcd;
-  struct function_block_t *fb;
-  struct function_heading_t *fh;
-  struct class_identification_t *ci;
-  struct class_list_t *cl;
-  struct program_t *program;
-  struct program_heading_t *ph;
-  int op;
+    struct type_denoter_t *tden;
+    char *id;
+    struct identifier_list_t *idl;
+    struct function_designator_t *fdes;
+    struct actual_parameter_list_t *apl;
+    struct actual_parameter_t *ap;
+    struct variable_declaration_list_t *vdl;
+    struct variable_declaration_t *vd;
+    struct range_t *r;
+    struct unsigned_number_t *un;
+    struct formal_parameter_section_list_t *fpsl;
+    struct formal_parameter_section_t *fps;
+    struct variable_access_t *va;
+    struct assignment_statement_t *as;
+    struct object_instantiation_t *os;
+    struct print_statement_t *ps;
+    struct expression_t *e;
+    struct statement_t *s;
+    struct statement_sequence_t *ss;
+    struct if_statement_t *is;
+    struct while_statement_t *ws;
+    struct indexed_variable_t *iv;
+    struct attribute_designator_t *ad;
+    struct method_designator_t *md;
+    struct index_expression_list_t *iel;
+    struct simple_expression_t *se;
+    struct term_t *t;
+    struct factor_t *f;
+    int *i;
+    struct primary_t *p;
+    struct array_type_t *at;
+    struct class_block_t *cb;
+    struct func_declaration_list_t *fdl;
+    struct function_declaration_t *funcd;
+    struct function_block_t *fb;
+    struct function_heading_t *fh;
+    struct class_identification_t *ci;
+    struct class_list_t *cl;
+    struct program_t *program;
+    struct program_heading_t *ph;
+    int op;
 }
 /* Line 1529 of yacc.c.  */
 #line 181 "y.tab.h"
-	YYSTYPE;
+YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1

@@ -11,6 +11,7 @@
 
 #include "shared.h"
 #include "rulefuncs.h"
+#include "symtab.h"
 
   int yylex(void);
   void yyerror(const char *error);
@@ -133,15 +134,22 @@
 
 program : program_heading SEMICOLON class_list DOT
 	{
-
+		program->ph = $1;
+		program->cl = $3;
 	}
  ;
 
 program_heading : PROGRAM identifier
 	{
+		$$ = new_program_heading();
+		$$->id = $2;
+		$$->il = NULL;
 	}
  | PROGRAM identifier LPAREN identifier_list RPAREN
 	{
+		$$ = new_program_heading();
+		$$->id = $2;
+		$$->il = $4;
 	}
  ;
 
@@ -171,30 +179,28 @@ identifier_list : identifier_list comma identifier
 class_list : class_list class_identification PBEGIN class_block END
 	{
 		// add_to_class_list(class_list($1), class_identification($2), class_block($4))
+		// symtab_insert(symAttr.CLASS, $1->next);
+		// symtab_exit_scope();
 	}
  | class_identification PBEGIN class_block END
 	{
-		// Create the tail of the class list, $$ = new_class_list
+		// Create the tail of the class list, $$ = new_class_list()
 		// add_to_class_list($$, class_identification($1), class_block($3))
+		// symtab_insert(symAttr.CLASS, $$);
+		// symtab_exit_scope();
 	}
  ;
 
 class_identification : CLASS identifier
 	{
-		// Check the class_identification against the class_list
-		// Create class_identification node and set to $$
-			// Set identifier to $2
-			// Set extend to NULL
-			// Set line number
+		// Create class_identification
+		// symtab_enter_scope();
 		
 	}
 | CLASS identifier EXTENDS identifier
 	{
-		// Check the class_identification against the class_list
-		// Create class_identification node and set to $$
-			// Set identifier to $2
-			// Set extend to $4
-			// Set line number
+		// Create class_identification (base case)
+		// symtab_enter_scope();
 	}
 ;
 
@@ -240,11 +246,13 @@ variable_declaration_part : VAR variable_declaration_list semicolon
 
 variable_declaration_list : variable_declaration_list semicolon variable_declaration
 	{
-
+		//add_to_variable_list($1, $3);
+		//symtab_insert(symAttr.VAR, $1->next);
 	}
  | variable_declaration
 	{
-
+		// $$ = new_variable_list()
+		//symtab_insert(symAttr.VAR, $$)
 	}
 
  ;
@@ -257,7 +265,7 @@ variable_declaration : identifier_list COLON type_denoter
 
 func_declaration_list : func_declaration_list semicolon function_declaration
 	{
-
+		
 	}
  | function_declaration
 	{
