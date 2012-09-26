@@ -24,13 +24,14 @@ void semantic_analysis(struct program_t *p) {
     while (temp_cl != NULL) {
         // If temp_cl->extend != null, check if extend is in p->cl
 
-        /* process the variable_declaration_list */
-        /* for each variable */
+        // Process the variable_declaration_list
+        /*
+        // for each variable
         	//variable;//FINISH
-        	/* if a variable->vd->tden->type == TYPE_DENOTER_T_CLASS_TYPE && variable->vd->tden->data->cl == NULL*/
+        	// if a variable->vd->tden->type == TYPE_DENOTER_T_CLASS_TYPE && variable->vd->tden->data->cl == NULL
         		struct type_denoter_t *varTypeDenoter = variable->vd->tden;
         		if(varTypeDenoter->type == TYPE_DENOTER_T_CLASS_TYPE && varTypeDenoter->data->cl == NULL){
-        		/* look for variable->vd->tden->name in symbol table */
+        		// look for variable->vd->tden->name in symbol table
         			struct scope_t *foundScope = symtab_lookup_class(varTypeDenoter->name);
         			// if found, update variable->vd->tden->data->cl
         			if(foundScope != NULL) {
@@ -41,8 +42,9 @@ void semantic_analysis(struct program_t *p) {
         				error_type_not_defined(variable->vd->line_number, varTypeDenoter->name);
         			}
         		}
-
-        /* process the func_declaration_list */
+		*/
+		
+        // Process the func_declaration_list
 
         temp_cl = temp_cl->next;
     }

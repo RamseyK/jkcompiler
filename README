@@ -3,7 +3,7 @@ Ramsey Kant, Keilan Jackson
 
 https://github.com/RamseyK/jkcompiler
 
-A Mini Object Pascal Compiler
+A Mini Object Pascal Compiler written in C
 
 Prerequisites: gcc, autotools, bison, flex, dejaGNU
 
