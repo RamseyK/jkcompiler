@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 	program = new_program();
 
     usrdef_init();
-    symtab_init();
+    symtab_init(program);
 
     /* begin parsing */
     yyparse();

@@ -179,14 +179,14 @@ identifier_list : identifier_list comma identifier
 class_list : class_list class_identification PBEGIN class_block END
 	{
 		// add_to_class_list(class_list($1), class_identification($2), class_block($4))
-		// symtab_insert(symAttr.CLASS, $1->next);
+		// symtab_insert(symAttr(SA_CLASS), $1->next);
 		// symtab_exit_scope();
 	}
  | class_identification PBEGIN class_block END
 	{
 		// Create the tail of the class list, $$ = new_class_list()
 		// add_to_class_list($$, class_identification($1), class_block($3))
-		// symtab_insert(symAttr.CLASS, $$);
+		// symtab_insert(symAttr(SA_CLASS), $$);
 		// symtab_exit_scope();
 	}
  ;
@@ -247,12 +247,12 @@ variable_declaration_part : VAR variable_declaration_list semicolon
 variable_declaration_list : variable_declaration_list semicolon variable_declaration
 	{
 		//add_to_variable_list($1, $3);
-		//symtab_insert(symAttr.VAR, $1->next);
+		//symtab_insert(symAttr(SA_VAR), $1->next);
 	}
  | variable_declaration
 	{
 		// $$ = new_variable_list()
-		//symtab_insert(symAttr.VAR, $$)
+		//symtab_insert(symAttr(SA_VAR), $$)
 	}
 
  ;

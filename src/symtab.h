@@ -19,14 +19,14 @@
  */
 
 // Attributes that designate the object scope_t->ptr points to
-enum symAttr_t {
-	VAR, //variable_declaration_list_t (need to get to type_denoter for type checking)
-	CLASS, // class_list_t
-	FUNC, //func_declaration_list_t
-	IF, //if_statement_t
-	WHILE, //while_statement_t
-	PROGRAM
-} symAttr;
+enum sym_attr_t {
+	SA_VAR, //variable_declaration_list_t (need to get to type_denoter for type checking)
+	SA_CLASS, // class_list_t
+	SA_FUNC, //func_declaration_list_t
+	SA_IF, //if_statement_t
+	SA_WHILE, //while_statement_t
+	SA_PROGRAM
+};
 
 struct scope_t {
 	int attrId;
@@ -51,7 +51,7 @@ struct scope_t *currScope;
  * ----------------------------------------------------------------
  */
 
-void symtab_init();
+void symtab_init(struct program_t* program);
 void symtab_print(int numOfTabs);
 void symtab_enter_scope();
 void symtab_exit_scope();

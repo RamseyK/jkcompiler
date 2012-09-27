@@ -13,16 +13,16 @@
  * Initializes the symbol table
  * ------------------------------------------------------------
  */
-void symtab_init() {
+void symtab_init(struct program_t* program) {
     // Initialize root scope
-    root = (struct scope_t *) malloc(sizeof(struct scope_t));
+    rootScope = (struct scope_t *) malloc(sizeof(struct scope_t));
     
-    root->attrId = symAttr.PROGRAM;
-    root->ptr = program;
-    root->next = NULL;
-    root->inner = NULL;
-    root->outer = NULL;
-    currScope = root;
+    rootScope->attrId = SA_PROGRAM;
+    rootScope->ptr = program;
+    rootScope->next = NULL;
+    rootScope->inner = NULL;
+    rootScope->outer = NULL;
+    currScope = rootScope;
 }
 
 
@@ -32,8 +32,6 @@ void symtab_init() {
  * ------------------------------------------------------------
  */
 void symtab_print(int numOfTabs) {
-
-
 }
 
 void symtab_enter_scope() {
@@ -50,7 +48,7 @@ void symtab_insert(int attr, void *pointer) {
 	
 	// Go to the last adjacent node in the current scope
 	struct scope_t *lastAdj = currScope;
-	END_OF_LIST(lastAdj);
+	GOTO_END_OF_LIST(lastAdj);
 	
 	// Add the new scope to the end of the list
 	lastAdj->next = newScope;
@@ -75,11 +73,11 @@ void symtab_insert(int attr, void *pointer) {
 
 // looks from the root
 struct scope_t *symtab_lookup_class(char *name) {
-	// Loop through all CLASS scope nodes adjacent to the root
-	struct scope_t *it = rootScope->next;
+	// Loop through all CLASS scope nodes in the inner scope of the root
+	struct scope_t *it = rootScope->inner;
 	while(it != NULL) {
-		if(it->attrId == symAttr.CLASS) {
-			class_list_t *cl = (struct class_list_t*)it->ptr;
+		if(it->attrId == SA_CLASS) {
+			struct class_list_t *cl = (struct class_list_t*)it->ptr;
 		
 			// Found class, names match
 			if(strcmp(cl->ci->id, name) == 0) {
@@ -100,8 +98,8 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 	// Loop through all FUNC scope nodes adjacent to the specified classScope
 	struct scope_t *it = classScope->next;
 	while(it != NULL) {
-		if(it->attrId == symAttr.FUNC) {
-			function_declaraction_list_t *fdl = (struct function_declaraction_list_t*)it->ptr;
+		if(it->attrId == SA_FUNC) {
+			struct func_declaration_list_t *fdl = (struct func_declaration_list_t*)it->ptr;
 		
 			// Found function, names match
 			if(strcmp(fdl->fd->fh->id, name) == 0) {
@@ -126,8 +124,8 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 	// Loop through all variables nodes adjacent to the specified scope
 	struct scope_t *it = scope;
 	while(it != NULL) {
-		if(it->attrId == symAttr.VAR) {
-			variable_declaration_list_t *vdl = (struct variable_declaration_list_t*)it->ptr;
+		if(it->attrId == SA_VAR) {
+			struct variable_declaration_list_t *vdl = (struct variable_declaration_list_t*)it->ptr;
 			
 			// Found variable, names match
 			if(strcmp(vdl->vd->il->id, name) == 0) {
