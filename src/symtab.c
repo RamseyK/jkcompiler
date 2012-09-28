@@ -58,7 +58,7 @@ void symtab_insert(int attr, void *pointer) {
 	newScope->outer = currScope->outer;
 	newScope->inner = NULL;
 	
-	// If the previous insert opened a new scope, set current scope's inner, and update current scope
+	// If the scope is supposed to be inside the current scope, set current scope's inner, and update current scope
 	if(enterNext) {
 		newScope->outer = currScope;
 		currScope->inner = newScope;
@@ -96,7 +96,7 @@ struct scope_t *symtab_lookup_class(char *name) {
 //looks in a class
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 	// Loop through all FUNC scope nodes adjacent to the specified classScope
-	struct scope_t *it = classScope->next;
+	struct scope_t *it = classScope->inner;
 	while(it != NULL) {
 		if(it->attrId == SA_FUNC) {
 			struct func_declaration_list_t *fdl = (struct func_declaration_list_t*)it->ptr;
@@ -111,6 +111,12 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 		it = it->next;
 	}
 	
+	// Check for the function in a parent class until the root is reached
+	it = classScope->outer;
+	while (it != root) {
+		return symtab_lookup_function(it, name);
+	}
+	
 	// Function name not found
 	return NULL;
 }
@@ -122,7 +128,7 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 		return NULL;
 
 	// Loop through all variables nodes adjacent to the specified scope
-	struct scope_t *it = scope;
+	struct scope_t *it = scope->inner;
 	while(it != NULL) {
 		if(it->attrId == SA_VAR) {
 			struct variable_declaration_list_t *vdl = (struct variable_declaration_list_t*)it->ptr;

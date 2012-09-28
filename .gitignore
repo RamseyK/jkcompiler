@@ -2,3 +2,9 @@
 *.o
 
 src/y.output
+
+src/.project
+
+src/.cproject
+
+.metadata/*
