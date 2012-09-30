@@ -425,35 +425,46 @@ print_statement : PRINT variable_access
 
 variable_access : identifier
 	{
-
+		$$ = new_variable_access();
+		$$->type = VARIABLE_ACCESS_T_IDENTIFIER;
+		$$->data->id = $1;
 	}
  | indexed_variable
 	{
-
+		$$ = new_variable_access();
+		$$->type = VARIABLE_ACCESS_T_INDEXED_VARIABLE;
+		$$->data->iv = $1;
 	}
  | attribute_designator
 	{
-
+		$$ = new_variable_access();
+		$$->type = VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR;
+		$$->data->ad = $1;
 	}
  | method_designator
 	{
-
+		$$ = new_variable_access();
+		$$->type = VARIABLE_ACCESS_T_METHOD_DESIGNATOR;
+		$$->data->md = $1;
 	}
  ;
 
 indexed_variable : variable_access LBRAC index_expression_list RBRAC
 	{
-
+		$$ = new_indexed_variable();
+		$$->va = $1;
+		$$->iel = $3;
 	}
  ;
 
 index_expression_list : index_expression_list comma index_expression
 	{
-
+		add_to_index_expression_list(&$1, $3);
 	}
  | index_expression
 	{
-
+		$$ = new_index_espression_list();
+		$$->e = $1;
 	}
  ;
 
@@ -461,44 +472,55 @@ index_expression : expression ;
 
 attribute_designator : variable_access DOT identifier
 	{
-
+		$$ = new_attribute_designator();
+		$$->va = $1;
+		$$->id = $3;
 	}
 ;
 
 method_designator: variable_access DOT function_designator
 	{
-
+		$$ = new_method_designator();
+		$$->va = $1;
+		$$->fd = $3;
 	}
  ;
 
 
 params : LPAREN actual_parameter_list RPAREN 
 	{
-
+		$$ = $2;
 	}
  ;
 
 actual_parameter_list : actual_parameter_list comma actual_parameter
 	{
-
+		add_to_actual_parameter_list(&$1, $3);
 	}
  | actual_parameter 
 	{
-
+		$$ = new_actual_parameter_list();
+		$$->ap = $1;
 	}
  ;
 
 actual_parameter : expression
 	{
-
+		$$ = new_actual_parameter();
+		$$->e1 = $1;
 	}
  | expression COLON expression
 	{
-
+		$$ = new_actual_parameter();
+		$$->e1 = $1;
+		$$->e2 = $3;
 	}
  | expression COLON expression COLON expression
 	{
-
+		$$ = new_actual_parameter();
+		$$->e1 = $1;
+		$$->e2 = $3;
+		$$->e3 = $5;
 	}
  ;
 
@@ -506,73 +528,157 @@ boolean_expression : expression ;
 
 expression : simple_expression
 	{
-
+		$$ = new_expression();
+		$$->se1 = $1;
+		$$->expr = $1->expr;
 	}
  | simple_expression relop simple_expression
 	{
-
+		$$ = new_expression();
+		$$->se1 = $1;
+		$$->relop = $2;
+		$$->se2 = $3;
+		//Do some kind of type checking ??
+		if($1->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER) && $3->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER)) {
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_BOOL;
+			if(relop == EQUAL)
+				$$->expr->val = ($1->expr->val == $3->expr->val)
+			if(relop == NOTEQUAL)
+				$$->expr->val = ($1->expr->val != $3->expr->val)
+			if(relop == GT)
+				$$->expr->val = ($1->expr->val > $3->expr->val)
+			if(relop == LT)
+				$$->expr->val = ($1->expr->val < $3->expr->val)
+			if(relop == GE)
+				$$->expr->val = ($1->expr->val >= $3->expr->val)
+			if(relop == LE)
+				$$->expr->val = ($1->expr->val <= $3->expr->val)
+		} else if($1->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN) && $3->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN)) {
+			if(relop == EQUAL)
+				$$->expr->val = ($1->expr->val == $3->expr->val)
+			if(relop == NOTEQUAL)
+				$$->expr->val = ($1->expr->val != $3->expr->val)
+		} else {
+			//Type mismatch
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		}
 	}
  ;
 
 simple_expression : term
 	{
-
+		$$ = new_simple_expression();
+		$$->t = $1;
+		$$->expr = $1->expr;
 	}
  | simple_expression addop term
 	{
-
+		add_to_simple_expression(&$1, $2, $3);
+		//Do some kind of type checking ??
+		if($1->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER) && $3->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER)) {
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_INTEGER;
+			if(addop == PLUS) 
+				$$->expr->val = $1->expr->val + $3->expr->val;
+			else if(addop == MINUS)
+				$$->expr->val = $1->expr->val - $3->expr->val;
+			else
+				// Invalid operation with integers
+		} else if($1->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN) && $3->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN)) {
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_BOOLEAN
+			if(addop == OR)
+				$$->expr->val = $1->expr->val | $3->expr->val;
+			else
+				// Invalid operation with boolean
+		} else {
+			//Type mismatch
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		}
 	}
  ;
 
 term : factor
 	{
-
+		$$ = new_term();
+		$$->f = $1;		
 	}
  | term mulop factor
-	{
-
+	{		
+		add_to_term(&$1, $2, $3);	
 	}
  ;
 
 sign : PLUS
 	{
-
+		$$ = new_sign();
+		*$$ = $1;
 	}
  | MINUS
 	{
-
+		$$ = new_sign();
+		*$$ = $1;
 	}
  ;
 
 factor : sign factor
 	{
-
+		$$ = new_factor();
+		$$->type = FACTOR_T_SINGFACTOR;
+		$$->data->f = (struct factor_data_t *) malloc(sizeof(struct factor_data_t));
+		CHECK_MEM_ERROR($$->data->f);
+		$$->data->f->sign = $1;
+		$$->data->f->next = $2;
+		$$->expr = $2->expr;
 	}
  | primary 
 	{
-
+		$$ = new_factor();
+		$$->type = FACTOR_T_PRIMARY;
+		$$->data->p = $1;
+		$$->expr = $1->expr;
 	}
  ;
 
 primary : variable_access
 	{
-
+		$$ = new_primary();
+		$$->type = PRIMARY_T_VARIABLE_ACCESS;
+		$$->data->va = $1;
+		$$->expr = $1->expr;
 	}
  | unsigned_constant
 	{
-
+		$$ = new_primary();
+		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
+		$$->data->un = $1;
+		$$->expr = $1->expr;
 	}
  | function_designator
 	{
-
+		$$ = new_primary();
+		$$->type = PRIMARY_T_FUNCTION_DESIGNATOR;
+		$$->data->fd = $1;
 	}
  | LPAREN expression RPAREN
 	{
-
+		$$ = new_primary();
+		$$->type = PRIMARY_T_EXPRESSION;
+		$$->data->e = $2;
+		$$->expr = $2->expr;
 	}
  | NOT primary
 	{
-
+		$$ = new_primary();
+		$$->type = PRIMARY_T_PRIMARY;
+		$$->data->p = (struct primary_data_t *) malloc(sizeof(struct primary_data_t)));
+		CHECK_MEM_ERROR($$->data->p);
+		$$->data->p->not = TRUE;
+		$$->data->p->next = $2;
+		$$->expr = $1->expr;
 	}
  ;
 
@@ -583,72 +689,78 @@ unsigned_number : unsigned_integer ;
 
 unsigned_integer : DIGSEQ
 	{
-
+		$$ = new_unsigned_integer;
+		$$->ui = atoi(yytext);
+		$$->expr = new_expression_data(); 
+        $$->expr->type = new_primitive_type(PRIMITIVE_TYPE_NAME_INTEGER); 
+        $$->expr->val = $$->ui;
 	}
  ;
 
 /* functions with no params will be handled by plain identifier */
 function_designator : identifier params
 	{
-
+		$$ = new_function_designator();
+		$$->id = $1;
+		$$->apl = $2;
 	}
  ;
 
 addop: PLUS
 	{
-
+		$$ = $1;
 	}
  | MINUS
 	{
-
+		$$ = $1;
 	}
  | OR
 	{
-
+		$$ = $1;
 	}
  ;
 
 mulop : STAR
 	{
-
+		$$ = $1;
 	}
  | SLASH
 	{
-
+		$$ = $1;
 	}
  | MOD
 	{
-
+		$$ = $1;
 	}
  | AND
 	{
-
+		$$ = $1;
 	}
  ;
 
 relop : EQUAL
 	{
-
+		$$ = $1;
 	}
  | NOTEQUAL
 	{
-
+		$$ = $1;
 	}
  | LT
 	{
-
+		$$ = $1;
 	}
  | GT
 	{
-
+		$$ = $1;
 	}
  | LE
 	{
-
+		$$ = $1;
 	}
  | GE
 	{
-
+		$$ = $1;
 	}
  ;
 
