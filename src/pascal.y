@@ -178,153 +178,225 @@ identifier_list : identifier_list comma identifier
 
 class_list : class_list class_identification PBEGIN class_block END
 	{
-		// add_to_class_list(class_list($1), class_identification($2), class_block($4))
-		// symtab_insert(symAttr(SA_CLASS), $1->next);
-		// symtab_exit_scope();
+		add_to_class_list($1, $2, $4)
+		
+		// Return to the higher scope and set the class_list_t ptr
+		symtab_exit_scope($1->next);
 	}
  | class_identification PBEGIN class_block END
 	{
 		// Create the tail of the class list, $$ = new_class_list()
-		// add_to_class_list($$, class_identification($1), class_block($3))
-		// symtab_insert(symAttr(SA_CLASS), $$);
-		// symtab_exit_scope();
+		$$ = new_class_list();
+		$$->ci = $1;
+		$$->cb = $3;
+		$$->next = NULL;
+		
+		// Return to the higher scope and set the class_list_t ptr
+		symtab_exit_scope($$);
 	}
  ;
 
 class_identification : CLASS identifier
 	{
-		// Create class_identification
-		// symtab_enter_scope();
+		// Create class_identification without an extend id
+		$$ = new_class_identification();
+		$$->id = $1;
+		$$->extend = NULL;
 		
+		// After encountering a class ident, start a class scope
+		symtab_insert(symAttr(SA_CLASS), NULL);
+		symtab_enter_scope();
 	}
 | CLASS identifier EXTENDS identifier
 	{
-		// Create class_identification (base case)
-		// symtab_enter_scope();
+		// Create class_identification with an extend id
+		$$ = new_class_identification();
+		$$->id = $1;
+		$$->extend = $3;
+		
+		// After encountering a class ident, start a class scope
+		symtab_insert(symAttr(SA_CLASS), NULL);
+		symtab_enter_scope();
 	}
 ;
 
-class_block:
- variable_declaration_part
- func_declaration_list
+class_block: variable_declaration_part func_declaration_list
 	{
-
+		$$ = new_class_block();
+		$$->vdl = $1;
+		$$->fdl = $2;
 	}
  ;
 
 type_denoter : array_type
 	{
-
+		$$ = new_type_denoter();
+		$$->type = TYPE_DENOTER_T_ARRAY_TYPE;
+		$$->name = 
+		$$->data.at = $1;
 	}
  | identifier
 	{
-
+		$$ = new_type_denoter();
+		$$->type = TYPE_DENOTER_T_IDENTIFIER;
+		$$->name = $1;
+		$$->data.id = $1;
 	}
  ;
 
 array_type : ARRAY LBRAC range RBRAC OF type_denoter
 	{
-
+		$$ = new_array_type();
+		$$->r = $3;
+		$$->td = $6;
 	}
  ;
 
 range : unsigned_integer DOTDOT unsigned_integer
 	{
-
+		$$ = new_range();
+		$$->min = $1;
+		$$->max = $3;
 	}
  ;
 
 variable_declaration_part : VAR variable_declaration_list semicolon
 	{
-
+		add_to_variable_declaration_list($2);
 	}
  |
 	{
-
+		$$ = new_variable_declaration_list();
 	}
  ;
 
 variable_declaration_list : variable_declaration_list semicolon variable_declaration
 	{
-		//add_to_variable_list($1, $3);
-		//symtab_insert(symAttr(SA_VAR), $1->next);
+		add_to_variable_declaration_list($1, $3);
+		symtab_insert(symAttr(SA_VAR), $1->next);
 	}
  | variable_declaration
 	{
-		// $$ = new_variable_list()
-		//symtab_insert(symAttr(SA_VAR), $$)
+		// Create the head of the variable list
+		$$ = new_variable_declaration_list();
+		
+		// Insert the variable declaration list into the currentScope's next node
+		symtab_insert(symAttr(SA_VAR), $$)
 	}
 
  ;
 
 variable_declaration : identifier_list COLON type_denoter
 	{
-
+		$$ = new_variable_declaration();
+		$$->il = $1;
+		$$->tden = $3;
+		$$->line_number = line_number;
 	}
  ;
 
 func_declaration_list : func_declaration_list semicolon function_declaration
 	{
+		add_to_func_declaration_list(&$1, $3);
 		
+		// Exit the function's scope
+		symtab_exit_scope($1->next);
 	}
  | function_declaration
 	{
-
+		$$ = new_func_declaration_list();
+		$$->fd = $1;
+		$$->next = NULL;
+		
+		// Exit the function's scope
+		symtab_exit_scope($$);
 	}
  |
 	{
-
 	}
  ;
 
 formal_parameter_list : LPAREN formal_parameter_section_list RPAREN 
 	{
-
+		$$ = $2;
 	}
 ;
 formal_parameter_section_list : formal_parameter_section_list semicolon formal_parameter_section
 	{
-
+		add_to_formal_parameter_section_list(&$1, $3);
 	}
  | formal_parameter_section
 	{
-
+		// Create the head of the formal_parameter_section_list
+		$$ = new_formal_parameter_section_list();
+		$$->fps = $1;
+		$$->next = NULL;
 	}
  ;
 
 formal_parameter_section : value_parameter_specification
+	{
+		$$ = new_formal_parameter_section();
+		$$->il = $1->next;
+		$$->id = $1->id;
+		$$->is_var = true;
+	}
  | variable_parameter_specification
+ 	{
+ 		$$ = new_formal_parameter_section();
+ 		$$->il = $1->next;
+		$$->id = $1->id;
+		$$->is_var = false;
+ 	}
  ;
 
 value_parameter_specification : identifier_list COLON identifier
 	{
-
+		$$ = new_identifier_list();
+		$$->next = $2;
+		$$-id = $4;
 	}
  ;
 
 variable_parameter_specification : VAR identifier_list COLON identifier
 	{
-
+		$$ = new_identifier_list();
+		$$->next = $2;
+		$$-id = $4;
 	}
  ;
 
 function_declaration : function_identification semicolon function_block
 	{
-
+		$$ = new_function_declaration();
+		struct function_heading_t *fh = new_function_heading();
+		fh->id = $1;
+		$$->fh = fh;
+		$$->fb = $3;
+		$$->line_number = line_number;
 	}
  | function_heading semicolon function_block
 	{
-
+		$$ = new_function_declaration();
+		$$->fh = $1;
+		$$->fb = $3;
+		$$->line_number = line_number;
 	}
  ;
 
 function_heading : FUNCTION identifier COLON result_type
 	{
-
+		$$ = new_function_heading();
+		$$->id = $2;
+		$$->res = $4;
+		$$->fpsl = NULL;
 	}
  | FUNCTION identifier formal_parameter_list COLON result_type
 	{
-
+		$$ = new_function_heading();
+		$$->id = $2;
+		$$->res = $5;
+		$$->fpsl = $3;
 	}
  ;
 
@@ -332,15 +404,20 @@ result_type : identifier ;
 
 function_identification : FUNCTION identifier
 	{
-
+		// Create an identifier for the function
+		$$ = new_identifier($2);
+		
+		// Insert the declaration list entry into the symbol table
+		symtab_insert(sym_attr_t(SA_FUNC), NULL);
+		symtab_enter_scope();
 	}
 ;
 
-function_block : 
-  variable_declaration_part
-  statement_part
+function_block : variable_declaration_part statement_part
 	{
-
+		$$ = new_function_block();
+		$$->vdl = $1;
+		$$->ss = $2;
 	}
 ;
 
@@ -349,78 +426,112 @@ statement_part : compound_statement
 
 compound_statement : PBEGIN statement_sequence END
 	{
-
+		$$ = $2;
 	}
  ;
 
 statement_sequence : statement
 	{
-
+		// Create head of the statement_sequence list
+		$$ = new_statement_sequence();
+		$$->s = $1;
+		$$->next = NULL;
 	}
  | statement_sequence semicolon statement
 	{
-
+		// Add to statement_sequence list
+		$$ = add_to_statement_sequence(&$1, $3);
 	}
  ;
 
 statement : assignment_statement
 	{
-
+		$$ = new_statement();
+		$$->type = STATEMENT_T_ASSIGNMENT;
+		$$->data.as = $1;
+		$$->line_number = line_number;
 	}
  | compound_statement
 	{
-
+		$$ = new_statement();
+		$$->type = STATEMENT_T_SEQUENCE;
+		$$->data.ss = $1;
+		$$->line_number = line_number;
 	}
  | if_statement
 	{
-
+		$$ = new_statement();
+		$$->type = STATEMENT_T_IF;
+		$$->data.is = $1;
+		$$->line_number = line_number;
 	}
  | while_statement
 	{
-
+		$$ = new_statement();
+		$$->type = STATEMENT_T_WHILE;
+		$$->data.ws = $1;
+		$$->line_number = line_number;
 	}
  | print_statement
-        {
-
-        }
+    {
+		$$ = new_statement();
+		$$->type = STATEMENT_T_PRINT;
+		$$->data.ps = $1;
+		$$->line_number = line_number;
+    }
  ;
 
 while_statement : WHILE boolean_expression DO statement
 	{
-
+		$$ = new_while_statement();
+		$$->e = $2;
+		$$->s = $4;
 	}
  ;
 
 if_statement : IF boolean_expression THEN statement ELSE statement
 	{
-
+		$$ = new_if_statement();
+		$$->e = $2;
+		$$->s1 = $4;
+		$$->s2 = $6;
 	}
  ;
 
 assignment_statement : variable_access ASSIGNMENT expression
 	{
-
+		$$ = new_assignment_statement();
+		$$->va = $1;
+		$$->e = $3;
+		$$->oe = NULL;
 	}
  | variable_access ASSIGNMENT object_instantiation
 	{
-
+		$$ = new_assignment_statement();
+		$$->va = $1;
+		$$->e = NULL;
+		$$->oe = $3;
 	}
  ;
 
 object_instantiation: NEW identifier
 	{
-
+		$$ = new_object_instantiation();
+		$$->id = $2;
 	}
  | NEW identifier params
 	{
-
+		$$ = new_object_instantiation();
+		$$->id = $2;
+		$$->apl = params;
 	}
 ;
 
 print_statement : PRINT variable_access
-        {
-
-        }
+    {
+		$$ = new_print_statement();
+		$$->va = $2;
+    }
 ;
 
 variable_access : identifier

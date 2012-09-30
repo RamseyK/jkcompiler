@@ -34,14 +34,31 @@ void symtab_init(struct program_t* program) {
 void symtab_print(int numOfTabs) {
 }
 
+/**
+ * Indicate the next symtab_insert call should insert a child node into the symbol table instead of an adjacent node
+ */
 void symtab_enter_scope() {
 	enterNext = true;
 }
 
-void symtab_exit_scope() {
+/**
+ * Move the currentScope pointer one level higher and set a pointer to the expected data structure in the node
+ * 
+ * @param pointer Pointer to the expected data structure to set in the currentScope node
+ */
+void symtab_exit_scope(void *pointer) {
 	currScope = currScope->outer;
+	currScope->ptr = pointer;
 }
 
+/**
+ * Insert an adjacent or child node into the symbol table
+ * A child node will be inserted if symtab_enter_scope preceded a call to this function
+ *
+ * @param attr Attribute ID correponding to values in the sym_attr_t enum
+ * @param pointer Pointer to the expected data structure associated with the node.
+ * 	If unknown at insert time (as is the case in classes and functions), set pointer to NULL
+ */
 void symtab_insert(int attr, void *pointer) {
 	struct scope_t *newScope = (struct scope_t *) malloc(sizeof(struct scope_t));
 	CHECK_MEM_ERROR(newScope);
