@@ -21,9 +21,19 @@ void semantic_analysis(struct program_t *p) {
     struct class_list_t *temp_cl;
 
     temp_cl = p->cl;
+    
+    // Fix up all extend / subclass related structures
     while (temp_cl != NULL) {
-        // If temp_cl->extend != null, check if extend is in p->cl
-        
+    	// If temp_cl->extend != null, check if extend is in p->cl
+    	
+    	// Add subclass into the scope of the base class
+    	// Set the parent pointer of the subclass to base class
+    }
+    
+    // Now that the class list is fixed, check deeper into the program
+    temp_cl = p->cl;
+    while (temp_cl != NULL) {
+
         // Fixup type_denoters and set the appropriate type (determine if class or identifier)
         // See type_denoter in the grammer to understand why this needs to be done
 

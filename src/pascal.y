@@ -257,6 +257,10 @@ range : unsigned_integer DOTDOT unsigned_integer
 		$$ = new_range();
 		$$->min = $1;
 		$$->max = $3;
+		
+		// If the min is greater than the max, error
+		if($$->min->ui > $$->max->ui)
+			error_array_range_invalid(line_number, $$->min->ui, $$->max->ui);
 	}
  ;
 

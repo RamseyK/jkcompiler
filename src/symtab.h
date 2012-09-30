@@ -23,9 +23,7 @@
 #define SYM_ATTR_VAR 1 //variable_declaration_list_t (need to get to type_denoter for type checking)
 #define SYM_ATTR_CLASS 2 // class_list_t
 #define SYM_ATTR_FUNC 3 //func_declaration_list_t
-#define SYM_ATTR_IF 4 //if_statement_t
-#define SYM_ATTR_WHILE 5 //while_statement_t
-#define SYM_ATTR_PROGRAM 6
+#define SYM_ATTR_PROGRAM 4
 
 struct scope_t {
 	int attrId;
