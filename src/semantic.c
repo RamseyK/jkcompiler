@@ -23,6 +23,9 @@ void semantic_analysis(struct program_t *p) {
     temp_cl = p->cl;
     while (temp_cl != NULL) {
         // If temp_cl->extend != null, check if extend is in p->cl
+        
+        // Fixup type_denoters and set the appropriate type (determine if class or identifier)
+        // See type_denoter in the grammer to understand why this needs to be done
 
         // Process the variable_declaration_list
         /*

@@ -17,7 +17,7 @@ void symtab_init(struct program_t* program) {
     // Initialize root scope
     rootScope = (struct scope_t *) malloc(sizeof(struct scope_t));
     
-    rootScope->attrId = SA_PROGRAM;
+    rootScope->attrId = SYM_ATTR_PROGRAM;
     rootScope->ptr = program;
     rootScope->next = NULL;
     rootScope->inner = NULL;
@@ -93,7 +93,7 @@ struct scope_t *symtab_lookup_class(char *name) {
 	// Loop through all CLASS scope nodes in the inner scope of the root
 	struct scope_t *it = rootScope->inner;
 	while(it != NULL) {
-		if(it->attrId == SA_CLASS) {
+		if(it->attrId == SYM_ATTR_CLASS) {
 			struct class_list_t *cl = (struct class_list_t*)it->ptr;
 		
 			// Found class, names match
@@ -115,7 +115,7 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 	// Loop through all FUNC scope nodes adjacent to the specified classScope
 	struct scope_t *it = classScope->inner;
 	while(it != NULL) {
-		if(it->attrId == SA_FUNC) {
+		if(it->attrId == SYM_ATTR_FUNC) {
 			struct func_declaration_list_t *fdl = (struct func_declaration_list_t*)it->ptr;
 		
 			// Found function, names match
@@ -130,7 +130,7 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 	
 	// Check for the function in a parent class until the root is reached
 	it = classScope->outer;
-	while (it != root) {
+	while (it != rootScope) {
 		return symtab_lookup_function(it, name);
 	}
 	
@@ -147,7 +147,7 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 	// Loop through all variables nodes adjacent to the specified scope
 	struct scope_t *it = scope->inner;
 	while(it != NULL) {
-		if(it->attrId == SA_VAR) {
+		if(it->attrId == SYM_ATTR_VAR) {
 			struct variable_declaration_list_t *vdl = (struct variable_declaration_list_t*)it->ptr;
 			
 			// Found variable, names match

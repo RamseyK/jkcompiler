@@ -178,7 +178,7 @@ identifier_list : identifier_list comma identifier
 
 class_list : class_list class_identification PBEGIN class_block END
 	{
-		add_to_class_list($1, $2, $4)
+		add_to_class_list(&$1, $2, $4);
 		
 		// Return to the higher scope and set the class_list_t ptr
 		symtab_exit_scope($1->next);
@@ -200,22 +200,22 @@ class_identification : CLASS identifier
 	{
 		// Create class_identification without an extend id
 		$$ = new_class_identification();
-		$$->id = $1;
+		$$->id = $2;
 		$$->extend = NULL;
 		
 		// After encountering a class ident, start a class scope
-		symtab_insert(symAttr(SA_CLASS), NULL);
+		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
 	}
 | CLASS identifier EXTENDS identifier
 	{
 		// Create class_identification with an extend id
 		$$ = new_class_identification();
-		$$->id = $1;
-		$$->extend = $3;
+		$$->id = $2;
+		$$->extend = $4;
 		
 		// After encountering a class ident, start a class scope
-		symtab_insert(symAttr(SA_CLASS), NULL);
+		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
 	}
 ;
@@ -232,7 +232,7 @@ type_denoter : array_type
 	{
 		$$ = new_type_denoter();
 		$$->type = TYPE_DENOTER_T_ARRAY_TYPE;
-		$$->name = 
+		$$->name = NULL;
 		$$->data.at = $1;
 	}
  | identifier
@@ -262,7 +262,8 @@ range : unsigned_integer DOTDOT unsigned_integer
 
 variable_declaration_part : VAR variable_declaration_list semicolon
 	{
-		add_to_variable_declaration_list($2);
+		$$ = new_variable_declaration_list();
+		$$->next = $2;
 	}
  |
 	{
@@ -272,8 +273,8 @@ variable_declaration_part : VAR variable_declaration_list semicolon
 
 variable_declaration_list : variable_declaration_list semicolon variable_declaration
 	{
-		add_to_variable_declaration_list($1, $3);
-		symtab_insert(symAttr(SA_VAR), $1->next);
+		add_to_variable_declaration_list(&$1, $3);
+		symtab_insert(SYM_ATTR_VAR, $1->next);
 	}
  | variable_declaration
 	{
@@ -281,7 +282,7 @@ variable_declaration_list : variable_declaration_list semicolon variable_declara
 		$$ = new_variable_declaration_list();
 		
 		// Insert the variable declaration list into the currentScope's next node
-		symtab_insert(symAttr(SA_VAR), $$)
+		symtab_insert(SYM_ATTR_VAR, $$);
 	}
 
  ;
@@ -337,14 +338,14 @@ formal_parameter_section_list : formal_parameter_section_list semicolon formal_p
 formal_parameter_section : value_parameter_specification
 	{
 		$$ = new_formal_parameter_section();
-		$$->il = $1->next;
+		$$->il = $1->il;
 		$$->id = $1->id;
 		$$->is_var = true;
 	}
  | variable_parameter_specification
  	{
  		$$ = new_formal_parameter_section();
- 		$$->il = $1->next;
+ 		$$->il = $1->il;
 		$$->id = $1->id;
 		$$->is_var = false;
  	}
@@ -352,17 +353,17 @@ formal_parameter_section : value_parameter_specification
 
 value_parameter_specification : identifier_list COLON identifier
 	{
-		$$ = new_identifier_list();
-		$$->next = $2;
-		$$-id = $4;
+		$$ = new_formal_parameter_section();
+		$$->il = $1;
+		$$->id = $3;
 	}
  ;
 
 variable_parameter_specification : VAR identifier_list COLON identifier
 	{
-		$$ = new_identifier_list();
-		$$->next = $2;
-		$$-id = $4;
+		$$ = new_formal_parameter_section();
+		$$->il = $2;
+		$$->id = $4;
 	}
  ;
 
@@ -408,7 +409,7 @@ function_identification : FUNCTION identifier
 		$$ = new_identifier($2);
 		
 		// Insert the declaration list entry into the symbol table
-		symtab_insert(sym_attr_t(SA_FUNC), NULL);
+		symtab_insert(SYM_ATTR_FUNC, NULL);
 		symtab_enter_scope();
 	}
 ;
@@ -440,7 +441,7 @@ statement_sequence : statement
  | statement_sequence semicolon statement
 	{
 		// Add to statement_sequence list
-		$$ = add_to_statement_sequence(&$1, $3);
+		add_to_statement_sequence(&$1, $3);
 	}
  ;
 
@@ -523,7 +524,7 @@ object_instantiation: NEW identifier
 	{
 		$$ = new_object_instantiation();
 		$$->id = $2;
-		$$->apl = params;
+		$$->apl = $3;
 	}
 ;
 
@@ -538,25 +539,25 @@ variable_access : identifier
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_IDENTIFIER;
-		$$->data->id = $1;
+		$$->data.id = $1;
 	}
  | indexed_variable
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_INDEXED_VARIABLE;
-		$$->data->iv = $1;
+		$$->data.iv = $1;
 	}
  | attribute_designator
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR;
-		$$->data->ad = $1;
+		$$->data.ad = $1;
 	}
  | method_designator
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_METHOD_DESIGNATOR;
-		$$->data->md = $1;
+		$$->data.md = $1;
 	}
  ;
 
@@ -574,7 +575,7 @@ index_expression_list : index_expression_list comma index_expression
 	}
  | index_expression
 	{
-		$$ = new_index_espression_list();
+		$$ = new_index_expression_list();
 		$$->e = $1;
 	}
  ;
@@ -650,26 +651,26 @@ expression : simple_expression
 		$$->relop = $2;
 		$$->se2 = $3;
 		//Do some kind of type checking ??
-		if($1->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER) && $3->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER)) {
+		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
 			$$->expr = new_expression_data();
-			$$->expr->type = PRIMITIVE_TYPE_BOOL;
-			if(relop == EQUAL)
-				$$->expr->val = ($1->expr->val == $3->expr->val)
-			if(relop == NOTEQUAL)
-				$$->expr->val = ($1->expr->val != $3->expr->val)
-			if(relop == GT)
-				$$->expr->val = ($1->expr->val > $3->expr->val)
-			if(relop == LT)
-				$$->expr->val = ($1->expr->val < $3->expr->val)
-			if(relop == GE)
-				$$->expr->val = ($1->expr->val >= $3->expr->val)
-			if(relop == LE)
-				$$->expr->val = ($1->expr->val <= $3->expr->val)
-		} else if($1->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN) && $3->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN)) {
-			if(relop == EQUAL)
-				$$->expr->val = ($1->expr->val == $3->expr->val)
-			if(relop == NOTEQUAL)
-				$$->expr->val = ($1->expr->val != $3->expr->val)
+			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
+			if($2 == OP_EQUAL)
+				$$->expr->val = ($1->expr->val == $3->expr->val);
+			if($2 == OP_NOTEQUAL)
+				$$->expr->val = ($1->expr->val != $3->expr->val);
+			if($2 == OP_GT)
+				$$->expr->val = ($1->expr->val > $3->expr->val);
+			if($2 == OP_LT)
+				$$->expr->val = ($1->expr->val < $3->expr->val);
+			if($2 == OP_GE)
+				$$->expr->val = ($1->expr->val >= $3->expr->val);
+			if($2 == OP_LE)
+				$$->expr->val = ($1->expr->val <= $3->expr->val);
+		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
+			if($2 == OP_EQUAL)
+				$$->expr->val = ($1->expr->val == $3->expr->val);
+			if($2 == OP_NOTEQUAL)
+				$$->expr->val = ($1->expr->val != $3->expr->val);
 		} else {
 			//Type mismatch
 			$$->expr = new_expression_data();
@@ -688,22 +689,24 @@ simple_expression : term
 	{
 		add_to_simple_expression(&$1, $2, $3);
 		//Do some kind of type checking ??
-		if($1->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER) && $3->expr->type.strcmp(PRIMITIVE_TYPE_INTEGER)) {
+		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
 			$$->expr = new_expression_data();
-			$$->expr->type = PRIMITIVE_TYPE_INTEGER;
-			if(addop == PLUS) 
+			$$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER;
+			if($2 == OP_PLUS) 
 				$$->expr->val = $1->expr->val + $3->expr->val;
-			else if(addop == MINUS)
+			else if($2 == OP_MINUS)
 				$$->expr->val = $1->expr->val - $3->expr->val;
-			else
+			else {
 				// Invalid operation with integers
-		} else if($1->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN) && $3->expr->type.strcmp(PRIMITIVE_TYPE_BOOLEAN)) {
+				}
+		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
 			$$->expr = new_expression_data();
-			$$->expr->type = PRIMITIVE_TYPE_BOOLEAN
-			if(addop == OR)
-				$$->expr->val = $1->expr->val | $3->expr->val;
-			else
+			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
+			if($2 == OP_OR)
+				$$->expr->val = (int)$1->expr->val | (int)$3->expr->val;
+			else {
 				// Invalid operation with boolean
+				}
 		} else {
 			//Type mismatch
 			$$->expr = new_expression_data();
@@ -726,30 +729,28 @@ term : factor
 sign : PLUS
 	{
 		$$ = new_sign();
-		*$$ = $1;
+		*$$ = OP_PLUS;
 	}
  | MINUS
 	{
 		$$ = new_sign();
-		*$$ = $1;
+		*$$ = OP_MINUS;
 	}
  ;
 
 factor : sign factor
 	{
 		$$ = new_factor();
-		$$->type = FACTOR_T_SINGFACTOR;
-		$$->data->f = (struct factor_data_t *) malloc(sizeof(struct factor_data_t));
-		CHECK_MEM_ERROR($$->data->f);
-		$$->data->f->sign = $1;
-		$$->data->f->next = $2;
+		$$->type = FACTOR_T_SIGNFACTOR;
+		$$->data.f.sign = $1;
+		$$->data.f.next = $2;
 		$$->expr = $2->expr;
 	}
  | primary 
 	{
 		$$ = new_factor();
 		$$->type = FACTOR_T_PRIMARY;
-		$$->data->p = $1;
+		$$->data.p = $1;
 		$$->expr = $1->expr;
 	}
  ;
@@ -758,38 +759,36 @@ primary : variable_access
 	{
 		$$ = new_primary();
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
-		$$->data->va = $1;
+		$$->data.va = $1;
 		$$->expr = $1->expr;
 	}
  | unsigned_constant
 	{
 		$$ = new_primary();
 		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
-		$$->data->un = $1;
+		$$->data.un = $1;
 		$$->expr = $1->expr;
 	}
  | function_designator
 	{
 		$$ = new_primary();
 		$$->type = PRIMARY_T_FUNCTION_DESIGNATOR;
-		$$->data->fd = $1;
+		$$->data.fd = $1;
 	}
  | LPAREN expression RPAREN
 	{
 		$$ = new_primary();
 		$$->type = PRIMARY_T_EXPRESSION;
-		$$->data->e = $2;
+		$$->data.e = $2;
 		$$->expr = $2->expr;
 	}
  | NOT primary
 	{
 		$$ = new_primary();
 		$$->type = PRIMARY_T_PRIMARY;
-		$$->data->p = (struct primary_data_t *) malloc(sizeof(struct primary_data_t)));
-		CHECK_MEM_ERROR($$->data->p);
-		$$->data->p->not = TRUE;
-		$$->data->p->next = $2;
-		$$->expr = $1->expr;
+		$$->data.p.not = true;
+		$$->data.p.next = $2;
+		$$->expr = $2->expr;
 	}
  ;
 
@@ -800,7 +799,7 @@ unsigned_number : unsigned_integer ;
 
 unsigned_integer : DIGSEQ
 	{
-		$$ = new_unsigned_integer;
+		$$ = new_unsigned_number();
 		$$->ui = atoi(yytext);
 		$$->expr = new_expression_data(); 
         $$->expr->type = new_primitive_type(PRIMITIVE_TYPE_NAME_INTEGER); 
@@ -819,59 +818,59 @@ function_designator : identifier params
 
 addop: PLUS
 	{
-		$$ = $1;
+		$$ = OP_PLUS;
 	}
  | MINUS
 	{
-		$$ = $1;
+		$$ = OP_MINUS;
 	}
  | OR
 	{
-		$$ = $1;
+		$$ = OP_OR;
 	}
  ;
 
 mulop : STAR
 	{
-		$$ = $1;
+		$$ = OP_STAR;
 	}
  | SLASH
 	{
-		$$ = $1;
+		$$ = OP_SLASH;
 	}
  | MOD
 	{
-		$$ = $1;
+		$$ = OP_MOD;
 	}
  | AND
 	{
-		$$ = $1;
+		$$ = OP_AND;
 	}
  ;
 
 relop : EQUAL
 	{
-		$$ = $1;
+		$$ = OP_EQUAL;
 	}
  | NOTEQUAL
 	{
-		$$ = $1;
+		$$ = OP_NOTEQUAL;
 	}
  | LT
 	{
-		$$ = $1;
+		$$ = OP_LT;
 	}
  | GT
 	{
-		$$ = $1;
+		$$ = OP_GT;
 	}
  | LE
 	{
-		$$ = $1;
+		$$ = OP_LE;
 	}
  | GE
 	{
-		$$ = $1;
+		$$ = OP_GE;
 	}
  ;
 

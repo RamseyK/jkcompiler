@@ -26,6 +26,20 @@
 #define BOOLEAN_VALUE_TRUE "True"
 #define BOOLEAN_VALUE_FALSE "False"
 
+#define OP_PLUS 1
+#define OP_MINUS 2
+#define OP_OR 3
+#define OP_STAR 4
+#define OP_SLASH 5
+#define OP_MOD 6
+#define OP_AND 7
+#define OP_EQUAL 8
+#define OP_NOTEQUAL 9
+#define OP_LT 10
+#define OP_GT 11
+#define OP_LE 12
+#define OP_GE 13
+
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \

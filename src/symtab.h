@@ -19,14 +19,13 @@
  */
 
 // Attributes that designate the object scope_t->ptr points to
-enum sym_attr_t {
-	SA_VAR, //variable_declaration_list_t (need to get to type_denoter for type checking)
-	SA_CLASS, // class_list_t
-	SA_FUNC, //func_declaration_list_t
-	SA_IF, //if_statement_t
-	SA_WHILE, //while_statement_t
-	SA_PROGRAM
-};
+
+#define SYM_ATTR_VAR 1 //variable_declaration_list_t (need to get to type_denoter for type checking)
+#define SYM_ATTR_CLASS 2 // class_list_t
+#define SYM_ATTR_FUNC 3 //func_declaration_list_t
+#define SYM_ATTR_IF 4 //if_statement_t
+#define SYM_ATTR_WHILE 5 //while_statement_t
+#define SYM_ATTR_PROGRAM 6
 
 struct scope_t {
 	int attrId;
