@@ -144,20 +144,12 @@ program_heading : PROGRAM identifier
 		$$ = new_program_heading();
 		$$->id = $2;
 		$$->il = NULL;
-		
-		// Enter the scope of the program
-		//printf("Entering scope of program\n");
-		symtab_enter_scope();
 	}
  | PROGRAM identifier LPAREN identifier_list RPAREN
 	{
 		$$ = new_program_heading();
 		$$->id = $2;
 		$$->il = $4;
-		
-		// Enter the scope of the program
-		//printf("Entering scope of program\n");
-		symtab_enter_scope();
 	}
  ;
 
@@ -170,9 +162,8 @@ identifier_list : identifier_list comma identifier
         {
         	// Create and add first identifier node
         	$$ = new_identifier_list();
-
-			// Add identifier to $$ (current identifier_list node):
-			add_to_identifier_list(&$$, $1);
+        	$$->id = $1;
+        	$$->next = NULL;
         }
  ;
 
@@ -199,7 +190,7 @@ class_list : class_list class_identification PBEGIN class_block END
 		$$->next = NULL;
 		
 		// Return to the higher scope and set the class_list_t ptr
-		//printf("exiting class-id scope (base)\n");
+		//printf("exiting class-id scope (base) %p\n", $$);
 		symtab_exit_scope($$);
 	}
  ;
@@ -294,6 +285,8 @@ variable_declaration_list : variable_declaration_list semicolon variable_declara
 	{
 		// Create the head of the variable list
 		$$ = new_variable_declaration_list();
+		$$->vd = $1;
+		$$->next = NULL;
 		
 		// Insert the variable declaration list into the currentScope's next node
 		symtab_insert(SYM_ATTR_VAR, $$);

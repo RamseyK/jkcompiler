@@ -50,7 +50,7 @@ struct scope_t *currScope;
 
 void symtab_init(struct program_t* program);
 void symtab_print(int numOfTabs);
-void symtab_print_recrusive(struct scope_t* start);
+void symtab_print_recursive(struct scope_t* start);
 void symtab_set_current_scope(struct scope_t *newCurrentScope);
 void symtab_enter_scope();
 void symtab_exit_scope(void *pointer);

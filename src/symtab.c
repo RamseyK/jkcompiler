@@ -23,6 +23,7 @@ void symtab_init(struct program_t* program) {
     rootScope->inner = NULL;
     rootScope->outer = NULL;
     currScope = rootScope;
+	enterNext = true;
 }
 
 
@@ -38,7 +39,7 @@ void symtab_print(int numOfTabs) {
  * Print's adjacent nodes to the passed in node value
  * Decends into inner nodes recursively
  */
-void symtab_print_recrusive(struct scope_t* start) {
+void symtab_print_recursive(struct scope_t* start) {
 	if(start == NULL)
 		return;
 
@@ -50,30 +51,34 @@ void symtab_print_recrusive(struct scope_t* start) {
 		// Find node information based on the attribute type
 		char *name = NULL;
 		char *attrName = NULL;
-		switch(node->attrId) {
-			case SYM_ATTR_VAR:
-				name = ((struct variable_declaration_list_t*)node->ptr)->vd->il->id;
-				attrName = (char*)malloc(4);
-				strcpy(attrName, "VAR");
-				break;
-			case SYM_ATTR_CLASS:
-				name = ((struct class_list_t*)node->ptr)->ci->id;
-				attrName = (char*)malloc(6);
-				strcpy(attrName, "CLASS");
-				break;
-			case SYM_ATTR_FUNC:
-				name = ((struct func_declaration_list_t*)node->ptr)->fd->fh->id;
-				attrName = (char*)malloc(5);
-				strcpy(attrName, "FUNC");
-				break;
-			default:
-				name = ((struct program_t*)node->ptr)->ph->id;
-				attrName = (char*)malloc(8);
-				strcpy(attrName, "PROGRAM");
-				break;
+		if(node->attrId == SYM_ATTR_VAR) {
+			struct variable_declaration_list_t* vdl = (struct variable_declaration_list_t*)node->ptr;
+			name = vdl->vd->il->id;
+			if(name == NULL)
+				printf("id is null!\n");
+			attrName = (char*)malloc(4);
+			strcpy(attrName, "VAR");
+		} else if(node->attrId == SYM_ATTR_FUNC) {
+			struct func_declaration_list_t* fdl = (struct func_declaration_list_t*)node->ptr;
+			name = fdl->fd->fh->id;
+			attrName = (char*)malloc(5);
+			strcpy(attrName, "FUNC");
+		} else if(node->attrId == SYM_ATTR_CLASS) {
+			struct class_list_t* cl = (struct class_list_t*)node->ptr;
+			name = cl->ci->id;
+			attrName = (char*)malloc(6);
+			strcpy(attrName, "CLASS");
+		} else if(node->attrId == SYM_ATTR_PROGRAM) {
+			struct program_t* p = (struct program_t*)node->ptr;
+			name = p->ph->id;
+			attrName = (char*)malloc(8);
+			strcpy(attrName, "PROGRAM");
+		} else {
+			printf("??\n");
 		}
 
-		printf("%s(%s), ", name, attrName);
+		printf("%p: %s(%s), ", node->ptr, name, attrName);
+		free(attrName);
 
 		// Move to the adjacent node
 		node = node->next;
@@ -83,8 +88,7 @@ void symtab_print_recrusive(struct scope_t* start) {
 	// Decend into inner nodes if they exist in the order that they appear in the horizontal list
 	node = start;
 	while(node != NULL) {
-		if(node->inner != NULL)
-			symtab_print_recrusive(node->inner);
+		symtab_print_recursive(node->inner);
 
 		// Move to the adjacent node
 		node = node->next;
@@ -112,8 +116,8 @@ void symtab_enter_scope() {
  * @param pointer Pointer to the expected data structure to set in the currentScope node
  */
 void symtab_exit_scope(void *pointer) {
-	currScope = currScope->outer;
 	currScope->ptr = pointer;
+	currScope = currScope->outer;
 }
 
 /**
@@ -253,10 +257,10 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 			if(strcmp(vdl->vd->il->id, name) == 0) {
 				return it;
 			}
-			
-			// Move horizontally along scope
-			it = it->next;
 		}
+		
+		// Move horizontally along scope
+		it = it->next;
 	}
 	
 	// Variable not found, move to outer scope

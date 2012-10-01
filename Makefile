@@ -19,7 +19,7 @@ RTCHECKS := -fmudflap -fstack-check -gnato
 # GCC Production Flags
 PRODFLAGS := -Wall -O2
 # Active Flags
-CFLAGS := -std=gnu99 -fnested-functions $(DEBUGFLAGS)
+CFLAGS := -std=gnu99 $(DEBUGFLAGS)
 LINK := $(DEBUGFLAGS)
 
 # Bison Flags (-d = defines, -y = yacc behavior, -v = verbose)

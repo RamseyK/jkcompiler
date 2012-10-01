@@ -31,7 +31,11 @@ void semantic_analysis(struct program_t *p) {
     	// If temp_cl->extend != null, check if extend is in p->cl
 		// Check if the class has a base class
 		struct scope_t *childScope = symtab_lookup_class(temp_cl->ci->id);
+		if(childScope == NULL)
+			printf("Couldn't find the scope: %s\n", temp_cl->ci->id);
 		struct class_list_t *childClass = (struct class_list_t*)childScope->ptr;
+		if(childClass == NULL)
+			printf("Couldn't find the class\n");
 		if(childClass->ci->extend != NULL) {
 			struct scope_t *baseScope = symtab_lookup_class(childClass->ci->extend);
 			// Base Class doesn't exist
@@ -52,7 +56,7 @@ void semantic_analysis(struct program_t *p) {
 	if(!foundProgramClass)
 		error_missing_program_class();
     
-    // Now that the class list is fixed, check deeper into the program
+    /*// Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
     while (temp_cl != NULL) {
 
@@ -82,7 +86,7 @@ void semantic_analysis(struct program_t *p) {
 
         // Advance to the next class
         temp_cl = temp_cl->next;
-    }
+    }*/
 }
 
 /*
