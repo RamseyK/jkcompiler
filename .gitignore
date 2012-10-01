@@ -8,3 +8,10 @@ src/.project
 src/.cproject
 
 .metadata/*
+
+gmon.out
+
+*.DS_Store
+tests/tests_semantic/gmon.out
+
+*.output

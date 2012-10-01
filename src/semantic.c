@@ -11,8 +11,6 @@
 #include "usrdef.h"
 #include "symtab.h"
 
-
-
 /* -----------------------------------------------------------------------
  * Carries out semantic analysis on a program
  * -----------------------------------------------------------------------
@@ -61,25 +59,10 @@ void semantic_analysis(struct program_t *p) {
     while (temp_cl != NULL) {
 
         // Fix up type_denoters and set the appropriate type (determine if class or identifier)
-        // See type_denoter in the grammar to understand why this needs to be done
+    	fix_type_denoters();
 
-        // Process the variable_declaration_list
-        struct variable_declaration_list_t *temp_vdl = temp_cl->cb->vdl;
-        // for each variable_declaration_list
-        while(temp_vdl != NULL) {
-        	// Check if the type is defined
-        	struct type_denoter_t *temp_vtden = temp_vdl->vd->tden;
-        	// Look up the name for class
-        	if(temp_vtden->type == TYPE_DENOTER_T_CLASS_TYPE && !usrdef_lookup(temp_vtden->name))
-        		error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
-        	// Look up the array type's type denoter for arrays
-        	if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && !usrdef_lookup(temp_vtden->data.at->td->name))
-        		error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
-        	// Look up for other types
-        	if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && !usrdef_lookup(temp_vtden->name))
-        		error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
-        	temp_vdl = temp_vdl->next;
-        }
+    	// Process the variable declaration list
+    	//check_variable_list_types_defined(temp_cl->cb->vdl);
 		
         // Process the func_declaration_list
 
@@ -167,6 +150,49 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	}
 	// Not compatible
 	return false;
+}
+
+/*
+ * Checks that all types are defined for a variable_declaration_list_t.  Prints
+ * appropriate error messages
+ */
+void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) {
+	// Process the variable_declaration_list
+	struct variable_declaration_list_t *temp_vdl = vdl;
+	// for each variable_declaration_list
+	while(temp_vdl != NULL) {
+		// Check if the type is defined
+		struct type_denoter_t *temp_vtden = temp_vdl->vd->tden;
+		// Look up the name for class
+		if(temp_vtden->type == TYPE_DENOTER_T_CLASS_TYPE && usrdef_lookup_td(temp_vtden) == NULL)
+			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+		// Look up the array type's type denoter for arrays
+		if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && usrdef_lookup_td(temp_vtden->data.at->td) == NULL)
+			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
+		// Look up for other types
+		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && usrdef_lookup_name(temp_vtden) == NULL)
+			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+		temp_vdl = temp_vdl->next;
+	}
+}
+
+/*
+ * Fix up type_denoters and set the appropriate type (determine if class or identifier)
+ */
+void fix_type_denoters() {
+	struct type_denoter_list_t *temp_tdl = usrdef_types;
+	while(temp_tdl != NULL) {
+		// See if it is an identifier that may need to be fixed to a class
+		if(temp_tdl->tden->type == TYPE_DENOTER_T_IDENTIFIER) {
+			struct scope_t *class_scope = symtab_lookup_class(temp_tdl->tden->name);
+			// Class found update the type and data
+			if(class_scope != NULL) {
+				temp_tdl->tden->type = TYPE_DENOTER_T_CLASS_TYPE;
+				temp_tdl->tden->data.cl = (struct class_list_t *) class_scope->ptr;
+			}
+		}
+		temp_tdl = temp_tdl->next;
+	}
 }
 
 /*

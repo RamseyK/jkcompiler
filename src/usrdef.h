@@ -12,10 +12,16 @@
 char * usrdef_new_name();
 void usrdef_init();
 void usrdef_print();
-void usrdef_insert(char *usrdef_name);
-bool usrdef_lookup(char *usrdef_name);
+struct type_denoter_t *usrdef_insert(struct type_denoter_t *td);
+struct type_denoter_t *usrdef_lookup_td(struct type_denoter_t *td);
+struct type_denoter_t *usrdef_lookup_name(char *usrdef_name);
 
-struct identifier_list_t *usrdef_types;
+struct type_denoter_list_t *usrdef_types;
+
+struct type_denoter_list_t {
+	struct type_denoter_t *tden;
+	struct type_denoter_list_t *next;
+};
 
 #endif
 
