@@ -54,15 +54,13 @@ void semantic_analysis(struct program_t *p) {
 	if(!foundProgramClass)
 		error_missing_program_class();
     
-<<<<<<< HEAD
-    /*// Now that the class list is fixed, check deeper into the program
-=======
+    // Now that the class list is fixed, check deeper into the program
+
 	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
 	fix_type_denoters();
 	usrdef_print();
 
     // Now that the class list is fixed, check deeper into the program
->>>>>>> usrdef fixes, symtab fixes
     temp_cl = p->cl;
     while (temp_cl != NULL) {
     	// Process the variable declaration list
@@ -73,7 +71,7 @@ void semantic_analysis(struct program_t *p) {
 
         // Advance to the next class
         temp_cl = temp_cl->next;
-    }*/
+    }
 }
 
 /*

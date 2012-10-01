@@ -89,12 +89,7 @@ void symtab_print_recursive(struct scope_t* start) {
 	// Decend into inner nodes if they exist in the order that they appear in the horizontal list
 	node = start;
 	while(node != NULL) {
-<<<<<<< HEAD
 		symtab_print_recursive(node->inner);
-=======
-		if(node->inner != NULL)
-			symtab_print_recursive(node->inner);
->>>>>>> usrdef fixes, symtab fixes
 
 		// Move to the adjacent node
 		node = node->next;
@@ -266,14 +261,8 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 			if(strcmp(vdl->vd->il->id, name) == 0) {
 				return it;
 			}
-<<<<<<< HEAD
 		}
-		
-=======
-			
-			
-		}
->>>>>>> usrdef fixes, symtab fixes
+
 		// Move horizontally along scope
 		it = it->next;
 	}
