@@ -1,0 +1,53 @@
+Test Run By krjackso on Sun Sep 30 23:49:25 2012
+Native configuration is x86_64-apple-darwin11.4.0
+
+		=== opc tests ===
+
+Schedule of variations:
+    unix
+
+Running target unix
+Using /usr/local/share/dejagnu/baseboards/unix.exp as board description file for target.
+Using /usr/local/share/dejagnu/config/unix.exp as generic interface file for target.
+WARNING: Couldn't find tool config file for unix, using default.
+Running ./tests_semantic.exp ...
+spawn ./test_compiled.sh
+opc: Usage: opc [-v] [-exitsem] [-O] [-ir] [-free] [-fcf] [-fvn] [-fgre] [--help]
+PASSED
+PASS: Binary compiled
+spawn ./test_missing_program_class.sh
+FAIL: Missing program class
+spawn ./test_missing_base_class.sh
+FAIL: Missing base class
+spawn ./test_valid_class_definition.sh
+FAIL: Simple, valid class definition
+spawn ./test_invalid_class_definition_underscores.sh
+'_' (0137): illegal character at line 8
+8: syntax error at 'Switch'
+Errors detected. Exiting.
+PASSED
+PASS: Simple, invalid class definition: underscores
+spawn ./test_invalid_class_definition_undeclared_vars.sh
+FAIL: Simple, invalid class definition: undeclared variables
+spawn ./test_datatype_defined.sh
+FAIL: Datatype already defined
+spawn ./test_datatype_not_defined.sh
+FAIL: Datatype is not defined
+spawn ./test_type_mismatch_integer.sh
+FAIL: Type mismatch of integer
+spawn ./test_type_mismatch_array_integer.sh
+FAIL: Type mismatch of an integer element in an array
+spawn ./test_variable_declared.sh
+FAIL: Variable already declared
+spawn ./test_variable_not_declared.sh
+FAIL: Variable not declared
+spawn ./test_variable_not_declared_complex.sh
+FAIL: Variable not declared in a complex expression
+spawn ./test_variable_invalid_name_tf.sh
+got a INT signal, interrupted by user 
+
+		=== opc Summary ===
+
+# of expected passes		2
+# of unexpected failures	11
+runtest completed at Sun Sep 30 23:50:25 2012

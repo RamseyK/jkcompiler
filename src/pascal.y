@@ -12,6 +12,7 @@
 #include "shared.h"
 #include "rulefuncs.h"
 #include "symtab.h"
+#include "usrdef.h"
 
   int yylex(void);
   void yyerror(const char *error);
@@ -215,6 +216,7 @@ class_identification : CLASS identifier
 		//printf("entering class scope\n");
 		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
+
 	}
 | CLASS identifier EXTENDS identifier
 	{
@@ -227,6 +229,7 @@ class_identification : CLASS identifier
 		//printf("entering class scope (base)\n");
 		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
+		
 	}
 ;
 
@@ -247,10 +250,16 @@ type_denoter : array_type
 	}
  | identifier
 	{
-		$$ = new_type_denoter();
-		$$->type = TYPE_DENOTER_T_IDENTIFIER;
-		$$->name = $1;
-		$$->data.id = $1;
+		struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
+		new_type->name = $1;
+		new_type->data.id = $1;
+		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		if(found_type == NULL) {
+			$$ = usrdef_insert(new_type);
+		} else {
+			$$ = found_type;
+		}
 	}
  ;
 

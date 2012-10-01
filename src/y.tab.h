@@ -133,7 +133,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 89 "pascal.y"
+#line 90 "pascal.y"
 {
   struct type_denoter_t *tden;
   char *id;

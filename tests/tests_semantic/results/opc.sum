@@ -1,0 +1,28 @@
+Test Run By krjackso on Sun Sep 30 23:49:25 2012
+Native configuration is x86_64-apple-darwin11.4.0
+
+		=== opc tests ===
+
+Schedule of variations:
+    unix
+
+Running target unix
+Running ./tests_semantic.exp ...
+PASS: Binary compiled
+FAIL: Missing program class
+FAIL: Missing base class
+FAIL: Simple, valid class definition
+PASS: Simple, invalid class definition: underscores
+FAIL: Simple, invalid class definition: undeclared variables
+FAIL: Datatype already defined
+FAIL: Datatype is not defined
+FAIL: Type mismatch of integer
+FAIL: Type mismatch of an integer element in an array
+FAIL: Variable already declared
+FAIL: Variable not declared
+FAIL: Variable not declared in a complex expression
+
+		=== opc Summary ===
+
+# of expected passes		2
+# of unexpected failures	11
