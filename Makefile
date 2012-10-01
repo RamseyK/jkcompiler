@@ -53,7 +53,7 @@ clean:
 	echo " Cleaning...";
 	rm -rf $(BUILDDIR) $(BINDIR)/$(TARGET)*
 	cd $(SRCDIR); rm -f y.tab.h.tmp y.output
-	rm -f $(TESTSDIR)/tests_lib.inc
+	rm -f $(TESTSDIR)/tests_lib_shared_auto.inc
 	rm -f $(TESTSDIR)/tests_semantic/results/$(TARGET).{log,sum}
 	rm -f $(TESTSDIR)/tests_semantic/*.output
 	rm -f $(TESTSDIR)/tests_semantic/out.c
@@ -67,7 +67,7 @@ tests_semantic: tests_prepare
 	(cd $(TESTSDIR)/tests_semantic; runtest --all --output results --tool $(TARGET) tests_semantic.exp)
 
 tests_prepare:
-	@echo "BINARY=../../$(BINDIR)/$(TARGET)" > $(TESTSDIR)/tests_lib.inc
+	@echo "BINARY=../../$(BINDIR)/$(TARGET)" > $(TESTSDIR)/tests_lib_shared_auto.inc
 
 .PHONY: all lex yacc clean tests
 
