@@ -54,15 +54,19 @@ void semantic_analysis(struct program_t *p) {
 	if(!foundProgramClass)
 		error_missing_program_class();
     
+<<<<<<< HEAD
     /*// Now that the class list is fixed, check deeper into the program
+=======
+	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
+	fix_type_denoters();
+	usrdef_print();
+
+    // Now that the class list is fixed, check deeper into the program
+>>>>>>> usrdef fixes, symtab fixes
     temp_cl = p->cl;
     while (temp_cl != NULL) {
-
-        // Fix up type_denoters and set the appropriate type (determine if class or identifier)
-    	fix_type_denoters();
-
     	// Process the variable declaration list
-    	//check_variable_list_types_defined(temp_cl->cb->vdl);
+    	check_variable_list_types_defined(temp_cl->cb->vdl);
 		
         // Process the func_declaration_list
 
@@ -166,12 +170,16 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 		// Look up the name for class
 		if(temp_vtden->type == TYPE_DENOTER_T_CLASS_TYPE && usrdef_lookup_td(temp_vtden) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+		else
+			printf("Found type %s in usrdef\n", temp_vtden->name);
 		// Look up the array type's type denoter for arrays
 		if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && usrdef_lookup_td(temp_vtden->data.at->td) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
 		// Look up for other types
-		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && usrdef_lookup_name(temp_vtden) == NULL)
+		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && usrdef_lookup_td(temp_vtden) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+		else
+			printf("Found type %s in usrdef\n", temp_vtden->name);
 		temp_vdl = temp_vdl->next;
 	}
 }

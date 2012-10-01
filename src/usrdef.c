@@ -88,6 +88,7 @@ struct type_denoter_t *usrdef_lookup_td(struct type_denoter_t *td) {
 	while(temp_il != NULL) {
 		if(temp_il->tden == td)
 			return td;
+		temp_il = temp_il->next;
 	}
 	return NULL;
 }

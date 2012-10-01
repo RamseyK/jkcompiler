@@ -15,3 +15,9 @@ gmon.out
 tests/tests_semantic/gmon.out
 
 *.output
+
+tests/.DS_Store
+
+tests/tests_semantic/results/opc.log
+
+tests/tests_semantic/results/opc.sum

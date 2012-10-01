@@ -181,6 +181,18 @@ class_list : class_list class_identification PBEGIN class_block END
 		// Return to the higher scope and set the class_list_t ptr
 		//printf("exiting class-id scope\n");
 		symtab_exit_scope($1->next);
+		
+		// Add to usrdef list
+		/*struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+		new_type->name = $2->id;
+		new_type->data.cl = $$;
+		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		if(found_type == NULL) {
+			usrdef_insert(new_type);
+		} else {
+			error_type_already_defined(line_number, $2->id, line_number-1);
+		}*/
 	}
  | class_identification PBEGIN class_block END
 	{
@@ -193,6 +205,20 @@ class_list : class_list class_identification PBEGIN class_block END
 		// Return to the higher scope and set the class_list_t ptr
 		//printf("exiting class-id scope (base) %p\n", $$);
 		symtab_exit_scope($$);
+		
+		// Add to usrdef list
+		/*struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+		new_type->name = $1->id;
+		new_type->data.cl = $$;
+		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		if(found_type == NULL) {
+			usrdef_insert(new_type);
+		} else {
+			error_type_already_defined(line_number, $1->id, line_number-1);
+		}
+		usrdef_print();
+		printf("\n\n");*/
 	}
  ;
 
@@ -241,16 +267,21 @@ type_denoter : array_type
 	}
  | identifier
 	{
-		struct type_denoter_t *new_type = new_type_denoter();
+		$$ = new_type_denoter();
+		$$->type = TYPE_DENOTER_T_IDENTIFIER;
+		$$->name = $1;
+		$$->data.id = $1;
+		
+		/*struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
 		new_type->name = $1;
 		new_type->data.id = $1;
-		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		struct type_denoter_t *found_type = usrdef_lookup_name(new_type->name);
 		if(found_type == NULL) {
 			$$ = usrdef_insert(new_type);
 		} else {
 			$$ = found_type;
-		}
+		}*/
 	}
  ;
 

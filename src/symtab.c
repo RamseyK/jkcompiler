@@ -33,6 +33,7 @@ void symtab_init(struct program_t* program) {
  * ------------------------------------------------------------
  */
 void symtab_print(int numOfTabs) {
+	symtab_print_recursive(rootScope);
 }
 
 /**
@@ -88,7 +89,12 @@ void symtab_print_recursive(struct scope_t* start) {
 	// Decend into inner nodes if they exist in the order that they appear in the horizontal list
 	node = start;
 	while(node != NULL) {
+<<<<<<< HEAD
 		symtab_print_recursive(node->inner);
+=======
+		if(node->inner != NULL)
+			symtab_print_recursive(node->inner);
+>>>>>>> usrdef fixes, symtab fixes
 
 		// Move to the adjacent node
 		node = node->next;
@@ -141,13 +147,16 @@ void symtab_insert(int attr, void *pointer) {
 		newScope->outer = currScope;
 		currScope->inner = newScope;
 	
+		newScope->next = NULL;
 		// The current scope shifts inside previous current scope
 		currScope = newScope;
 		
 		enterNext = false;
-	} else { // Scope is adjacent
+	} else { 
+		// Scope is adjacent
 		newScope->outer = currScope->outer;
-	
+		newScope->inner = NULL;
+		
 		// Go to the last adjacent node in the current scope
 		struct scope_t *lastAdj = currScope;
 		GOTO_END_OF_LIST(lastAdj);
@@ -257,8 +266,14 @@ struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 			if(strcmp(vdl->vd->il->id, name) == 0) {
 				return it;
 			}
+<<<<<<< HEAD
 		}
 		
+=======
+			
+			
+		}
+>>>>>>> usrdef fixes, symtab fixes
 		// Move horizontally along scope
 		it = it->next;
 	}

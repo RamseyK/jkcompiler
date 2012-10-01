@@ -602,6 +602,7 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
+<<<<<<< HEAD
        0,   136,   136,   143,   149,   157,   162,   171,   185,   199,
      212,   227,   235,   242,   257,   265,   277,   283,   288,   293,
      306,   315,   329,   340,   344,   349,   353,   362,   369,   378,
@@ -613,6 +614,19 @@ static const yytype_uint16 yyrline[] =
      774,   783,   790,   797,   803,   810,   820,   823,   825,   836,
      844,   848,   852,   858,   862,   866,   870,   876,   880,   884,
      888,   892,   896,   902,   908,   911
+=======
+       0,   136,   136,   143,   153,   165,   170,   180,   206,   234,
+     247,   262,   270,   277,   297,   305,   317,   323,   328,   333,
+     344,   353,   367,   378,   382,   387,   391,   400,   407,   416,
+     424,   432,   441,   450,   457,   466,   468,   480,   488,   491,
+     497,   504,   511,   518,   525,   532,   539,   548,   556,   565,
+     572,   581,   586,   594,   601,   607,   613,   619,   627,   635,
+     639,   646,   648,   656,   665,   671,   675,   682,   687,   693,
+     702,   704,   710,   745,   751,   781,   786,   792,   797,   804,
+     812,   821,   828,   835,   841,   848,   858,   861,   863,   874,
+     882,   886,   890,   896,   900,   904,   908,   914,   918,   922,
+     926,   930,   934,   940,   946,   949
+>>>>>>> usrdef fixes, symtab fixes
 };
 #endif
 
@@ -1728,13 +1742,29 @@ yyreduce:
 		// Return to the higher scope and set the class_list_t ptr
 		//printf("exiting class-id scope\n");
 		symtab_exit_scope((yyvsp[(1) - (5)].cl)->next);
+		
+		// Add to usrdef list
+		/*struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+		new_type->name = $2->id;
+		new_type->data.cl = $$;
+		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		if(found_type == NULL) {
+			usrdef_insert(new_type);
+		} else {
+			error_type_already_defined(line_number, $2->id, line_number-1);
+		}*/
 	}
     break;
 
   case 8:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 186 "pascal.y"
+=======
+#line 207 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create the tail of the class list, $$ = new_class_list()
 		(yyval.cl) = new_class_list();
@@ -1745,13 +1775,31 @@ yyreduce:
 		// Return to the higher scope and set the class_list_t ptr
 		//printf("exiting class-id scope (base) %p\n", $$);
 		symtab_exit_scope((yyval.cl));
+		
+		// Add to usrdef list
+		/*struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+		new_type->name = $1->id;
+		new_type->data.cl = $$;
+		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		if(found_type == NULL) {
+			usrdef_insert(new_type);
+		} else {
+			error_type_already_defined(line_number, $1->id, line_number-1);
+		}
+		usrdef_print();
+		printf("\n\n");*/
 	}
     break;
 
   case 9:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 200 "pascal.y"
+=======
+#line 235 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create class_identification without an extend id
 		(yyval.ci) = new_class_identification();
@@ -1767,9 +1815,13 @@ yyreduce:
     break;
 
   case 10:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 213 "pascal.y"
+=======
+#line 248 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create class_identification with an extend id
 		(yyval.ci) = new_class_identification();
@@ -1785,9 +1837,13 @@ yyreduce:
     break;
 
   case 11:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 228 "pascal.y"
+=======
+#line 263 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.cb) = new_class_block();
 		(yyval.cb)->vdl = (yyvsp[(1) - (2)].vdl);
@@ -1796,9 +1852,13 @@ yyreduce:
     break;
 
   case 12:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 236 "pascal.y"
+=======
+#line 271 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.tden) = new_type_denoter();
 		(yyval.tden)->type = TYPE_DENOTER_T_ARRAY_TYPE;
@@ -1808,27 +1868,40 @@ yyreduce:
     break;
 
   case 13:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 243 "pascal.y"
+=======
+#line 278 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
-		struct type_denoter_t *new_type = new_type_denoter();
+		(yyval.tden) = new_type_denoter();
+		(yyval.tden)->type = TYPE_DENOTER_T_IDENTIFIER;
+		(yyval.tden)->name = (yyvsp[(1) - (1)].id);
+		(yyval.tden)->data.id = (yyvsp[(1) - (1)].id);
+		
+		/*struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
-		new_type->name = (yyvsp[(1) - (1)].id);
-		new_type->data.id = (yyvsp[(1) - (1)].id);
-		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
+		new_type->name = $1;
+		new_type->data.id = $1;
+		struct type_denoter_t *found_type = usrdef_lookup_name(new_type->name);
 		if(found_type == NULL) {
-			(yyval.tden) = usrdef_insert(new_type);
+			$$ = usrdef_insert(new_type);
 		} else {
-			(yyval.tden) = found_type;
-		}
+			$$ = found_type;
+		}*/
 	}
     break;
 
   case 14:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 258 "pascal.y"
+=======
+#line 298 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.at) = new_array_type();
 		(yyval.at)->r = (yyvsp[(3) - (6)].r);
@@ -1837,9 +1910,13 @@ yyreduce:
     break;
 
   case 15:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 266 "pascal.y"
+=======
+#line 306 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.r) = new_range();
 		(yyval.r)->min = (yyvsp[(1) - (3)].un);
@@ -1852,9 +1929,13 @@ yyreduce:
     break;
 
   case 16:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 278 "pascal.y"
+=======
+#line 318 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.vdl) = new_variable_declaration_list();
 		(yyval.vdl)->next = (yyvsp[(2) - (3)].vdl);
@@ -1862,18 +1943,26 @@ yyreduce:
     break;
 
   case 17:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 283 "pascal.y"
+=======
+#line 323 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.vdl) = new_variable_declaration_list();
 	}
     break;
 
   case 18:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 289 "pascal.y"
+=======
+#line 329 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		add_to_variable_declaration_list(&(yyvsp[(1) - (3)].vdl), (yyvsp[(3) - (3)].vd));
 		symtab_insert(SYM_ATTR_VAR, (yyvsp[(1) - (3)].vdl)->next);
@@ -1881,9 +1970,13 @@ yyreduce:
     break;
 
   case 19:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 294 "pascal.y"
+=======
+#line 334 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create the head of the variable list
 		(yyval.vdl) = new_variable_declaration_list();
@@ -1896,9 +1989,13 @@ yyreduce:
     break;
 
   case 20:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 307 "pascal.y"
+=======
+#line 345 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.vd) = new_variable_declaration();
 		(yyval.vd)->il = (yyvsp[(1) - (3)].idl);
@@ -1908,9 +2005,13 @@ yyreduce:
     break;
 
   case 21:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 316 "pascal.y"
+=======
+#line 354 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
         // Check the func_declaration header against the current func_declaration_list for duplicates
         struct func_declaration_list_t *matched = find_func_list((yyvsp[(1) - (3)].fdl), (yyvsp[(3) - (3)].funcd)->fh->id);
@@ -1927,9 +2028,13 @@ yyreduce:
     break;
 
   case 22:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 330 "pascal.y"
+=======
+#line 368 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fdl) = new_func_declaration_list();
 		(yyval.fdl)->fd = (yyvsp[(1) - (1)].funcd);
@@ -1942,35 +2047,51 @@ yyreduce:
     break;
 
   case 23:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 340 "pascal.y"
+=======
+#line 378 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 	}
     break;
 
   case 24:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 345 "pascal.y"
+=======
+#line 383 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fpsl) = (yyvsp[(2) - (3)].fpsl);
 	}
     break;
 
   case 25:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 350 "pascal.y"
+=======
+#line 388 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		add_to_formal_parameter_section_list(&(yyvsp[(1) - (3)].fpsl), (yyvsp[(3) - (3)].fps));
 	}
     break;
 
   case 26:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 354 "pascal.y"
+=======
+#line 392 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create the head of the formal_parameter_section_list
 		(yyval.fpsl) = new_formal_parameter_section_list();
@@ -1980,9 +2101,13 @@ yyreduce:
     break;
 
   case 27:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 363 "pascal.y"
+=======
+#line 401 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fps) = new_formal_parameter_section();
 		(yyval.fps)->il = (yyvsp[(1) - (1)].fps)->il;
@@ -1992,9 +2117,13 @@ yyreduce:
     break;
 
   case 28:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 370 "pascal.y"
+=======
+#line 408 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
  		(yyval.fps) = new_formal_parameter_section();
  		(yyval.fps)->il = (yyvsp[(1) - (1)].fps)->il;
@@ -2004,9 +2133,13 @@ yyreduce:
     break;
 
   case 29:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 379 "pascal.y"
+=======
+#line 417 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fps) = new_formal_parameter_section();
 		(yyval.fps)->il = (yyvsp[(1) - (3)].idl);
@@ -2015,9 +2148,13 @@ yyreduce:
     break;
 
   case 30:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 387 "pascal.y"
+=======
+#line 425 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fps) = new_formal_parameter_section();
 		(yyval.fps)->il = (yyvsp[(2) - (4)].idl);
@@ -2026,9 +2163,13 @@ yyreduce:
     break;
 
   case 31:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 395 "pascal.y"
+=======
+#line 433 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.funcd) = new_function_declaration();
 		struct function_heading_t *fh = new_function_heading();
@@ -2040,9 +2181,13 @@ yyreduce:
     break;
 
   case 32:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 404 "pascal.y"
+=======
+#line 442 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.funcd) = new_function_declaration();
 		(yyval.funcd)->fh = (yyvsp[(1) - (3)].fh);
@@ -2052,9 +2197,13 @@ yyreduce:
     break;
 
   case 33:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 413 "pascal.y"
+=======
+#line 451 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fh) = new_function_heading();
 		(yyval.fh)->id = (yyvsp[(2) - (4)].id);
@@ -2064,9 +2213,13 @@ yyreduce:
     break;
 
   case 34:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 420 "pascal.y"
+=======
+#line 458 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fh) = new_function_heading();
 		(yyval.fh)->id = (yyvsp[(2) - (5)].id);
@@ -2076,9 +2229,13 @@ yyreduce:
     break;
 
   case 36:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 431 "pascal.y"
+=======
+#line 469 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create an identifier for the function
 		(yyval.id) = new_identifier((yyvsp[(2) - (2)].id));
@@ -2091,9 +2248,13 @@ yyreduce:
     break;
 
   case 37:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 443 "pascal.y"
+=======
+#line 481 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fb) = new_function_block();
 		(yyval.fb)->vdl = (yyvsp[(1) - (2)].vdl);
@@ -2102,18 +2263,26 @@ yyreduce:
     break;
 
   case 39:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 454 "pascal.y"
+=======
+#line 492 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ss) = (yyvsp[(2) - (3)].ss);
 	}
     break;
 
   case 40:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 460 "pascal.y"
+=======
+#line 498 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Create head of the statement_sequence list
 		(yyval.ss) = new_statement_sequence();
@@ -2123,9 +2292,13 @@ yyreduce:
     break;
 
   case 41:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 467 "pascal.y"
+=======
+#line 505 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		// Add to statement_sequence list
 		add_to_statement_sequence(&(yyvsp[(1) - (3)].ss), (yyvsp[(3) - (3)].s));
@@ -2133,9 +2306,13 @@ yyreduce:
     break;
 
   case 42:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 474 "pascal.y"
+=======
+#line 512 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.s) = new_statement();
 		(yyval.s)->type = STATEMENT_T_ASSIGNMENT;
@@ -2145,9 +2322,13 @@ yyreduce:
     break;
 
   case 43:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 481 "pascal.y"
+=======
+#line 519 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.s) = new_statement();
 		(yyval.s)->type = STATEMENT_T_SEQUENCE;
@@ -2157,9 +2338,13 @@ yyreduce:
     break;
 
   case 44:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 488 "pascal.y"
+=======
+#line 526 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.s) = new_statement();
 		(yyval.s)->type = STATEMENT_T_IF;
@@ -2169,9 +2354,13 @@ yyreduce:
     break;
 
   case 45:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 495 "pascal.y"
+=======
+#line 533 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.s) = new_statement();
 		(yyval.s)->type = STATEMENT_T_WHILE;
@@ -2181,9 +2370,13 @@ yyreduce:
     break;
 
   case 46:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 502 "pascal.y"
+=======
+#line 540 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.s) = new_statement();
 		(yyval.s)->type = STATEMENT_T_PRINT;
@@ -2193,9 +2386,13 @@ yyreduce:
     break;
 
   case 47:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 511 "pascal.y"
+=======
+#line 549 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ws) = new_while_statement();
 		(yyval.ws)->e = (yyvsp[(2) - (4)].e);
@@ -2204,9 +2401,13 @@ yyreduce:
     break;
 
   case 48:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 519 "pascal.y"
+=======
+#line 557 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.is) = new_if_statement();
 		(yyval.is)->e = (yyvsp[(2) - (6)].e);
@@ -2216,9 +2417,13 @@ yyreduce:
     break;
 
   case 49:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 528 "pascal.y"
+=======
+#line 566 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.as) = new_assignment_statement();
 		(yyval.as)->va = (yyvsp[(1) - (3)].va);
@@ -2228,9 +2433,13 @@ yyreduce:
     break;
 
   case 50:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 535 "pascal.y"
+=======
+#line 573 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.as) = new_assignment_statement();
 		(yyval.as)->va = (yyvsp[(1) - (3)].va);
@@ -2240,9 +2449,13 @@ yyreduce:
     break;
 
   case 51:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 544 "pascal.y"
+=======
+#line 582 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.os) = new_object_instantiation();
 		(yyval.os)->id = (yyvsp[(2) - (2)].id);
@@ -2250,9 +2463,13 @@ yyreduce:
     break;
 
   case 52:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 549 "pascal.y"
+=======
+#line 587 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.os) = new_object_instantiation();
 		(yyval.os)->id = (yyvsp[(2) - (3)].id);
@@ -2261,9 +2478,13 @@ yyreduce:
     break;
 
   case 53:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 557 "pascal.y"
+=======
+#line 595 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ps) = new_print_statement();
 		(yyval.ps)->va = (yyvsp[(2) - (2)].va);
@@ -2271,9 +2492,13 @@ yyreduce:
     break;
 
   case 54:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 564 "pascal.y"
+=======
+#line 602 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.va) = new_variable_access();
 		(yyval.va)->type = VARIABLE_ACCESS_T_IDENTIFIER;
@@ -2282,9 +2507,13 @@ yyreduce:
     break;
 
   case 55:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 570 "pascal.y"
+=======
+#line 608 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.va) = new_variable_access();
 		(yyval.va)->type = VARIABLE_ACCESS_T_INDEXED_VARIABLE;
@@ -2293,9 +2522,13 @@ yyreduce:
     break;
 
   case 56:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 576 "pascal.y"
+=======
+#line 614 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.va) = new_variable_access();
 		(yyval.va)->type = VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR;
@@ -2304,9 +2537,13 @@ yyreduce:
     break;
 
   case 57:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 582 "pascal.y"
+=======
+#line 620 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.va) = new_variable_access();
 		(yyval.va)->type = VARIABLE_ACCESS_T_METHOD_DESIGNATOR;
@@ -2315,9 +2552,13 @@ yyreduce:
     break;
 
   case 58:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 590 "pascal.y"
+=======
+#line 628 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.iv) = new_indexed_variable();
 		(yyval.iv)->va = (yyvsp[(1) - (4)].va);
@@ -2326,18 +2567,26 @@ yyreduce:
     break;
 
   case 59:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 598 "pascal.y"
+=======
+#line 636 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		add_to_index_expression_list(&(yyvsp[(1) - (3)].iel), (yyvsp[(3) - (3)].e));
 	}
     break;
 
   case 60:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 602 "pascal.y"
+=======
+#line 640 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.iel) = new_index_expression_list();
 		(yyval.iel)->e = (yyvsp[(1) - (1)].e);
@@ -2345,9 +2594,13 @@ yyreduce:
     break;
 
   case 62:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 611 "pascal.y"
+=======
+#line 649 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ad) = new_attribute_designator();
 		(yyval.ad)->va = (yyvsp[(1) - (3)].va);
@@ -2356,9 +2609,13 @@ yyreduce:
     break;
 
   case 63:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 619 "pascal.y"
+=======
+#line 657 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.md) = new_method_designator();
 		(yyval.md)->va = (yyvsp[(1) - (3)].va);
@@ -2367,27 +2624,39 @@ yyreduce:
     break;
 
   case 64:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 628 "pascal.y"
+=======
+#line 666 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.apl) = (yyvsp[(2) - (3)].apl);
 	}
     break;
 
   case 65:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 634 "pascal.y"
+=======
+#line 672 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		add_to_actual_parameter_list(&(yyvsp[(1) - (3)].apl), (yyvsp[(3) - (3)].ap));
 	}
     break;
 
   case 66:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 638 "pascal.y"
+=======
+#line 676 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.apl) = new_actual_parameter_list();
 		(yyval.apl)->ap = (yyvsp[(1) - (1)].ap);
@@ -2395,9 +2664,13 @@ yyreduce:
     break;
 
   case 67:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 645 "pascal.y"
+=======
+#line 683 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ap) = new_actual_parameter();
 		(yyval.ap)->e1 = (yyvsp[(1) - (1)].e);
@@ -2405,9 +2678,13 @@ yyreduce:
     break;
 
   case 68:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 650 "pascal.y"
+=======
+#line 688 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ap) = new_actual_parameter();
 		(yyval.ap)->e1 = (yyvsp[(1) - (3)].e);
@@ -2416,9 +2693,13 @@ yyreduce:
     break;
 
   case 69:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 656 "pascal.y"
+=======
+#line 694 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.ap) = new_actual_parameter();
 		(yyval.ap)->e1 = (yyvsp[(1) - (5)].e);
@@ -2428,9 +2709,13 @@ yyreduce:
     break;
 
   case 71:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 667 "pascal.y"
+=======
+#line 705 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.e) = new_expression();
 		(yyval.e)->se1 = (yyvsp[(1) - (1)].se);
@@ -2439,9 +2724,13 @@ yyreduce:
     break;
 
   case 72:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 673 "pascal.y"
+=======
+#line 711 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.e) = new_expression();
 		(yyval.e)->se1 = (yyvsp[(1) - (3)].se);
@@ -2477,9 +2766,13 @@ yyreduce:
     break;
 
   case 73:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 708 "pascal.y"
+=======
+#line 746 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.se) = new_simple_expression();
 		(yyval.se)->t = (yyvsp[(1) - (1)].t);
@@ -2488,9 +2781,13 @@ yyreduce:
     break;
 
   case 74:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 714 "pascal.y"
+=======
+#line 752 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		add_to_simple_expression(&(yyvsp[(1) - (3)].se), (yyvsp[(2) - (3)].op), (yyvsp[(3) - (3)].t));
 		//Do some kind of type checking ??
@@ -2521,9 +2818,13 @@ yyreduce:
     break;
 
   case 75:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 744 "pascal.y"
+=======
+#line 782 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.t) = new_term();
 		(yyval.t)->f = (yyvsp[(1) - (1)].f);		
@@ -2531,18 +2832,26 @@ yyreduce:
     break;
 
   case 76:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 749 "pascal.y"
+=======
+#line 787 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {		
 		add_to_term(&(yyvsp[(1) - (3)].t), (yyvsp[(2) - (3)].op), (yyvsp[(3) - (3)].f));	
 	}
     break;
 
   case 77:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 755 "pascal.y"
+=======
+#line 793 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.i) = new_sign();
 		*(yyval.i) = OP_PLUS;
@@ -2550,9 +2859,13 @@ yyreduce:
     break;
 
   case 78:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 760 "pascal.y"
+=======
+#line 798 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.i) = new_sign();
 		*(yyval.i) = OP_MINUS;
@@ -2560,9 +2873,13 @@ yyreduce:
     break;
 
   case 79:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 767 "pascal.y"
+=======
+#line 805 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.f) = new_factor();
 		(yyval.f)->type = FACTOR_T_SIGNFACTOR;
@@ -2573,9 +2890,13 @@ yyreduce:
     break;
 
   case 80:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 775 "pascal.y"
+=======
+#line 813 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.f) = new_factor();
 		(yyval.f)->type = FACTOR_T_PRIMARY;
@@ -2585,9 +2906,13 @@ yyreduce:
     break;
 
   case 81:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 784 "pascal.y"
+=======
+#line 822 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.p) = new_primary();
 		(yyval.p)->type = PRIMARY_T_VARIABLE_ACCESS;
@@ -2597,9 +2922,13 @@ yyreduce:
     break;
 
   case 82:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 791 "pascal.y"
+=======
+#line 829 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.p) = new_primary();
 		(yyval.p)->type = PRIMARY_T_UNSIGNED_CONSTANT;
@@ -2609,9 +2938,13 @@ yyreduce:
     break;
 
   case 83:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 798 "pascal.y"
+=======
+#line 836 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.p) = new_primary();
 		(yyval.p)->type = PRIMARY_T_FUNCTION_DESIGNATOR;
@@ -2620,9 +2953,13 @@ yyreduce:
     break;
 
   case 84:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 804 "pascal.y"
+=======
+#line 842 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.p) = new_primary();
 		(yyval.p)->type = PRIMARY_T_EXPRESSION;
@@ -2632,9 +2969,13 @@ yyreduce:
     break;
 
   case 85:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 811 "pascal.y"
+=======
+#line 849 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.p) = new_primary();
 		(yyval.p)->type = PRIMARY_T_PRIMARY;
@@ -2645,9 +2986,13 @@ yyreduce:
     break;
 
   case 88:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 826 "pascal.y"
+=======
+#line 864 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.un) = new_unsigned_number();
 		(yyval.un)->ui = atoi(yytext);
@@ -2658,9 +3003,13 @@ yyreduce:
     break;
 
   case 89:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 837 "pascal.y"
+=======
+#line 875 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.fdes) = new_function_designator();
 		(yyval.fdes)->id = (yyvsp[(1) - (2)].id);
@@ -2669,135 +3018,196 @@ yyreduce:
     break;
 
   case 90:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 845 "pascal.y"
+=======
+#line 883 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_PLUS;
 	}
     break;
 
   case 91:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 849 "pascal.y"
+=======
+#line 887 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_MINUS;
 	}
     break;
 
   case 92:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 853 "pascal.y"
+=======
+#line 891 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_OR;
 	}
     break;
 
   case 93:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 859 "pascal.y"
+=======
+#line 897 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_STAR;
 	}
     break;
 
   case 94:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 863 "pascal.y"
+=======
+#line 901 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_SLASH;
 	}
     break;
 
   case 95:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 867 "pascal.y"
+=======
+#line 905 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_MOD;
 	}
     break;
 
   case 96:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 871 "pascal.y"
+=======
+#line 909 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_AND;
 	}
     break;
 
   case 97:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 877 "pascal.y"
+=======
+#line 915 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_EQUAL;
 	}
     break;
 
   case 98:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 881 "pascal.y"
+=======
+#line 919 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_NOTEQUAL;
 	}
     break;
 
   case 99:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 885 "pascal.y"
+=======
+#line 923 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_LT;
 	}
     break;
 
   case 100:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 889 "pascal.y"
+=======
+#line 927 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_GT;
 	}
     break;
 
   case 101:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 893 "pascal.y"
+=======
+#line 931 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_LE;
 	}
     break;
 
   case 102:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 897 "pascal.y"
+=======
+#line 935 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.op) = OP_GE;
 	}
     break;
 
   case 103:
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 903 "pascal.y"
+=======
+#line 941 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
     {
 		(yyval.id) = new_identifier(yytext);
 	}
     break;
 
 
+<<<<<<< HEAD
 
 /* Line 1464 of yacc.c  */
 #line 2801 "y.tab.c"
+=======
+/* Line 1267 of yacc.c.  */
+#line 2626 "y.tab.c"
+>>>>>>> usrdef fixes, symtab fixes
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -3007,8 +3417,12 @@ yyreturn:
 }
 
 
+<<<<<<< HEAD
 
 /* Line 1684 of yacc.c  */
 #line 914 "pascal.y"
+=======
+#line 952 "pascal.y"
+>>>>>>> usrdef fixes, symtab fixes
 
 
