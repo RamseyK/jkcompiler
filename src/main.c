@@ -23,7 +23,6 @@ extern struct program_t *program;
 extern void yyparse();
 
 
-
 /* -----------------------------------------------------------------------
  * Printout on error message and exit
  * -----------------------------------------------------------------------

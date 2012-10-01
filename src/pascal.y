@@ -144,12 +144,20 @@ program_heading : PROGRAM identifier
 		$$ = new_program_heading();
 		$$->id = $2;
 		$$->il = NULL;
+		
+		// Enter the scope of the program
+		//printf("Entering scope of program\n");
+		symtab_enter_scope();
 	}
  | PROGRAM identifier LPAREN identifier_list RPAREN
 	{
 		$$ = new_program_heading();
 		$$->id = $2;
 		$$->il = $4;
+		
+		// Enter the scope of the program
+		//printf("Entering scope of program\n");
+		symtab_enter_scope();
 	}
  ;
 
@@ -179,6 +187,7 @@ class_list : class_list class_identification PBEGIN class_block END
 		add_to_class_list(&$1, $2, $4);
 		
 		// Return to the higher scope and set the class_list_t ptr
+		//printf("exiting class-id scope\n");
 		symtab_exit_scope($1->next);
 	}
  | class_identification PBEGIN class_block END
@@ -190,6 +199,7 @@ class_list : class_list class_identification PBEGIN class_block END
 		$$->next = NULL;
 		
 		// Return to the higher scope and set the class_list_t ptr
+		//printf("exiting class-id scope (base)\n");
 		symtab_exit_scope($$);
 	}
  ;
@@ -202,6 +212,7 @@ class_identification : CLASS identifier
 		$$->extend = NULL;
 		
 		// After encountering a class ident, start a class scope
+		//printf("entering class scope\n");
 		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
 	}
@@ -211,8 +222,9 @@ class_identification : CLASS identifier
 		$$ = new_class_identification();
 		$$->id = $2;
 		$$->extend = $4;
-		
+
 		// After encountering a class ident, start a class scope
+		//printf("entering class scope (base)\n");
 		symtab_insert(SYM_ATTR_CLASS, NULL);
 		symtab_enter_scope();
 	}
@@ -309,6 +321,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 		add_to_func_declaration_list(&$1, $3);
 		
 		// Exit the function's scope
+		//printf("Exiting scope of function\n");
 		symtab_exit_scope($1->next);
 	}
  | function_declaration
@@ -318,6 +331,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 		$$->next = NULL;
 		
 		// Exit the function's scope
+		//printf("Exiting scope of function\n");
 		symtab_exit_scope($$);
 	}
  |
@@ -417,6 +431,7 @@ function_identification : FUNCTION identifier
 		$$ = new_identifier($2);
 		
 		// Insert the declaration list entry into the symbol table
+		//printf("Entering scope of function\n");
 		symtab_insert(SYM_ATTR_FUNC, NULL);
 		symtab_enter_scope();
 	}

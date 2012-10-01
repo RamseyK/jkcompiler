@@ -45,6 +45,7 @@ void semantic_analysis(struct program_t *p) {
 				symtab_exit_scope(baseScope->ptr);
 			}
 		}
+		temp_cl = temp_cl->next;
     }
 
 	// Main program class wasn't found in the initial class fixup, error

@@ -48,8 +48,8 @@ void symtab_print_recrusive(struct scope_t* start) {
 
 	while(node != NULL) {
 		// Find node information based on the attribute type
-		char *name;
-		char *attrName;
+		char *name = NULL;
+		char *attrName = NULL;
 		switch(node->attrId) {
 			case SYM_ATTR_VAR:
 				name = ((struct variable_declaration_list_t*)node->ptr)->vd->il->id;
@@ -127,33 +127,29 @@ void symtab_exit_scope(void *pointer) {
 void symtab_insert(int attr, void *pointer) {
 	struct scope_t *newScope = (struct scope_t *) malloc(sizeof(struct scope_t));
 	CHECK_MEM_ERROR(newScope);
-	
-	// Go to the last adjacent node in the current scope
-	struct scope_t *lastAdj = currScope;
-	GOTO_END_OF_LIST(lastAdj);
-	
-	// Add the new scope to the end of the list
-	lastAdj->next = newScope;
 		
 	newScope->attrId = attr;
 	newScope->ptr = pointer;
-	newScope->outer = currScope->outer;
 	newScope->inner = NULL;
 	
 	// If the scope is supposed to be inside the current scope, set current scope to the last inner node, and update the newScope parent
 	if(enterNext) {
 		newScope->outer = currScope;
-		struct scope_t* inStart = currScope->inner;
-		GOTO_END_OF_LIST(inStart);
-		if(inStart != NULL)
-			inStart = newScope;
-		else
-			inStart->next = newScope;
+		currScope->inner = newScope;
 	
 		// The current scope shifts inside previous current scope
 		currScope = newScope;
 		
 		enterNext = false;
+	} else { // Scope is adjacent
+		newScope->outer = currScope->outer;
+	
+		// Go to the last adjacent node in the current scope
+		struct scope_t *lastAdj = currScope;
+		GOTO_END_OF_LIST(lastAdj);
+	
+		// Add the new scope to the end of the list
+		lastAdj->next = newScope;
 	}
 	
 }
@@ -163,32 +159,32 @@ void symtab_insert(int attr, void *pointer) {
  *
  * @param nScope The scope to insert at the currentNode
  */
-void symtab_insert_scope(struct scope_t *nScope) {
-	// Go to the last adjacent node in the current scope
-	struct scope_t *lastAdj = currScope;
-	GOTO_END_OF_LIST(lastAdj);
-	
-	// Add the new scope to the end of the list
-	lastAdj->next = nScope;
-	
-	nScope->outer = currScope->outer;
-	
+void symtab_insert_scope(struct scope_t *nScope) {	
 	// If the scope is supposed to be inside the current scope, set the nScope parent, and set current scope to the last inner node
 	if(enterNext) {
 		nScope->outer = currScope;
 		struct scope_t* inStart = currScope->inner;
-		GOTO_END_OF_LIST(inStart);
-		if(inStart != NULL)
+		if(inStart == NULL) {
 			inStart = nScope;
-		else
+			currScope->inner = inStart;
+		} else {
+			GOTO_END_OF_LIST(inStart);
 			inStart->next = nScope;
+		}
 	
 		// The current scope shifts inside previous current scope
 		currScope = nScope;
 		
 		enterNext = false;
-	}
+	} else {
+		nScope->outer = currScope->outer;
+		// Go to the last adjacent node in the current scope
+		struct scope_t *lastAdj = currScope;
+		GOTO_END_OF_LIST(lastAdj);
 	
+		// Add the new scope to the end of the list
+		lastAdj->next = nScope;
+	}
 }
 
 // looks from the root
