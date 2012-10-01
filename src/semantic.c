@@ -56,10 +56,10 @@ void semantic_analysis(struct program_t *p) {
 /*
  * Checks for compatible types.
  */
-int compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
+bool compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
 	// Handle primitive types
 	if(t1->type == TYPE_DENOTER_T_IDENTIFIER && t2->type == TYPE_DENOTER_T_IDENTIFIER) {
-		if(t1->data.id == t2->data.id) {
+		if(strcmp(t1->data.id,t2->data.id) == 0) {
 			return true;
 		}
 	}
@@ -78,7 +78,7 @@ int compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
  *  Check array compatibility.  Arrays are compatible if they have the same number of elements
  *  and the elements are of compatible types.
  */
-int compatible_arrays(struct array_type_t *a1, struct array_type_t *a2) {
+bool compatible_arrays(struct array_type_t *a1, struct array_type_t *a2) {
 	int size1 = a1->r->max - a1->r->min;
 	int size2 = a2->r->max - a2->r->min;
 	return (size1 == size2) && compatible_types(a1->td, a2->td);
@@ -89,7 +89,7 @@ int compatible_arrays(struct array_type_t *a1, struct array_type_t *a2) {
  * are compatible.
  */
 
-int compatible_classes(struct class_list_t *c1, struct class_list_t *c2) {
+bool compatible_classes(struct class_list_t *c1, struct class_list_t *c2) {
 	// Pointer to first variable declaration in c1 and c2
 	struct variable_declaration_list_t *temp_vdl1 = c1->cb->vdl;
 	struct variable_declaration_list_t *temp_vdl2 = c2->cb->vdl;
@@ -100,7 +100,7 @@ int compatible_classes(struct class_list_t *c1, struct class_list_t *c2) {
 		int same_size = (identifier_list_size(temp_vdl1->vd->il) == identifier_list_size(temp_vdl2->vd->il));
 		// Make sure the types are compatible
 		int types_compat = compatible_types(temp_vdl1->vd->tden, temp_vdl2->vd->tden);
-		if(!same_size | !types_compat)
+		if(!same_size || !types_compat)
 			return false;
 		temp_vdl1 = temp_vdl1->next;
 		temp_vdl2 = temp_vdl2->next;
@@ -113,21 +113,21 @@ int compatible_classes(struct class_list_t *c1, struct class_list_t *c2) {
 
 /*
  * Checks if an assignment of one class to another is compatible.  An assignment is
- * compatible if the lhs is a descendant of the rhs (rhs is an ancestor)
+ * compatible if the rhs is a descendant of the lhs (lhs is an ancestor)
  */
-int compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *rhs) {
+bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *rhs) {
 	// Look up the classes in the symbol table
 	struct scope_t *left = symtab_lookup_class(lhs->ci->id);
 	struct scope_t *right = symtab_lookup_class(rhs->ci->id);
 	// If the classes are both in the symbol table and are the same they are compatible
-	if(left == right) {
+	if(right == left) {
 		return true;
 	}
 	// If the right scope is an ancestor of the left, they are compatible
-	while(left != NULL) {
-		if(left == right)
+	while(right != NULL) {
+		if(right == left)
 			return true;
-		left = left->outer;
+		right = right->outer;
 	}
 	// Not compatible
 	return false;
