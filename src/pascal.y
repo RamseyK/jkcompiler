@@ -154,20 +154,12 @@ program_heading : PROGRAM identifier
  ;
 
 identifier_list : identifier_list comma identifier
-        {
-        	// Check the identifier against the current identifier_list for duplicates
-        	struct identifier_list_t *matched_il = get_identifier($1, $3);
-        	if(matched_il != NULL) {
-        		error_variable_already_declared(line_number, matched_il->id, line_number-1);
-        	}
-        	
+        {        	
 			// Add the identifier node to the identifier_list
 			add_to_identifier_list(&$1, $3);
         }
  | identifier
         {
-        	// Check the identifier against the current identifier_list for duplicates
-        
         	// Create and add first identifier node
         	$$ = new_identifier_list();
 
@@ -178,6 +170,12 @@ identifier_list : identifier_list comma identifier
 
 class_list : class_list class_identification PBEGIN class_block END
 	{
+        // Check the class_identification against the current class_list for duplicates
+        struct class_list_t *matched = find_class_list($1, $2->id);
+        if(matched != NULL) {
+        	error_class_already_declared(line_number, $2->id, line_number-1);
+        }
+
 		add_to_class_list(&$1, $2, $4);
 		
 		// Return to the higher scope and set the class_list_t ptr
@@ -302,6 +300,12 @@ variable_declaration : identifier_list COLON type_denoter
 
 func_declaration_list : func_declaration_list semicolon function_declaration
 	{
+        // Check the func_declaration header against the current func_declaration_list for duplicates
+        struct func_declaration_list_t *matched = find_func_list($1, $3->fh->id);
+        if(matched != NULL) {
+        	error_function_already_declared(line_number, $3->fh->id, line_number-1);
+        }
+
 		add_to_func_declaration_list(&$1, $3);
 		
 		// Exit the function's scope

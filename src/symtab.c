@@ -35,6 +35,71 @@ void symtab_print(int numOfTabs) {
 }
 
 /**
+ * Print's adjacent nodes to the passed in node value
+ * Decends into inner nodes recursively
+ */
+void symtab_print_recrusive(struct scope_t* start) {
+	if(start == NULL)
+		return;
+
+	printf("<Enter Scope>\n");
+
+	struct scope_t* node = start;
+
+	while(node != NULL) {
+		// Find node information based on the attribute type
+		char *name;
+		char *attrName;
+		switch(node->attrId) {
+			case SYM_ATTR_VAR:
+				name = ((struct variable_declaration_list_t*)node->ptr)->vd->il->id;
+				attrName = (char*)malloc(4);
+				strcpy(attrName, "VAR");
+				break;
+			case SYM_ATTR_CLASS:
+				name = ((struct class_list_t*)node->ptr)->ci->id;
+				attrName = (char*)malloc(6);
+				strcpy(attrName, "CLASS");
+				break;
+			case SYM_ATTR_FUNC:
+				name = ((struct func_declaration_list_t*)node->ptr)->fd->fh->id;
+				attrName = (char*)malloc(5);
+				strcpy(attrName, "FUNC");
+				break;
+			default:
+				name = ((struct program_t*)node->ptr)->ph->id;
+				attrName = (char*)malloc(8);
+				strcpy(attrName, "PROGRAM");
+				break;
+		}
+
+		printf("%s(%s), ", name, attrName);
+
+		// Move to the adjacent node
+		node = node->next;
+	}
+	printf("\n\n");
+
+	// Decend into inner nodes if they exist in the order that they appear in the horizontal list
+	node = start;
+	while(node != NULL) {
+		if(node->inner != NULL)
+			symtab_print_recrusive(node->inner);
+
+		// Move to the adjacent node
+		node = node->next;
+	}
+	printf("<End Scope>\n\n");
+}
+
+/**
+ * Set's the currentScope variable to a new scope. All insert operations will be done relative to the new scope
+ */
+void symtab_set_current_scope(struct scope_t *newCurrentScope) {
+	currScope = newCurrentScope;
+}
+
+/**
  * Indicate the next symtab_insert call should insert a child node into the symbol table instead of an adjacent node
  */
 void symtab_enter_scope() {
@@ -75,13 +140,51 @@ void symtab_insert(int attr, void *pointer) {
 	newScope->outer = currScope->outer;
 	newScope->inner = NULL;
 	
-	// If the scope is supposed to be inside the current scope, set current scope's inner, and update current scope
+	// If the scope is supposed to be inside the current scope, set current scope to the last inner node, and update the newScope parent
 	if(enterNext) {
 		newScope->outer = currScope;
-		currScope->inner = newScope;
+		struct scope_t* inStart = currScope->inner;
+		GOTO_END_OF_LIST(inStart);
+		if(inStart != NULL)
+			inStart = newScope;
+		else
+			inStart->next = newScope;
 	
 		// The current scope shifts inside previous current scope
 		currScope = newScope;
+		
+		enterNext = false;
+	}
+	
+}
+
+/*
+ * Insert an existing scope node at the currentNode
+ *
+ * @param nScope The scope to insert at the currentNode
+ */
+void symtab_insert_scope(struct scope_t *nScope) {
+	// Go to the last adjacent node in the current scope
+	struct scope_t *lastAdj = currScope;
+	GOTO_END_OF_LIST(lastAdj);
+	
+	// Add the new scope to the end of the list
+	lastAdj->next = nScope;
+	
+	nScope->outer = currScope->outer;
+	
+	// If the scope is supposed to be inside the current scope, set the nScope parent, and set current scope to the last inner node
+	if(enterNext) {
+		nScope->outer = currScope;
+		struct scope_t* inStart = currScope->inner;
+		GOTO_END_OF_LIST(inStart);
+		if(inStart != NULL)
+			inStart = nScope;
+		else
+			inStart->next = nScope;
+	
+		// The current scope shifts inside previous current scope
+		currScope = nScope;
 		
 		enterNext = false;
 	}

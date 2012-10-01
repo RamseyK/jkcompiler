@@ -50,9 +50,12 @@ struct scope_t *currScope;
 
 void symtab_init(struct program_t* program);
 void symtab_print(int numOfTabs);
+void symtab_print_recrusive(struct scope_t* start);
+void symtab_set_current_scope(struct scope_t *newCurrentScope);
 void symtab_enter_scope();
 void symtab_exit_scope(void *pointer);
 void symtab_insert(int attrId, void *pointer);
+void symtab_insert_scope(struct scope_t *nScope);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search

@@ -68,7 +68,7 @@ long identifier_list_count(struct identifier_list_t *il) {
  * Returns a reference to the identifier_list node whose id matches the id parameter
  * -----------------------------------------------------------------------
  */
-struct identifier_list_t *get_identifier(struct identifier_list_t *il, char *id) {
+struct identifier_list_t *find_identifier_list(struct identifier_list_t *il, char *id) {
     struct identifier_list_t *temp_il = il;
 
     while(temp_il != NULL) {
@@ -114,6 +114,24 @@ void add_to_class_list(struct class_list_t **cl, struct class_identification_t *
         temp->next->ci = ci;
         temp->next->cb = cb;
     }
+}
+
+
+
+/* -----------------------------------------------------------------------
+ * Returns a reference to the class_list_t node whose class_identifier id matches the id parameter
+ * -----------------------------------------------------------------------
+ */
+struct class_list_t *find_class_list(struct class_list_t *cl, char *id) {
+	struct class_list_t *temp_cl = cl;
+
+	while(temp_cl != NULL) {
+		if(strcmp(temp_cl->ci->id, id) == 0)
+			return temp_cl;
+		temp_cl = temp_cl->next;
+	}
+
+	return NULL;
 }
 
 
@@ -871,6 +889,22 @@ void add_to_func_declaration_list(struct func_declaration_list_t **fdl,
     }
 }
 
+
+/* -----------------------------------------------------------------------
+ * Find's function_declaration_list node based on the id of the function_heading
+ * -----------------------------------------------------------------------
+ */
+struct func_declaration_list_t *find_func_list(struct func_declaration_list_t *fdl, char *headingId) {
+	struct func_declaration_list_t *temp_fdl = fdl;
+
+	while(temp_fdl != NULL) {
+		if(strcmp(temp_fdl->fd->fh->id, headingId) == 0)
+			return temp_fdl;
+		temp_fdl = temp_fdl->next;
+	}
+
+	return NULL;
+}
 
 
 /* -----------------------------------------------------------------------

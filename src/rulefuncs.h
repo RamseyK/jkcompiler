@@ -21,7 +21,7 @@
 struct identifier_list_t *new_identifier_list();
 void add_to_identifier_list(struct identifier_list_t **il, char *id);
 long identifier_list_count(struct identifier_list_t *il);
-struct identifier_list_t *get_identifier(struct identifier_list_t *il, char *id);
+struct identifier_list_t *find_identifier_list(struct identifier_list_t *il, char *id);
 char *new_identifier(char *text);
 
 struct actual_parameter_list_t *new_actual_parameter_list();
@@ -33,6 +33,7 @@ void add_to_record_section_list(struct record_section_list_t **rsl, struct recor
 
 struct class_list_t *new_class_list();
 void add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *b);
+struct class_list_t *find_class_list(struct class_list_t *cl, char *id);
 struct class_identification_t *new_class_identification();
 struct class_block_t *new_class_block();
 
@@ -52,6 +53,7 @@ struct formal_parameter_section_t *new_formal_parameter_section();
 
 struct func_declaration_list_t *new_func_declaration_list();
 void add_to_func_declaration_list(struct func_declaration_list_t **fdl, struct function_declaration_t *fd);
+struct func_declaration_list_t *find_func_list(struct func_declaration_list_t *fdl, char *headingId);
 
 struct function_declaration_t *new_function_declaration();
 struct function_heading_t *new_function_heading();

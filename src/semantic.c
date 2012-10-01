@@ -18,17 +18,38 @@
  * -----------------------------------------------------------------------
  */
 void semantic_analysis(struct program_t *p) {
+	bool foundProgramClass = false; // Determined if the main Program class is present in the class list
     struct class_list_t *temp_cl;
-
     temp_cl = p->cl;
     
-    // Fix up all extend / subclass related structures
+    // Initial fix up all base & subclass class structures
     while (temp_cl != NULL) {
+		// Found the main program class
+		if(strcmp(temp_cl->ci->id, p->ph->id) == 0)
+			foundProgramClass = true;
+
     	// If temp_cl->extend != null, check if extend is in p->cl
-    	
-    	// Add subclass into the scope of the base class
-    	// Set the parent pointer of the subclass to base class
+		// Check if the class has a base class
+		struct scope_t *childScope = symtab_lookup_class(temp_cl->ci->id);
+		struct class_list_t *childClass = (struct class_list_t*)childScope->ptr;
+		if(childClass->ci->extend != NULL) {
+			struct scope_t *baseScope = symtab_lookup_class(childClass->ci->extend);
+			// Base Class doesn't exist
+			if(baseScope == NULL) {
+				error_extending_missing_class(temp_cl->ci->line_number, temp_cl->ci->id, childClass->ci->extend);
+			} else {
+				// Add subclass into the scope of the base class & Set the parent pointer of the subclass to base class
+				symtab_set_current_scope(baseScope);
+				symtab_enter_scope();
+				symtab_insert_scope(childScope);
+				symtab_exit_scope(baseScope->ptr);
+			}
+		}
     }
+
+	// Main program class wasn't found in the initial class fixup, error
+	if(!foundProgramClass)
+		error_missing_program_class();
     
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
