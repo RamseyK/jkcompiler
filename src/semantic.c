@@ -56,31 +56,31 @@ void semantic_analysis(struct program_t *p) {
     temp_cl = p->cl;
     while (temp_cl != NULL) {
 
-        // Fixup type_denoters and set the appropriate type (determine if class or identifier)
-        // See type_denoter in the grammer to understand why this needs to be done
+        // Fix up type_denoters and set the appropriate type (determine if class or identifier)
+        // See type_denoter in the grammar to understand why this needs to be done
 
         // Process the variable_declaration_list
-        /*
-        // for each variable
-        	//variable;//FINISH
-        	// if a variable->vd->tden->type == TYPE_DENOTER_T_CLASS_TYPE && variable->vd->tden->data->cl == NULL
-        		struct type_denoter_t *varTypeDenoter = variable->vd->tden;
-        		if(varTypeDenoter->type == TYPE_DENOTER_T_CLASS_TYPE && varTypeDenoter->data->cl == NULL){
-        		// look for variable->vd->tden->name in symbol table
-        			struct scope_t *foundScope = symtab_lookup_class(varTypeDenoter->name);
-        			// if found, update variable->vd->tden->data->cl
-        			if(foundScope != NULL) {
-        				varTypeDenoter->data->cl = (class_list_t *)foundScope->ptr;
-        			}
-        			// else error_class_not_found?
-        			else {
-        				error_type_not_defined(variable->vd->line_number, varTypeDenoter->name);
-        			}
-        		}
-		*/
+        struct variable_declaration_list_t *temp_vdl = temp_cl->cb->vdl;
+        // for each variable_declaration_list
+        while(temp_vdl != NULL) {
+        	// Check if the type is defined
+        	struct type_denoter_t *temp_vtden = temp_vdl->vd->tden;
+        	// Look up the name for class
+        	if(temp_vtden->type == TYPE_DENOTER_T_CLASS_TYPE && !usrdef_lookup(temp_vtden->name))
+        		error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+        	// Look up the array type's type denoter for arrays
+        	if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && !usrdef_lookup(temp_vtden->data.at->td->name))
+        		error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
+        	// Look up for other types
+        	if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && !usrdef_lookup(temp_vtden->name))
+        		error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
+        	temp_vdl = temp_vdl->next;
+        }
 		
         // Process the func_declaration_list
 
+
+        // Advance to the next class
         temp_cl = temp_cl->next;
     }
 }
