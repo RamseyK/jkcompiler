@@ -32,7 +32,7 @@ struct record_section_list_t *new_record_section_list();
 void add_to_record_section_list(struct record_section_list_t **rsl, struct record_section_t *rs);
 
 struct class_list_t *new_class_list();
-void add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *b);
+struct class_list_t *add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *b);
 struct class_list_t *find_class_list(struct class_list_t *cl, char *id);
 struct class_identification_t *new_class_identification();
 struct class_block_t *new_class_block();

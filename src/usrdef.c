@@ -99,7 +99,7 @@ struct type_denoter_t *usrdef_lookup_td(struct type_denoter_t *td) {
 struct type_denoter_t *usrdef_lookup_name(char *usrdef_name) {
 	struct type_denoter_list_t *temp_il = usrdef_types;
 	while(temp_il != NULL) {
-		if(strcmp(temp_il->tden->name,usrdef_name))
+		if(strcmp(temp_il->tden->name,usrdef_name) == 0)
 			return temp_il->tden;
 		temp_il = temp_il->next;
 	}

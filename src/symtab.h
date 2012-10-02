@@ -25,12 +25,24 @@
 #define SYM_ATTR_FUNC 3 //func_declaration_list_t
 #define SYM_ATTR_PROGRAM 4
 
-struct scope_t {
+/*struct scope_t {
 	int attrId;
 	void *ptr; // class_list or type_den depending on attrId
 	struct scope_t *inner; // Points to the head of the inner scope
 	struct scope_t *outer; // Points to the head of the outer scope
 	struct scope_t *next; // Points to the head of the adjacent scope
+};*/
+
+struct scope_t {
+	int attrId;
+	struct scope_t *parent;
+	struct program_t *program;
+	struct scope_t *class_scopes;
+	struct class_list_t *cl;
+	struct scope_t *func_scopes;
+	struct function_declaration_t *fd;
+	struct scope_t *next;
+	struct scope_t *nextSibling;
 };
 
 /* ----------------------------------------------------------------
@@ -41,6 +53,7 @@ struct scope_t {
 bool enterNext;
 struct scope_t *rootScope;
 struct scope_t *currScope;
+struct scope_t *tailScope;
 
 
 /* ----------------------------------------------------------------
@@ -48,19 +61,17 @@ struct scope_t *currScope;
  * ----------------------------------------------------------------
  */
 
+void symtab_print_list_addr();
 void symtab_init(struct program_t* program);
 void symtab_print(int numOfTabs);
-void symtab_print_recursive(struct scope_t* start);
-void symtab_set_current_scope(struct scope_t *newCurrentScope);
-void symtab_enter_scope();
-void symtab_exit_scope(void *pointer);
-void symtab_insert(int attrId, void *pointer);
-void symtab_insert_scope(struct scope_t *nScope);
+void symtab_print_recursive(struct scope_t* start, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search
 
-
-
+struct scope_t *new_scope();
+void symtab_create_function_scope(struct function_declaration_t *fd);
+void symtab_create_class_scope(struct class_list_t *cl);
+struct scope_t *symtab_lookup_function_scope(struct function_declaration_t *fd);
 
 #endif

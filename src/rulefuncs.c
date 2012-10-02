@@ -99,11 +99,12 @@ char *new_identifier(char *text) {
  * Adds a class_identification and block to the end of the class_list
  * -----------------------------------------------------------------------
  */
-void add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *cb) {
+struct class_list_t *add_to_class_list(struct class_list_t **cl, struct class_identification_t *ci, struct class_block_t *cb) {
     if (*cl == NULL) {
         *cl = new_class_list();
         (*cl)->ci = ci;
         (*cl)->cb = cb;
+        return *cl;
     } else {
         struct class_list_t *temp;
 
@@ -113,6 +114,7 @@ void add_to_class_list(struct class_list_t **cl, struct class_identification_t *
         temp->next = new_class_list();
         temp->next->ci = ci;
         temp->next->cb = cb;
+        return temp->next;
     }
 }
 

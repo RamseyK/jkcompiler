@@ -19,6 +19,8 @@ void semantic_analysis(struct program_t *p) {
 	bool foundProgramClass = false; // Determined if the main Program class is present in the class list
     struct class_list_t *temp_cl;
     temp_cl = p->cl;
+    if(p == NULL)
+    	printf("Program null\n");
     
     // Initial fix up all base & subclass class structures
     while (temp_cl != NULL) {
@@ -28,25 +30,22 @@ void semantic_analysis(struct program_t *p) {
 
     	// If temp_cl->extend != null, check if extend is in p->cl
 		// Check if the class has a base class
-		struct scope_t *childScope = symtab_lookup_class(temp_cl->ci->id);
-		if(childScope == NULL)
-			printf("Couldn't find the scope: %s\n", temp_cl->ci->id);
-		struct class_list_t *childClass = (struct class_list_t*)childScope->ptr;
-		if(childClass == NULL)
-			printf("Couldn't find the class\n");
-		if(childClass->ci->extend != NULL) {
-			struct scope_t *baseScope = symtab_lookup_class(childClass->ci->extend);
-			// Base Class doesn't exist
-			if(baseScope == NULL) {
-				error_extending_missing_class(temp_cl->ci->line_number, temp_cl->ci->id, childClass->ci->extend);
+		if(temp_cl->ci->extend != NULL) {
+			struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
+			if(classScope == NULL) {
+				printf("Could not find class %s in symtab\n", temp_cl->ci->id);
 			} else {
-				// Add subclass into the scope of the base class & Set the parent pointer of the subclass to base class
-				symtab_set_current_scope(baseScope);
-				symtab_enter_scope();
-				symtab_insert_scope(childScope);
-				symtab_exit_scope(baseScope->ptr);
+				struct scope_t *extendScope = symtab_lookup_class(temp_cl->ci->extend);
+				if(extendScope == NULL) {
+					error_extending_missing_class(temp_cl->ci->line_number, temp_cl->ci->id, temp_cl->ci->extend);
+				} else {
+					// Fix the scope pointers
+					classScope->parent = extendScope;
+				}
 			}
 		}
+
+		//printf("Class: %s\n", temp_cl->ci->id);
 		temp_cl = temp_cl->next;
     }
 
@@ -54,17 +53,21 @@ void semantic_analysis(struct program_t *p) {
 	if(!foundProgramClass)
 		error_missing_program_class();
     
+	//symtab_print(0);
+
+
+
     // Now that the class list is fixed, check deeper into the program
 
 	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
-	fix_type_denoters();
-	usrdef_print();
+	//fix_type_denoters();
+	//usrdef_print();
 
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
     while (temp_cl != NULL) {
     	// Process the variable declaration list
-    	check_variable_list_types_defined(temp_cl->cb->vdl);
+    	//check_variable_list_types_defined(temp_cl->cb->vdl);
 		
         // Process the func_declaration_list
 
@@ -148,7 +151,7 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	while(right != NULL) {
 		if(right == left)
 			return true;
-		right = right->outer;
+		right = right->parent;
 	}
 	// Not compatible
 	return false;
@@ -168,16 +171,12 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 		// Look up the name for class
 		if(temp_vtden->type == TYPE_DENOTER_T_CLASS_TYPE && usrdef_lookup_td(temp_vtden) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
-		else
-			printf("Found type %s in usrdef\n", temp_vtden->name);
 		// Look up the array type's type denoter for arrays
 		if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && usrdef_lookup_td(temp_vtden->data.at->td) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
 		// Look up for other types
 		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && usrdef_lookup_td(temp_vtden) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
-		else
-			printf("Found type %s in usrdef\n", temp_vtden->name);
 		temp_vdl = temp_vdl->next;
 	}
 }
@@ -185,7 +184,7 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 /*
  * Fix up type_denoters and set the appropriate type (determine if class or identifier)
  */
-void fix_type_denoters() {
+/*void fix_type_denoters() {
 	struct type_denoter_list_t *temp_tdl = usrdef_types;
 	while(temp_tdl != NULL) {
 		// See if it is an identifier that may need to be fixed to a class
@@ -199,7 +198,7 @@ void fix_type_denoters() {
 		}
 		temp_tdl = temp_tdl->next;
 	}
-}
+}*/
 
 /*
  * Returns the number of elements in an identifier list

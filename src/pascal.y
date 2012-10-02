@@ -173,26 +173,33 @@ class_list : class_list class_identification PBEGIN class_block END
         // Check the class_identification against the current class_list for duplicates
         struct class_list_t *matched = find_class_list($1, $2->id);
         if(matched != NULL) {
-        	error_class_already_declared(line_number, $2->id, line_number-1);
+        	error_class_already_declared($2->line_number, $2->id, matched->ci->line_number);
         }
 
-		add_to_class_list(&$1, $2, $4);
+		struct class_list_t *addedClass = add_to_class_list(&$1, $2, $4);
 		
-		// Return to the higher scope and set the class_list_t ptr
-		//printf("exiting class-id scope\n");
-		symtab_exit_scope($1->next);
+		// Create the class scope
+		symtab_create_class_scope(addedClass);
 		
 		// Add to usrdef list
-		/*struct type_denoter_t *new_type = new_type_denoter();
+		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
 		new_type->name = $2->id;
-		new_type->data.cl = $$;
+		new_type->data.cl = addedClass;
 		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
 		if(found_type == NULL) {
-			usrdef_insert(new_type);
+			// See if the type can be found by name (e.g. a variable declared it
+			// as an identifier and now we know its a class
+			found_type = usrdef_lookup_name(new_type->name);
+			if(found_type == NULL) {
+				usrdef_insert(new_type);
+			} else { // Update it
+				found_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+				found_type->data.cl = addedClass;
+			}
 		} else {
-			error_type_already_defined(line_number, $2->id, line_number-1);
-		}*/
+			error_type_already_defined($2->line_number, $2->id, found_type->data.cl->ci->line_number);
+		}
 	}
  | class_identification PBEGIN class_block END
 	{
@@ -202,23 +209,30 @@ class_list : class_list class_identification PBEGIN class_block END
 		$$->cb = $3;
 		$$->next = NULL;
 		
-		// Return to the higher scope and set the class_list_t ptr
-		//printf("exiting class-id scope (base) %p\n", $$);
-		symtab_exit_scope($$);
+		// Create the class scope
+		symtab_create_class_scope($$);
 		
 		// Add to usrdef list
-		/*struct type_denoter_t *new_type = new_type_denoter();
+		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
 		new_type->name = $1->id;
 		new_type->data.cl = $$;
 		struct type_denoter_t *found_type = usrdef_lookup_td(new_type);
 		if(found_type == NULL) {
-			usrdef_insert(new_type);
+			// See if the type can be found by name (e.g. a variable declared it
+			// as an identifier and now we know its a class
+			found_type = usrdef_lookup_name(new_type->name);
+			if(found_type == NULL) {
+				usrdef_insert(new_type);
+			} else { // Update it
+				found_type->type = TYPE_DENOTER_T_CLASS_TYPE;
+				found_type->data.cl = $$;
+			}
 		} else {
-			error_type_already_defined(line_number, $1->id, line_number-1);
+			error_type_already_defined($1->line_number, $1->id, found_type->data.cl->ci->line_number);
 		}
-		usrdef_print();
-		printf("\n\n");*/
+		//usrdef_print();
+		
 	}
  ;
 
@@ -228,12 +242,7 @@ class_identification : CLASS identifier
 		$$ = new_class_identification();
 		$$->id = $2;
 		$$->extend = NULL;
-		
-		// After encountering a class ident, start a class scope
-		//printf("entering class scope\n");
-		symtab_insert(SYM_ATTR_CLASS, NULL);
-		symtab_enter_scope();
-
+		$$->line_number = line_number;
 	}
 | CLASS identifier EXTENDS identifier
 	{
@@ -241,12 +250,7 @@ class_identification : CLASS identifier
 		$$ = new_class_identification();
 		$$->id = $2;
 		$$->extend = $4;
-
-		// After encountering a class ident, start a class scope
-		//printf("entering class scope (base)\n");
-		symtab_insert(SYM_ATTR_CLASS, NULL);
-		symtab_enter_scope();
-		
+		$$->line_number = line_number;
 	}
 ;
 
@@ -272,7 +276,7 @@ type_denoter : array_type
 		$$->name = $1;
 		$$->data.id = $1;
 		
-		/*struct type_denoter_t *new_type = new_type_denoter();
+		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
 		new_type->name = $1;
 		new_type->data.id = $1;
@@ -281,7 +285,7 @@ type_denoter : array_type
 			$$ = usrdef_insert(new_type);
 		} else {
 			$$ = found_type;
-		}*/
+		}
 	}
  ;
 
@@ -319,7 +323,6 @@ variable_declaration_part : VAR variable_declaration_list semicolon
 variable_declaration_list : variable_declaration_list semicolon variable_declaration
 	{
 		add_to_variable_declaration_list(&$1, $3);
-		symtab_insert(SYM_ATTR_VAR, $1->next);
 	}
  | variable_declaration
 	{
@@ -327,9 +330,7 @@ variable_declaration_list : variable_declaration_list semicolon variable_declara
 		$$ = new_variable_declaration_list();
 		$$->vd = $1;
 		$$->next = NULL;
-		
-		// Insert the variable declaration list into the currentScope's next node
-		symtab_insert(SYM_ATTR_VAR, $$);
+
 	}
 
  ;
@@ -353,9 +354,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 
 		add_to_func_declaration_list(&$1, $3);
 		
-		// Exit the function's scope
-		//printf("Exiting scope of function\n");
-		symtab_exit_scope($1->next);
+		symtab_create_function_scope($3);
 	}
  | function_declaration
 	{
@@ -363,9 +362,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 		$$->fd = $1;
 		$$->next = NULL;
 		
-		// Exit the function's scope
-		//printf("Exiting scope of function\n");
-		symtab_exit_scope($$);
+		symtab_create_function_scope($1);
 	}
  |
 	{
@@ -462,11 +459,6 @@ function_identification : FUNCTION identifier
 	{
 		// Create an identifier for the function
 		$$ = new_identifier($2);
-		
-		// Insert the declaration list entry into the symbol table
-		//printf("Entering scope of function\n");
-		symtab_insert(SYM_ATTR_FUNC, NULL);
-		symtab_enter_scope();
 	}
 ;
 
