@@ -69,7 +69,8 @@ void semantic_analysis(struct program_t *p) {
     	//printf("Class: %s\n", temp_cl->ci->id);
     	// Process the variable declaration list
     	check_variable_list_types_defined(temp_cl->cb->vdl);
-		
+		check_variable_declared_in_parent(temp_cl);
+
         // Process the func_declaration_list
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
     	while(temp_fdl != NULL) {
@@ -164,6 +165,33 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	}
 	// Not compatible
 	return false;
+}
+
+/*
+ * Checks if any variables in a variable declaration list have been
+ * declared in parent classes
+ */
+
+void check_variable_declared_in_parent(struct class_list_t *cl) {
+	if(cl->ci->extend == NULL) {
+		return; // No parent to look in
+	}
+	// Get the scope for the class
+	struct scope_t *classScope = symtab_lookup_class(cl->ci->id);
+	// Get the variable declaration list
+	struct variable_declaration_list_t *temp_vdl = cl->cb->vdl;
+	while(temp_vdl != NULL) {
+		// Check each identifier in the identifier list
+		struct identifier_list_t *temp_il = temp_vdl->vd->il;
+		while(temp_il != NULL) {
+			struct variable_declaration_t *foundVd = symtab_lookup_variable(classScope->parent,temp_il->id);
+			if(foundVd != NULL) {
+				error_variable_already_declared(temp_vdl->vd->line_number,temp_il->id,foundVd->line_number);
+			}
+			temp_il = temp_il->next;
+		}
+		temp_vdl = temp_vdl->next;
+	}
 }
 
 /*

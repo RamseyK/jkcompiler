@@ -252,53 +252,38 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 
 /*
  * Looks up a variable using its name starting in the scope.  Looks in the
- * parent scope until rootScope is reached
+ * parent scope until rootScope is reached.  Returns the variable declaration
  */
-struct scope_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
+struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, char *name) {
 	// Reached the root scope and not found
 	if(scope == rootScope)
 		return NULL;
 	
+	struct variable_declaration_list_t *vdl;
 	// If scope is a class scope
 	if(scope->attrId == SYM_ATTR_CLASS) {
-		struct variable_declaration_list_t *vdl = scope->cl->cb->vdl;
-		// Go through every variable declaration in the list
-		while(vdl != NULL) {
-			struct identifier_list_t *il = vdl->vd->il;
-			// Go through every identifier in the list
-			while(il != NULL) {
-				if(strcmp(il->id,name) == 0)
-					return scope;
-				il = il->next;
-			}
-			vdl = vdl->next;
+		vdl = scope->cl->cb->vdl;
+	// The scope is a function scope
+	} else if(scope->attrId == SYM_ATTR_FUNC) {
+		vdl = scope->fd->fb->vdl;
+	// Scope isn't the right type
+	} else {
+		return NULL;
+	}
+	// Go through every variable declaration in the list
+	while(vdl != NULL) {
+		struct identifier_list_t *il = vdl->vd->il;
+		// Go through every identifier in the list
+		while(il != NULL) {
+			if(strcmp(il->id,name) == 0)
+				return vdl->vd;
+			il = il->next;
 		}
-		
-		// Not found, look in parent scope
-		return symtab_lookup_variable(scope->parent, name);
+		vdl = vdl->next;
 	}
 	
-	// If scope is a function scope
-	if(scope->attrId == SYM_ATTR_FUNC) {
-		struct variable_declaration_list_t *vdl = scope->fd->fb->vdl;
-		// Go through every variable declaration in the list
-		while(vdl != NULL) {
-			struct identifier_list_t *il = vdl->vd->il;
-			// Go through every identifier in the list
-			while(il != NULL) {
-				if(strcmp(il->id,name) == 0)
-					return scope;
-				il = il->next;
-			}
-			vdl = vdl->next;
-		}
-				
-		// Not found, look in parent scope
-		return symtab_lookup_variable(scope->parent, name);
-	}
-	
-	// Scope wasn't the right types
-	return NULL;
+	// Not found, look in parent scope
+	return symtab_lookup_variable(scope->parent, name);
 }
 
 

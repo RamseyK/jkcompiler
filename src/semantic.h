@@ -15,7 +15,7 @@ bool compatible_classes(struct class_list_t *c1, struct class_list_t *c2);
 bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *rhs);
 
 void check_variable_list_types_defined(struct variable_declaration_list_t *vdl);
-//void check_types_defined();
+void check_variable_declared_in_parent(struct class_list_t *cl);
 
 int identifier_list_size(struct identifier_list_t *il);
 
