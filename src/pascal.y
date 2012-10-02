@@ -311,12 +311,11 @@ range : unsigned_integer DOTDOT unsigned_integer
 
 variable_declaration_part : VAR variable_declaration_list semicolon
 	{
-		$$ = new_variable_declaration_list();
-		$$->next = $2;
+		$$ = $2;
 	}
  |
 	{
-		$$ = new_variable_declaration_list();
+		$$ = NULL;
 	}
  ;
 
@@ -366,6 +365,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 	}
  |
 	{
+		$$ = NULL;
 	}
  ;
 
