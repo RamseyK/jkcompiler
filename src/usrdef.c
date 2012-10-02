@@ -53,7 +53,7 @@ void usrdef_init() {
 void usrdef_print() {
 	struct type_denoter_list_t *temp_il = usrdef_types;
 	while(temp_il != NULL) {
-		printf("\t%s\n", temp_il->tden->name);
+		printf("\t%i:%s\n", temp_il->tden->type, temp_il->tden->name);
 		temp_il = temp_il->next;
 	}
 }

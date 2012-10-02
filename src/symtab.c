@@ -163,6 +163,20 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 				printf("id is null!\n");
 			print_tabs(numTabs);
 			printf("%p: %s(FUNC)\n", node, name);
+			
+			// Show method variables
+			struct variable_declaration_list_t *vdl = fd->fb->vdl;
+			while(vdl != NULL) {
+				if(vdl->vd != NULL) {
+					struct identifier_list_t *il = vdl->vd->il;
+					while(il != NULL) {
+						print_tabs(numTabs);
+						printf("%p: %s(VAR)\n", node, il->id);
+						il = il->next;
+					}
+				}
+				vdl = vdl->next;
+			}
 		} else if(node->attrId == SYM_ATTR_CLASS) {
 			//printf("attrId = CLASS");
 			struct class_list_t* cl = node->cl;
@@ -175,6 +189,21 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 				printf("%p: %s(CLASS) extends %s\n", node, name, cl->ci->extend);
 			else
 				printf("%p: %s(CLASS)\n", node, name);
+			
+			// Show class variables
+			struct variable_declaration_list_t *vdl = cl->cb->vdl;
+			while(vdl != NULL) {
+				if(vdl->vd != NULL) {
+					struct identifier_list_t *il = vdl->vd->il;
+					while(il != NULL) {
+						print_tabs(numTabs);
+						printf("%p: %s(VAR)\n", node, il->id);
+						il = il->next;
+					}
+				}
+				vdl = vdl->next;
+			}
+			
 			// Descend into function nodes to print their parse trees
 			symtab_print_recursive(node->func_scopes, numTabs+1);
 		} else if(node->attrId == SYM_ATTR_PROGRAM) {

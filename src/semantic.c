@@ -55,10 +55,7 @@ void semantic_analysis(struct program_t *p) {
     
 	//symtab_print(0);
 
-
-
-    // Now that the class list is fixed, check deeper into the program
-
+	
 	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
 	//fix_type_denoters();
 	//usrdef_print();
@@ -66,11 +63,19 @@ void semantic_analysis(struct program_t *p) {
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
     while (temp_cl != NULL) {
+    	// Get the class scope needed for helper functions
+    	struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
+    	
+    	struct scope_t* funcScope = classScope->func_scopes;
+    	while(funcScope != NULL) {
+			// Check for semantic errors in all statements within the function block
+			//verify_statements_in_sequence(funcScope->fd->fb->ss);
+    		
+    		funcScope = funcScope->nextSibling;
+    	}
+    
     	// Process the variable declaration list
     	//check_variable_list_types_defined(temp_cl->cb->vdl);
-		
-        // Process the func_declaration_list
-
 
         // Advance to the next class
         temp_cl = temp_cl->next;
@@ -156,6 +161,67 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	// Not compatible
 	return false;
 }
+
+void verify_statements_in_sequence(struct statement_sequence_t *ss) {
+	if(ss == NULL)
+		return;
+	
+	// Check the statement type and handle accordingly
+	if(ss->s->type == STATEMENT_T_ASSIGNMENT) {
+		// Check the id (LHS) of the assignment
+		verify_identifiers_in_variable_access(ss->s->data.as->va);
+		
+		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
+		if(ss->s->data.as->oe != NULL) {
+			char *clName = ss->s->data.as->oe->id;
+			struct type_denoter_t *clTd = usrdef_lokup_name(clName);
+			if(clTd == NULL)
+				error_type_not_defined(ss->s->line_number, clTd);
+		}
+		
+	} else if(ss->s->type == STATEMENT_T_SEQUENCE) {
+		verify_statemens_in_sequence(ss->s->data.ss);
+	} else if(ss->s->type == STATEMENT_T_IF) {
+		// Combine both statements into a single sequence and check the entire statement as a whole
+		struct statement_sequence_t *ss1 = new_statement_sequence();
+		struct statement_sequence_t *ss2 = new_statement_sequence();
+		ss1->s = ss->s->data.is->s1;
+		ss2->s = ss->s->data.is->s2;
+		ss1->next = ss2;
+		verify_statements_in_sequence(ss1);
+		free(ss1);
+		free(ss2);
+	} else if(ss->s->type == STATEMENT_T_WHILE) {
+	
+		// Check the statement within the while statement
+		struct statement_sequence_t *ss1 = new_statement_sequence();
+		ss1->s = ss->s->data.ws->s;
+		verify_statements_in_sequence(ss1);
+		free(ss1);
+	} else if(ss->s->type == STATEMENT_T_PRINT) {
+		verify_identifiers_in_variable_access(ss->s->data.ps->va);
+	} else {
+	}
+	
+	verify_statements_in_sequence(ss->next);
+}
+
+void verify_identifiers_in_variable_access(struct variable_access_t *va) {
+	// Check the variable access type and find the id accordingly
+	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+		printf("found VA identifier %s\n", va->data.id);
+	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
+		verify_identifiers_in_variable_access(va->data.iv->va, ids);
+	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
+		verify_identifiers_in_variable_access(va->data.ad->va, ids);
+		printf("found VA attribute designator %s\n", va->data.ad->id);
+	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
+		verify_identifiers_in_variable_access(va->data.md->va, ids);
+		printf("found VA method designator %s\n", va->data.md->fd->id);
+	} else {
+	}
+}
+
 
 /*
  * Checks that all types are defined for a variable_declaration_list_t.  Prints

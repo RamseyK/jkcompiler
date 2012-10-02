@@ -18,31 +18,22 @@
  * ----------------------------------------------------------------
  */
 
-// Attributes that designate the object scope_t->ptr points to
-
-#define SYM_ATTR_VAR 1 //variable_declaration_list_t (need to get to type_denoter for type checking)
-#define SYM_ATTR_CLASS 2 // class_list_t
-#define SYM_ATTR_FUNC 3 //func_declaration_list_t
+// Type of the scope node which determines which struct members are set
+#define SYM_ATTR_VAR 1
+#define SYM_ATTR_CLASS 2
+#define SYM_ATTR_FUNC 3
 #define SYM_ATTR_PROGRAM 4
 
-/*struct scope_t {
-	int attrId;
-	void *ptr; // class_list or type_den depending on attrId
-	struct scope_t *inner; // Points to the head of the inner scope
-	struct scope_t *outer; // Points to the head of the outer scope
-	struct scope_t *next; // Points to the head of the adjacent scope
-};*/
-
 struct scope_t {
-	int attrId;
-	struct scope_t *parent;
-	struct program_t *program;
-	struct scope_t *class_scopes;
-	struct class_list_t *cl;
-	struct scope_t *func_scopes;
-	struct function_declaration_t *fd;
-	struct scope_t *next;
-	struct scope_t *nextSibling;
+	int attrId; // Type of the scope node which determines which struct members are set
+	struct scope_t *parent; // Parent scope
+	struct program_t *program; // Program in this scope
+	struct scope_t *class_scopes; // Head node of class scopes in this scope
+	struct class_list_t *cl; // Class in this scope
+	struct scope_t *func_scopes; // Head node of function scopes in this scope
+	struct function_declaration_t *fd; // Function declaration in this scope
+	struct scope_t *next; // Next class_scope
+	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
 };
 
 /* ----------------------------------------------------------------
