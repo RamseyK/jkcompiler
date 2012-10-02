@@ -589,8 +589,8 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint16 yyrline[] =
 {
        0,   136,   136,   143,   149,   157,   162,   171,   204,   239,
-     247,   257,   265,   272,   292,   300,   312,   318,   323,   327,
-     338,   347,   359,   368,   372,   377,   381,   390,   397,   406,
+     247,   257,   265,   272,   292,   300,   312,   317,   322,   326,
+     337,   346,   358,   367,   372,   377,   381,   390,   397,   406,
      414,   422,   431,   440,   447,   456,   458,   465,   473,   476,
      482,   489,   496,   503,   510,   517,   524,   533,   541,   550,
      557,   566,   571,   579,   586,   592,   598,   604,   612,   620,
@@ -1841,27 +1841,26 @@ yyreduce:
   case 16:
 #line 313 "pascal.y"
     {
-		(yyval.vdl) = new_variable_declaration_list();
-		(yyval.vdl)->next = (yyvsp[(2) - (3)].vdl);
+		(yyval.vdl) = (yyvsp[(2) - (3)].vdl);
 	}
     break;
 
   case 17:
-#line 318 "pascal.y"
+#line 317 "pascal.y"
     {
-		(yyval.vdl) = new_variable_declaration_list();
+		(yyval.vdl) = NULL;
 	}
     break;
 
   case 18:
-#line 324 "pascal.y"
+#line 323 "pascal.y"
     {
 		add_to_variable_declaration_list(&(yyvsp[(1) - (3)].vdl), (yyvsp[(3) - (3)].vd));
 	}
     break;
 
   case 19:
-#line 328 "pascal.y"
+#line 327 "pascal.y"
     {
 		// Create the head of the variable list
 		(yyval.vdl) = new_variable_declaration_list();
@@ -1872,7 +1871,7 @@ yyreduce:
     break;
 
   case 20:
-#line 339 "pascal.y"
+#line 338 "pascal.y"
     {
 		(yyval.vd) = new_variable_declaration();
 		(yyval.vd)->il = (yyvsp[(1) - (3)].idl);
@@ -1882,7 +1881,7 @@ yyreduce:
     break;
 
   case 21:
-#line 348 "pascal.y"
+#line 347 "pascal.y"
     {
         // Check the func_declaration header against the current func_declaration_list for duplicates
         struct func_declaration_list_t *matched = find_func_list((yyvsp[(1) - (3)].fdl), (yyvsp[(3) - (3)].funcd)->fh->id);
@@ -1897,7 +1896,7 @@ yyreduce:
     break;
 
   case 22:
-#line 360 "pascal.y"
+#line 359 "pascal.y"
     {
 		(yyval.fdl) = new_func_declaration_list();
 		(yyval.fdl)->fd = (yyvsp[(1) - (1)].funcd);
@@ -1908,8 +1907,9 @@ yyreduce:
     break;
 
   case 23:
-#line 368 "pascal.y"
+#line 367 "pascal.y"
     {
+		(yyval.fdl) = NULL;
 	}
     break;
 

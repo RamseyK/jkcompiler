@@ -59,24 +59,29 @@ void semantic_analysis(struct program_t *p) {
 	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
 	//fix_type_denoters();
 	//usrdef_print();
-
+	//symtab_print(0);
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
     while (temp_cl != NULL) {
-    	// Get the class scope needed for helper functions
-    	struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
-    	
-    	struct scope_t* funcScope = classScope->func_scopes;
-    	while(funcScope != NULL) {
-			// Check for semantic errors in all statements within the function block
-			//verify_statements_in_sequence(funcScope->fd->fb->ss);
-    		
-    		funcScope = funcScope->nextSibling;
-    	}
-    
+    	//printf("Class: %s\n", temp_cl->ci->id);
     	// Process the variable declaration list
-    	//check_variable_list_types_defined(temp_cl->cb->vdl);
+    	check_variable_list_types_defined(temp_cl->cb->vdl);
+		check_variable_declared_in_parent(temp_cl);
 
+        // Process the func_declaration_list
+    	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
+    	while(temp_fdl != NULL) {
+    		// Process the variable declaration list in fdl
+    		//if(temp_fdl->fd == NULL) printf("Function declaration null\n");
+    		//if(temp_fdl->fd->fb == NULL) printf("Function block null\n");
+    		//if(temp_fdl->fd->fb->vdl == NULL) printf("Function vdl null\n");
+    		check_variable_list_types_defined(temp_fdl->fd->fb->vdl);
+			
+			// Check for semantic errors in all statements within the function block
+			//verify_statements_in_sequence(temp_fdl->fd->fb->ss);
+
+    		temp_fdl = temp_fdl->next;
+    	}
         // Advance to the next class
         temp_cl = temp_cl->next;
     }
@@ -224,6 +229,33 @@ void verify_identifiers_in_variable_access(struct variable_access_t *va) {
 
 
 /*
+ * Checks if any variables in a variable declaration list have been
+ * declared in parent classes
+ */
+
+void check_variable_declared_in_parent(struct class_list_t *cl) {
+	if(cl->ci->extend == NULL) {
+		return; // No parent to look in
+	}
+	// Get the scope for the class
+	struct scope_t *classScope = symtab_lookup_class(cl->ci->id);
+	// Get the variable declaration list
+	struct variable_declaration_list_t *temp_vdl = cl->cb->vdl;
+	while(temp_vdl != NULL) {
+		// Check each identifier in the identifier list
+		struct identifier_list_t *temp_il = temp_vdl->vd->il;
+		while(temp_il != NULL) {
+			struct variable_declaration_t *foundVd = symtab_lookup_variable(classScope->parent,temp_il->id);
+			if(foundVd != NULL) {
+				error_variable_already_declared(temp_vdl->vd->line_number,temp_il->id,foundVd->line_number);
+			}
+			temp_il = temp_il->next;
+		}
+		temp_vdl = temp_vdl->next;
+	}
+}
+
+/*
  * Checks that all types are defined for a variable_declaration_list_t.  Prints
  * appropriate error messages
  */
@@ -232,6 +264,12 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 	struct variable_declaration_list_t *temp_vdl = vdl;
 	// for each variable_declaration_list
 	while(temp_vdl != NULL) {
+		//printf("Variable: %s\n", temp_vdl->vd->il->id);
+
+		// Check nulls for testing
+		//if(temp_vdl->vd == NULL) printf("Variable decl null\n");
+		//if(temp_vdl->vd->tden == NULL) printf("Variable decl tden null\n");
+
 		// Check if the type is defined
 		struct type_denoter_t *temp_vtden = temp_vdl->vd->tden;
 		// Look up the name for class
@@ -240,31 +278,19 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 		// Look up the array type's type denoter for arrays
 		if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && usrdef_lookup_td(temp_vtden->data.at->td) == NULL)
 			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
-		// Look up for other types
-		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER && usrdef_lookup_td(temp_vtden) == NULL)
-			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
-		temp_vdl = temp_vdl->next;
-	}
-}
-
-/*
- * Fix up type_denoters and set the appropriate type (determine if class or identifier)
- */
-/*void fix_type_denoters() {
-	struct type_denoter_list_t *temp_tdl = usrdef_types;
-	while(temp_tdl != NULL) {
-		// See if it is an identifier that may need to be fixed to a class
-		if(temp_tdl->tden->type == TYPE_DENOTER_T_IDENTIFIER) {
-			struct scope_t *class_scope = symtab_lookup_class(temp_tdl->tden->name);
-			// Class found update the type and data
-			if(class_scope != NULL) {
-				temp_tdl->tden->type = TYPE_DENOTER_T_CLASS_TYPE;
-				temp_tdl->tden->data.cl = (struct class_list_t *) class_scope->ptr;
+		// Look up for identifier types
+		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER) {
+			// Make sure the name is not integer, boolean, pointer
+			if((strcmp(temp_vtden->name,PRIMITIVE_TYPE_NAME_INTEGER) != 0) &&
+				(strcmp(temp_vtden->name,PRIMITIVE_TYPE_NAME_BOOLEAN) != 0) &&
+				(strcmp(temp_vtden->name,PRIMITIVE_TYPE_NAME_POINTER) != 0)) {
+				error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
 			}
 		}
-		temp_tdl = temp_tdl->next;
+		temp_vdl = temp_vdl->next;
+		//printf("loop iter\n");
 	}
-}*/
+}
 
 /*
  * Returns the number of elements in an identifier list

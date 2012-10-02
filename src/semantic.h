@@ -19,7 +19,7 @@ void verify_statements_in_sequence(struct statement_sequence_t *ss);
 void verify_identifiers_in_variable_access(struct variable_access_t *va);
 
 void check_variable_list_types_defined(struct variable_declaration_list_t *vdl);
-void fix_type_denoters();
+void check_variable_declared_in_parent(struct class_list_t *cl);
 
 int identifier_list_size(struct identifier_list_t *il);
 
