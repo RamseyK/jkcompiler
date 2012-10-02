@@ -65,13 +65,15 @@ void semantic_analysis(struct program_t *p) {
     while (temp_cl != NULL) {
     	//printf("Class: %s\n", temp_cl->ci->id);
     	// Process the variable declaration list
-    	check_variable_list_types_defined(temp_cl->cb->vdl);
+    	process_variable_declaration_list(temp_cl->cb->vdl);
+    	// Check if variable was declared in parent classes
 		check_variable_declared_in_parent(temp_cl);
 
         // Process the func_declaration_list
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
     	while(temp_fdl != NULL) {
     		// Process the variable declaration list in fdl
+<<<<<<< HEAD
     		//if(temp_fdl->fd == NULL) printf("Function declaration null\n");
     		//if(temp_fdl->fd->fb == NULL) printf("Function block null\n");
     		//if(temp_fdl->fd->fb->vdl == NULL) printf("Function vdl null\n");
@@ -79,6 +81,9 @@ void semantic_analysis(struct program_t *p) {
 			
 			// Check for semantic errors in all statements within the function block
 			//verify_statements_in_sequence(temp_fdl->fd->fb->ss);
+=======
+    		process_variable_declaration_list(temp_fdl->fd->fb->vdl);
+>>>>>>> Invaild variable names (true/false)
 
     		temp_fdl = temp_fdl->next;
     	}
@@ -237,6 +242,9 @@ void check_variable_declared_in_parent(struct class_list_t *cl) {
 	if(cl->ci->extend == NULL) {
 		return; // No parent to look in
 	}
+	if(symtab_lookup_class(cl->ci->extend) == NULL) {
+		return; // Base class was not found
+	}
 	// Get the scope for the class
 	struct scope_t *classScope = symtab_lookup_class(cl->ci->id);
 	// Get the variable declaration list
@@ -256,10 +264,29 @@ void check_variable_declared_in_parent(struct class_list_t *cl) {
 }
 
 /*
- * Checks that all types are defined for a variable_declaration_list_t.  Prints
- * appropriate error messages
+ * Checks if a variable name is the same as one of the reserved words (integer, boolean, True, False...)
+ * ignoring case.
  */
-void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) {
+bool check_variable_valid_name(char *id) {
+	char *id_lower = stringtolower(id);
+	if(strcmp(id_lower,PRIMITIVE_TYPE_NAME_INTEGER) == 0 ||
+		strcmp(id_lower,PRIMITIVE_TYPE_NAME_BOOLEAN) == 0 ||
+		strcmp(id_lower,PRIMITIVE_TYPE_NAME_POINTER) == 0 ||
+		strcmp(id_lower,PRIMITIVE_TYPE_NAME_UNKNOWN) == 0 ||
+		strcmp(id_lower,BOOLEAN_VALUE_TRUE) == 0 ||
+		strcmp(id_lower,BOOLEAN_VALUE_FALSE) == 0) {
+		//printf("Variable id: %s found invalid\n",id);
+		return false;
+	}
+	//printf("Variable id: %s foudn valid\n",id);
+	return true;
+}
+
+/*
+ * Checks that all types are defined for a variable_declaration_list_t.
+ * Also checks that variable names are valid. Prints appropriate error messages
+ */
+void process_variable_declaration_list(struct variable_declaration_list_t *vdl) {
 	// Process the variable_declaration_list
 	struct variable_declaration_list_t *temp_vdl = vdl;
 	// for each variable_declaration_list
@@ -286,6 +313,16 @@ void check_variable_list_types_defined(struct variable_declaration_list_t *vdl) 
 				(strcmp(temp_vtden->name,PRIMITIVE_TYPE_NAME_POINTER) != 0)) {
 				error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
 			}
+		}
+
+		// Check if variable name is valid
+		struct identifier_list_t *temp_il = temp_vdl->vd->il;
+		while(temp_il != NULL) {
+			// Check if it is a valid variable name
+			if(!check_variable_valid_name(temp_il->id)) {
+				error_variable_name_invalid(temp_vdl->vd->line_number, temp_il->id);
+			}
+			temp_il = temp_il->next;
 		}
 		temp_vdl = temp_vdl->next;
 		//printf("loop iter\n");

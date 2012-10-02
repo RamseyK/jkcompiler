@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define K 1024
 #define MAX_ERROR_SIZE 1 * K
@@ -23,8 +24,8 @@
 #define PRIMITIVE_TYPE_NAME_POINTER "pointer"
 #define PRIMITIVE_TYPE_NAME_UNKNOWN "unknown"
 
-#define BOOLEAN_VALUE_TRUE "True"
-#define BOOLEAN_VALUE_FALSE "False"
+#define BOOLEAN_VALUE_TRUE "true"
+#define BOOLEAN_VALUE_FALSE "false"
 
 #define OP_PLUS 1
 #define OP_MINUS 2
@@ -425,6 +426,6 @@ int makekey(char* lexeme, int max_hashkeys);
 void print_tabs(int numOfTabs);
 char *inttostring(int value);
 char *longtostring(long value);
-
+char *stringtolower(char *str);
 #endif
 

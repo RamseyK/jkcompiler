@@ -67,3 +67,19 @@ char *longtostring(long value) {
 
     return s;
 }
+
+/*
+ * Converts a string to all lower case characters
+ */
+char *stringtolower(char *str) {
+	int i = 0;
+	char *lower = (char *)malloc((strlen(str)+1) * sizeof(char));
+	while(str[i] != '\0') {
+		//printf("Converting %c to lower: ",str[i]);
+		lower[i] = (char)tolower(str[i]);
+		//printf("%c\n",lower[i]);
+		i++;
+	} 
+	lower[i] = '\0';
+	return lower;
+}
