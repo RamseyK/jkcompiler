@@ -853,6 +853,10 @@ sign : PLUS
 factor : sign factor
 	{
 		GLOG(("factor : sign factor\n"));
+		// Check if the factor $2 already has a sign
+		if($2->type == FACTOR_T_SIGNFACTOR) {
+			error_too_many_signs(line_number);
+		}
 		$$ = new_factor();
 		$$->type = FACTOR_T_SIGNFACTOR;
 		$$->data.f.sign = $1;
