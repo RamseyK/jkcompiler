@@ -73,17 +73,14 @@ void semantic_analysis(struct program_t *p) {
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
     	while(temp_fdl != NULL) {
     		// Process the variable declaration list in fdl
-<<<<<<< HEAD
     		//if(temp_fdl->fd == NULL) printf("Function declaration null\n");
     		//if(temp_fdl->fd->fb == NULL) printf("Function block null\n");
     		//if(temp_fdl->fd->fb->vdl == NULL) printf("Function vdl null\n");
-    		check_variable_list_types_defined(temp_fdl->fd->fb->vdl);
+    		//check_variable_list_types_defined(temp_fdl->fd->fb->vdl);
 			
 			// Check for semantic errors in all statements within the function block
 			//verify_statements_in_sequence(temp_fdl->fd->fb->ss);
-=======
     		process_variable_declaration_list(temp_fdl->fd->fb->vdl);
->>>>>>> Invaild variable names (true/false)
 
     		temp_fdl = temp_fdl->next;
     	}
@@ -184,13 +181,13 @@ void verify_statements_in_sequence(struct statement_sequence_t *ss) {
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(ss->s->data.as->oe != NULL) {
 			char *clName = ss->s->data.as->oe->id;
-			struct type_denoter_t *clTd = usrdef_lokup_name(clName);
+			struct type_denoter_t *clTd = usrdef_lookup_name(clName);
 			if(clTd == NULL)
-				error_type_not_defined(ss->s->line_number, clTd);
+				error_type_not_defined(ss->s->line_number, clName);
 		}
 		
 	} else if(ss->s->type == STATEMENT_T_SEQUENCE) {
-		verify_statemens_in_sequence(ss->s->data.ss);
+		verify_statements_in_sequence(ss->s->data.ss);
 	} else if(ss->s->type == STATEMENT_T_IF) {
 		// Combine both statements into a single sequence and check the entire statement as a whole
 		struct statement_sequence_t *ss1 = new_statement_sequence();
@@ -221,12 +218,12 @@ void verify_identifiers_in_variable_access(struct variable_access_t *va) {
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
 		printf("found VA identifier %s\n", va->data.id);
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
-		verify_identifiers_in_variable_access(va->data.iv->va, ids);
+		verify_identifiers_in_variable_access(va->data.iv->va);
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
-		verify_identifiers_in_variable_access(va->data.ad->va, ids);
+		verify_identifiers_in_variable_access(va->data.ad->va);
 		printf("found VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
-		verify_identifiers_in_variable_access(va->data.md->va, ids);
+		verify_identifiers_in_variable_access(va->data.md->va);
 		printf("found VA method designator %s\n", va->data.md->fd->id);
 	} else {
 	}

@@ -21,3 +21,7 @@ tests/.DS_Store
 tests/tests_semantic/results/opc.log
 
 tests/tests_semantic/results/opc.sum
+
+tests/tests_lib_shared_auto.inc
+
+src/lex.yy.c
