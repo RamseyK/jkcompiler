@@ -66,9 +66,9 @@ void semantic_analysis(struct program_t *p) {
     	struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
     	
     	// Process the variable declaration list
-    	process_variable_declaration_list(temp_cl->cb->vdl);
+    	process_variable_declaration_list(classScope,temp_cl->cb->vdl);
     	// Check if variable was declared in parent classes
-		check_variable_declared_in_parent(temp_cl);
+		//check_variable_declared_in_parent(temp_cl);
 
         // Process the func_declaration_list
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
@@ -80,7 +80,7 @@ void semantic_analysis(struct program_t *p) {
 			
 			// Check for semantic errors in all statements within the function block
 			struct scope_t *funcScope = symtab_lookup_function(classScope, temp_fdl->fd->fh->id);
-    		process_variable_declaration_list(temp_fdl->fd->fb->vdl);
+    		process_variable_declaration_list(funcScope,temp_fdl->fd->fb->vdl);
     		verify_statements_in_sequence(funcScope, temp_fdl->fd->fb->ss);
 
     		temp_fdl = temp_fdl->next;
@@ -229,11 +229,8 @@ void verify_identifiers_in_variable_access(struct scope_t *scope, struct variabl
 		verify_identifiers_in_variable_access(scope, va->data.iv->va, line_number);
 		
 		// Check if the array index is out of bounds
-		//printf("indexed expr %s[%i]\n", va->data.iv->va->data.id, (int)va->data.iv->iel->e->expr->val);
 		int idx = (int)va->data.iv->iel->e->expr->val;
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
-		
-		// If we have a variable definition, check if the index is in the range
 		if(vd != NULL && vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
 			struct range_t *range = vd->tden->data.at->r;
 			if(idx > range->max->ui || idx < range->min->ui)
@@ -248,37 +245,6 @@ void verify_identifiers_in_variable_access(struct scope_t *scope, struct variabl
 		verify_identifiers_in_variable_access(scope, va->data.md->va, line_number);
 		//printf("VA method designator %s\n", va->data.md->fd->id);
 	} else {
-	}
-}
-
-
-/*
- * Checks if any variables in a variable declaration list have been
- * declared in parent classes
- */
-
-void check_variable_declared_in_parent(struct class_list_t *cl) {
-	if(cl->ci->extend == NULL) {
-		return; // No parent to look in
-	}
-	if(symtab_lookup_class(cl->ci->extend) == NULL) {
-		return; // Base class was not found
-	}
-	// Get the scope for the class
-	struct scope_t *classScope = symtab_lookup_class(cl->ci->id);
-	// Get the variable declaration list
-	struct variable_declaration_list_t *temp_vdl = cl->cb->vdl;
-	while(temp_vdl != NULL) {
-		// Check each identifier in the identifier list
-		struct identifier_list_t *temp_il = temp_vdl->vd->il;
-		while(temp_il != NULL) {
-			struct variable_declaration_t *foundVd = symtab_lookup_variable(classScope->parent,temp_il->id);
-			if(foundVd != NULL) {
-				error_variable_already_declared(temp_vdl->vd->line_number,temp_il->id,foundVd->line_number);
-			}
-			temp_il = temp_il->next;
-		}
-		temp_vdl = temp_vdl->next;
 	}
 }
 
@@ -306,7 +272,7 @@ bool check_variable_valid_name(char *id) {
  * Checks that all types are defined for a variable_declaration_list_t.
  * Also checks that variable names are valid. Prints appropriate error messages
  */
-void process_variable_declaration_list(struct variable_declaration_list_t *vdl) {
+void process_variable_declaration_list(struct scope_t *scope, struct variable_declaration_list_t *vdl) {
 	// Process the variable_declaration_list
 	struct variable_declaration_list_t *temp_vdl = vdl;
 
@@ -351,12 +317,27 @@ void process_variable_declaration_list(struct variable_declaration_list_t *vdl) 
 					error_variable_name_invalid(temp_vdl->vd->line_number, temp_il->id);
 				}
 				// Checks if the variable was declared in the same line, adds it to master list if not
-				//if(full_id_list == NULL) printf("full_id_list null\n");
-				//if(temp_il->id == NULL) printf("temp_il->id null\n");
 				if(find_identifier_list(id_list,temp_il->id) == NULL) {
 					add_to_identifier_list(&id_list,temp_il->id);
 				} else {
 					error_variable_already_declared(temp_vd->line_number,temp_il->id,temp_vd->line_number);
+				}
+
+				// Check if the variable name is the same as the function name
+				if(scope->attrId == SYM_ATTR_FUNC) {
+					if(strcmp(temp_il->id,scope->fd->fh->id) == 0) {
+						error_variable_name_reserved_for_function_return_value(temp_vd->line_number,temp_il->id);
+					}
+				}
+
+				// If the scope is a class see if the variable was declared in a parent
+				if(scope->attrId == SYM_ATTR_CLASS) {
+					if(scope->parent->attrId == SYM_ATTR_CLASS) {
+						struct variable_declaration_t *foundVd = symtab_lookup_variable(scope->parent,temp_il->id);
+						if(foundVd != NULL) {
+							error_variable_already_declared(temp_vdl->vd->line_number,temp_il->id,foundVd->line_number);
+						}
+					}
 				}
 
 				// Check the vdl up to this element to see if the variable was declared in a previous vdl

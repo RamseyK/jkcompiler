@@ -348,7 +348,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
         // Check the func_declaration header against the current func_declaration_list for duplicates
         struct func_declaration_list_t *matched = find_func_list($1, $3->fh->id);
         if(matched != NULL) {
-        	error_function_already_declared(line_number, $3->fh->id, line_number-1);
+        	error_function_already_declared($3->line_number, $3->fh->id, matched->fd->line_number);
         }
 
 		add_to_func_declaration_list(&$1, $3);
