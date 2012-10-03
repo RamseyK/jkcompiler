@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
     exit_on_errors();
 
     /* Perform semantic analysis */
-    semantic_analysis(program);
+    //semantic_analysis(program);
     //symtab_print_list_addr();
     //usrdef_print();
 
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
         printf("-------------\n");
         symtab_print(0);
     }
-
+    
     /* Simple, wasn't it ?!! */
 
     return 0;

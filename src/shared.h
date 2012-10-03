@@ -57,6 +57,24 @@
                                   name = name->next; \
                                }
 
+/*
+ * Macro for grammar logging
+ */
+#if 0
+	#define GLOG(x) printf x
+#else
+	#define GLOG(x) (void)0
+#endif
+
+/*
+ * Macro for semantic logging
+ */
+#if 0
+	#define SLOG(x) printf x
+#else
+	#define SLOG(x) (void)0
+#endif
+
 /* ================================================================
  * Datatype declarations
  * ================================================================
