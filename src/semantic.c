@@ -223,22 +223,25 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+		// Plain identifier
 		//printf("VA identifier %s\n", va->data.id);
-		
 		// Check the function parameters and variables for the identifier
-		if(symtab_lookup_function_param(scope, va->data.id) == NULL && symtab_lookup_variable(scope, va->data.id) == NULL) {
+		struct formal_parameter_section_t *fps = symtab_lookup_function_param(scope, va->data.id);
+		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.id);
+		if(fps == NULL && vd == NULL) {
 			// If the name doesn't match the function name, it's undeclared
 			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
 				error_variable_not_declared(line_number, va->data.id);
 			}
-		}
+		}		
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
+		// Accessing an indexed variable (array)
+	
 		// Recursively check the inner variable access for the array var identifier
 		verify_variable_access(scope, va->data.iv->va, line_number);
 		
 		// Check if the array index is out of bounds
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
-		//printf("%s\n", va->data.iv->iel->e->expr->type);
 		if(vd != NULL) {
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
@@ -249,14 +252,11 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 				
 				while(iel != NULL && arr != NULL) {
 					//printf("Inner: [%i,%i]\n", arr->r->min->ui, arr->r->max->ui);
-					
 					if(strcmp(iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
 						int idx = (int)iel->e->expr->val;
-						//printf("%i\n", idx);
 						struct range_t *range = arr->r;
 						if(idx > range->max->ui || idx < range->min->ui)
-							error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
-					
+							error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);		
 					}
 						
 					// If the inner type is an array (another dimension) move to it
@@ -343,6 +343,44 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 			//printf("unsigned constant: %i\n", p->data.un->ui);
 		} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
 			//printf("func desig: %s\n", p->data.fd->id);
+			
+			// Lookup the function in the parent of the current scope (the class scope)
+			struct scope_t* funcScope = symtab_lookup_function(scope->parent, p->data.fd->id);
+			if(funcScope == NULL) {
+				//error_function_not_declared(line_number, p->data.fd->id);
+				return;
+			}
+			
+			int numParams = 0, actualParams = 0;
+			struct actual_parameter_list_t *apl = p->data.fd->apl;
+			while(apl != NULL) {
+				//verify_expression(scope, apl->ap->e1, line_number);
+				//verify_expression(scope, apl->ap->e2, line_number);
+				//verify_expression(scope, apl->ap->e3, line_number);
+				if(apl->ap->e1 != NULL) numParams++;
+				if(apl->ap->e2 != NULL) numParams++;
+				if(apl->ap->e3 != NULL) numParams++;
+				apl = apl->next;
+			}
+			//printf("Number of params: %i\n", numParams);
+			
+			// Count the number of parameters expected for a successful function call
+			if(funcScope->fd->fh->fpsl != NULL) {
+				struct formal_parameter_section_list_t *fpsl = funcScope->fd->fh->fpsl;
+				while(fpsl != NULL) {
+					struct identifier_list_t *il = fpsl->fps->il;
+					while(il != NULL) {
+						actualParams++;
+						il = il->next;
+					}
+					fpsl = fpsl->next;
+				}
+			}
+			
+			// If the number of parameters in the call doesn't meet the required amount, error
+			if(numParams != actualParams)
+				error_function_not_declared(line_number, funcScope->fd->fh->id);
+			
 		} else if(p->type == PRIMARY_T_EXPRESSION) {
 			//verify_expression(scope, p->data.e, line_number);
 		} else if(p->type == PRIMARY_T_PRIMARY) {
@@ -358,7 +396,6 @@ void verify_expression(struct scope_t *scope, struct expression_t *e, int line_n
 	if(e == NULL)
 		return;
 
-	//printf("Expression data - %s = %f \n", e->expr->type, e->expr->val);
 	// Two expressions are present
 	if(e->se2 != NULL) {
 		verify_simple_expression(scope, e->se2, line_number);
