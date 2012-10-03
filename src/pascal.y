@@ -649,6 +649,8 @@ index_expression_list : index_expression_list comma index_expression
 	{
 		$$ = new_index_expression_list();
 		$$->e = $1;
+		$$->expr = $1->expr;
+		$$->next = NULL;
 	}
  ;
 

@@ -239,18 +239,36 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 		// Check if the array index is out of bounds
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
 		//printf("%s\n", va->data.iv->iel->e->expr->type);
-		if(vd != NULL) {		
+		if(vd != NULL) {
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+				// Loop through inner ranges and check each index in a comma separated expression list
 				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
-				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
-					int idx = (int)va->data.iv->iel->e->expr->val;
-					struct range_t *range = vd->tden->data.at->r;
-					if(idx > range->max->ui || idx < range->min->ui)
-						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
-				} 
+				struct array_type_t *arr = vd->tden->data.at;
+				struct index_expression_list_t *iel = va->data.iv->iel;
 				
-				// Check type of index (works for n dimensions)
+				while(iel != NULL && arr != NULL) {
+					//printf("Inner: [%i,%i]\n", arr->r->min->ui, arr->r->max->ui);
+					
+					if(strcmp(iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
+						int idx = (int)iel->e->expr->val;
+						//printf("%i\n", idx);
+						struct range_t *range = arr->r;
+						if(idx > range->max->ui || idx < range->min->ui)
+							error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+					
+					}
+						
+					// If the inner type is an array (another dimension) move to it
+					if(arr->td->type == TYPE_DENOTER_T_ARRAY_TYPE)
+						arr = arr->td->data.at;
+					else
+						arr = NULL;
+						
+					iel = iel->next;
+				}
+				
+				// Check type of index
 				if(strcmp(vd->tden->data.at->inner_type_name, PRIMITIVE_TYPE_NAME_INTEGER) != 0) {
 					error_array_index_is_not_integer(line_number, va->data.iv->va->data.id);
 				}
