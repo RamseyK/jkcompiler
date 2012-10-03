@@ -267,6 +267,7 @@ void check_variable_declared_in_parent(struct class_list_t *cl) {
 bool check_variable_valid_name(char *id) {
 	char *id_lower = stringtolower(id);
 	if(strcmp(id_lower,PRIMITIVE_TYPE_NAME_INTEGER) == 0 ||
+		strcmp(id_lower,PRIMITIVE_TYPE_NAME_REAL) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_BOOLEAN) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_POINTER) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_UNKNOWN) == 0 ||

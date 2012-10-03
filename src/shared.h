@@ -20,6 +20,7 @@
 #define PROGRAMNAME "opc"
 
 #define PRIMITIVE_TYPE_NAME_INTEGER "integer"
+#define PRIMITIVE_TYPE_NAME_REAL "real"
 #define PRIMITIVE_TYPE_NAME_BOOLEAN "boolean"
 #define PRIMITIVE_TYPE_NAME_POINTER "pointer"
 #define PRIMITIVE_TYPE_NAME_UNKNOWN "unknown"

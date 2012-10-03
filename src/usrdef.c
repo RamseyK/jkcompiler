@@ -30,13 +30,19 @@ void usrdef_init() {
 	integer_td->name = PRIMITIVE_TYPE_NAME_INTEGER;
 	integer_td->data.id = PRIMITIVE_TYPE_NAME_INTEGER;
 	usrdef_insert(integer_td);
-	// Second type is boolean
+	// The second type is real
+	struct type_denoter_t *real_td = new_type_denoter();
+	real_td->type = TYPE_DENOTER_T_IDENTIFIER;
+	real_td->name = PRIMITIVE_TYPE_NAME_REAL;
+	real_td->data.id = PRIMITIVE_TYPE_NAME_REAL;
+	usrdef_insert(real_td);
+	// Third type is boolean
 	struct type_denoter_t *boolean_td = new_type_denoter();
 	boolean_td->type = TYPE_DENOTER_T_IDENTIFIER;
 	boolean_td->name = PRIMITIVE_TYPE_NAME_BOOLEAN;
 	boolean_td->data.id = PRIMITIVE_TYPE_NAME_BOOLEAN;
 	usrdef_insert(boolean_td);
-	// Third type is pointer
+	// Fourth type is pointer
 	struct type_denoter_t *pointer_td = new_type_denoter();
 	pointer_td->type = TYPE_DENOTER_T_IDENTIFIER;
 	pointer_td->name = PRIMITIVE_TYPE_NAME_POINTER;
