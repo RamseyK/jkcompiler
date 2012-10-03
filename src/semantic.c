@@ -180,7 +180,10 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_seque
 	// Check the statement type and handle accordingly
 	if(ss->s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
-		verify_identifiers_in_variable_access(scope, ss->s->data.as->va, ss->s->line_number);
+		verify_variable_access(scope, ss->s->data.as->va, ss->s->line_number);
+		
+		// Check the RHS of the assignment
+		//verify_expression(scope, ss->s->data.as->e, ss->s->line_number);
 		
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(ss->s->data.as->oe != NULL) {
@@ -210,17 +213,30 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_seque
 		verify_statements_in_sequence(scope, ss1);
 		free(ss1);
 	} else if(ss->s->type == STATEMENT_T_PRINT) {
-		verify_identifiers_in_variable_access(scope, ss->s->data.ps->va, ss->s->line_number);
+		verify_variable_access(scope, ss->s->data.ps->va, ss->s->line_number);
 	} else {
 	}
 	
 	verify_statements_in_sequence(scope, ss->next);
 }
 
-void verify_identifiers_in_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
+void verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
+	if(va == NULL)
+		return;
+
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
 		//printf("VA identifier %s\n", va->data.id);
+		
+		// Check the formal_parameter_list
+		if(scope->fd->fh->fpsl != NULL) {
+			struct formal_parameter_section_list_t *fpsl = scope->fd->fh->fpsl;
+			while(fpsl != NULL) {
+				
+				fpsl = fpsl->next;
+			}
+		}
+		
 		if(symtab_lookup_variable(scope, va->data.id) == NULL) {
 			// If the name doesn't match the function name, it's undeclared
 			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
@@ -229,26 +245,79 @@ void verify_identifiers_in_variable_access(struct scope_t *scope, struct variabl
 		}
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
 		// Recursively check the inner variable access for the array var identifier
-		verify_identifiers_in_variable_access(scope, va->data.iv->va, line_number);
+		verify_variable_access(scope, va->data.iv->va, line_number);
 		
 		// Check if the array index is out of bounds
-		int idx = (int)va->data.iv->iel->e->expr->val;
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
-		if(vd != NULL && vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
-			struct range_t *range = vd->tden->data.at->r;
-			if(idx > range->max->ui || idx < range->min->ui)
-				error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+		if(vd != NULL) {
+			// Ensure the indexed variable is actually an array
+			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
+				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER)) {
+					int idx = (int)va->data.iv->iel->e->expr->val;
+					struct range_t *range = vd->tden->data.at->r;
+					if(idx > range->max->ui || idx < range->min->ui)
+						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+				}
+			} else {
+				error_indexed_variable_not_an_array(line_number, va->data.iv->va->data.id);
+			}
 		}
 		
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
 		// Accessing fields in a class
-		verify_identifiers_in_variable_access(scope, va->data.ad->va, line_number);
+		verify_variable_access(scope, va->data.ad->va, line_number);
 		//printf("VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
-		verify_identifiers_in_variable_access(scope, va->data.md->va, line_number);
+		verify_variable_access(scope, va->data.md->va, line_number);
 		//printf("VA method designator %s\n", va->data.md->fd->id);
 	} else {
 	}
+}
+
+void verify_simple_expression(struct scope_t *scope, struct simple_expression_t *se, int line_number) {
+	if(se == NULL)
+		return;
+
+	struct factor_t *factor = se->t->f;
+	struct primary_t *p;
+	
+	// If not a primary, no need to go any further
+	if(factor->type != FACTOR_T_PRIMARY)
+		return;
+	p = factor->data.p;
+	
+	//printf("Primary - type: %i\n", p->type);
+	if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
+		verify_variable_access(scope, p->data.va, line_number);
+	} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
+	} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
+		//printf("func desig: %s\n", p->data.fd->id);
+	} else if(p->type == PRIMARY_T_EXPRESSION) {
+		//verify_expression(scope, p->data.e, line_number);
+	} else if(p->type == PRIMARY_T_PRIMARY) {
+	} else {
+	}
+	
+}
+
+void verify_expression(struct scope_t *scope, struct expression_t *e, int line_number) {
+	if(e == NULL)
+		return;
+
+	//printf("Expression data - %s = %f \n", e->expr->type, e->expr->val);
+	// Two expressions are present
+	if(e->se2 != NULL) {
+		verify_simple_expression(scope, e->se2, line_number);
+	
+		// Check for type mismatch
+		if(strcmp(e->se1->expr->type, e->se2->expr->type) != 0) {
+			error_type_mismatch(line_number, e->se1->expr->type, e->se2->expr->type);
+		}
+	}
+	
+	// Always evaluate the first simple expression
+	verify_simple_expression(scope, e->se1, line_number);
 }
 
 /*

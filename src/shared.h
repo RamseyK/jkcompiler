@@ -42,7 +42,6 @@
 #define OP_LE 12
 #define OP_GE 13
 
-
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \
 				 printf("Memory allocation error\n"); \
