@@ -7,6 +7,7 @@
 #define SEMANTIC_H
 
 #include "symtab.h"
+#include "shared.h"
 
 void semantic_analysis(struct program_t *p);
 
