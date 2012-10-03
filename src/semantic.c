@@ -302,27 +302,35 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 	if(se == NULL)
 		return;
 
-	struct factor_t *factor = se->t->f;
-	struct primary_t *p;
-	
-	// If not a primary, no need to go any further
-	if(factor->type != FACTOR_T_PRIMARY)
-		return;
-	p = factor->data.p;
-	
-	//printf("Primary - type: %i\n", p->type);
-	if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
-		verify_variable_access(scope, p->data.va, line_number);
-	} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
-		//printf("unsigned constant: %i\n", p->data.un->ui);
-	} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
-		//printf("func desig: %s\n", p->data.fd->id);
-	} else if(p->type == PRIMARY_T_EXPRESSION) {
-		//verify_expression(scope, p->data.e, line_number);
-	} else if(p->type == PRIMARY_T_PRIMARY) {
-	} else {
+	// Loop through all terms
+	struct term_t *term = se->t;
+	while(term != NULL) {
+		struct factor_t *factor = term->f;
+		struct primary_t *p;
+		
+		// If not a primary, no need to go any further
+		if(factor->type != FACTOR_T_PRIMARY) {
+			term = term->next;
+			continue;
+		}
+		p = factor->data.p;
+		
+		//printf("Primary - type: %i\n", p->type);
+		if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
+			verify_variable_access(scope, p->data.va, line_number);
+		} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
+			//printf("unsigned constant: %i\n", p->data.un->ui);
+		} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
+			//printf("func desig: %s\n", p->data.fd->id);
+		} else if(p->type == PRIMARY_T_EXPRESSION) {
+			//verify_expression(scope, p->data.e, line_number);
+		} else if(p->type == PRIMARY_T_PRIMARY) {
+		} else {
+		}
+		term = term->next;
 	}
 	
+	verify_simple_expression(scope, se->next, line_number);
 }
 
 void verify_expression(struct scope_t *scope, struct expression_t *e, int line_number) {

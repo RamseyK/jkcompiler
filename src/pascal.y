@@ -177,10 +177,10 @@ class_list : class_list class_identification PBEGIN class_block END
         }
 
 		struct class_list_t *addedClass = add_to_class_list(&$1, $2, $4);
-		
+
 		// Create the class scope
 		symtab_create_class_scope(addedClass);
-		
+
 		// Add to usrdef list
 		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
@@ -208,10 +208,10 @@ class_list : class_list class_identification PBEGIN class_block END
 		$$->ci = $1;
 		$$->cb = $3;
 		$$->next = NULL;
-		
+
 		// Create the class scope
 		symtab_create_class_scope($$);
-		
+
 		// Add to usrdef list
 		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_CLASS_TYPE;
@@ -232,7 +232,7 @@ class_list : class_list class_identification PBEGIN class_block END
 			error_type_already_defined($1->line_number, $1->id, found_type->data.cl->ci->line_number);
 		}
 		//usrdef_print();
-		
+
 	}
  ;
 
@@ -275,7 +275,7 @@ type_denoter : array_type
 		$$->type = TYPE_DENOTER_T_IDENTIFIER;
 		$$->name = $1;
 		$$->data.id = $1;
-		
+
 		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
 		new_type->name = $1;
@@ -303,7 +303,7 @@ range : unsigned_integer DOTDOT unsigned_integer
 		$$ = new_range();
 		$$->min = $1;
 		$$->max = $3;
-		
+
 		// If the min is greater than the max, error
 		if($$->min->ui > $$->max->ui)
 			error_array_range_invalid(line_number, $$->min->ui, $$->max->ui);
@@ -353,7 +353,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
         }
 
 		add_to_func_declaration_list(&$1, $3);
-		
+
 		symtab_create_function_scope($3);
 	}
  | function_declaration
@@ -361,7 +361,7 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 		$$ = new_func_declaration_list();
 		$$->fd = $1;
 		$$->next = NULL;
-		
+
 		symtab_create_function_scope($1);
 	}
  |
