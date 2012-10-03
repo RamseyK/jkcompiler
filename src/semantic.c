@@ -136,9 +136,9 @@ bool compatible_classes(struct class_list_t *c1, struct class_list_t *c2) {
 	// Iterate through c1's variable declarations
 	while(temp_vdl1 != NULL) {
 		// Make sure the lists are the same size
-		int same_size = (identifier_list_size(temp_vdl1->vd->il) == identifier_list_size(temp_vdl2->vd->il));
+		bool same_size = (identifier_list_size(temp_vdl1->vd->il) == identifier_list_size(temp_vdl2->vd->il));
 		// Make sure the types are compatible
-		int types_compat = compatible_types(temp_vdl1->vd->tden, temp_vdl2->vd->tden);
+		bool types_compat = compatible_types(temp_vdl1->vd->tden, temp_vdl2->vd->tden);
 		if(!same_size || !types_compat)
 			return false;
 		temp_vdl1 = temp_vdl1->next;
@@ -162,12 +162,15 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	if(right == left) {
 		return true;
 	}
-	// If the right scope is an ancestor of the left, they are compatible
+	// If the right scope is an ancestor of the left, the assignment is valid
 	while(right != NULL) {
 		if(right == left)
 			return true;
 		right = right->parent;
 	}
+	// If the classes are compatible the assignment is valid
+	if(compatible_classes(lhs,rhs))
+		return true;
 	// Not compatible
 	return false;
 }
