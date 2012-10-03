@@ -69,6 +69,6 @@ tests_semantic: tests_prepare
 tests_prepare:
 	@echo "BINARY=../../$(BINDIR)/$(TARGET)" > $(TESTSDIR)/tests_lib_shared_auto.inc
 
-.PHONY: all lex yacc clean tests
+.PHONY: all lex yacc clean tests tests_semantic tests_prepare
 
 
