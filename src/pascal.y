@@ -266,7 +266,7 @@ type_denoter : array_type
 	{
 		$$ = new_type_denoter();
 		$$->type = TYPE_DENOTER_T_ARRAY_TYPE;
-		$$->name = NULL;
+		$$->name = $1->inner_type_name;
 		$$->data.at = $1;
 	}
  | identifier
@@ -294,6 +294,7 @@ array_type : ARRAY LBRAC range RBRAC OF type_denoter
 		$$ = new_array_type();
 		$$->r = $3;
 		$$->td = $6;
+		$$->inner_type_name = $6->name;
 	}
  ;
 

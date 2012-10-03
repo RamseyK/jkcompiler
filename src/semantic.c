@@ -207,7 +207,6 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 			ss = ss->next;
 		}
 	} else if(s->type == STATEMENT_T_IF) {
-		//printf("Verifying statements in if statement\n");
 		verify_statements_in_sequence(scope, s->data.is->s1);
 		verify_statements_in_sequence(scope, s->data.is->s2);
 	} else if(s->type == STATEMENT_T_WHILE) {
@@ -250,7 +249,7 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
 				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
-				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER)) {
+				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
 					int idx = (int)va->data.iv->iel->e->expr->val;
 					struct range_t *range = vd->tden->data.at->r;
 					if(idx > range->max->ui || idx < range->min->ui)
@@ -363,7 +362,7 @@ void process_variable_declaration_list(struct scope_t *scope, struct variable_de
 			error_type_not_defined(temp_vdl->vd->line_number,temp_vtden->name);
 		// Look up the array type's type denoter for arrays
 		if(temp_vtden->type == TYPE_DENOTER_T_ARRAY_TYPE && usrdef_lookup_td(temp_vtden->data.at->td) == NULL)
-			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->td->name);
+			error_type_not_defined(temp_vdl->vd->line_number, temp_vtden->data.at->inner_type_name);
 		// Look up for identifier types
 		if(temp_vtden->type == TYPE_DENOTER_T_IDENTIFIER) {
 			// Make sure the name is not integer, boolean, pointer

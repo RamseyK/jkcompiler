@@ -90,6 +90,11 @@ struct type_denoter_t *usrdef_insert(struct type_denoter_t *td) {
  * Lookup by type denoter
  */
 struct type_denoter_t *usrdef_lookup_td(struct type_denoter_t *td) {
+	// For array types check the inner type since you can have arrays of arrays
+	if(td->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+		return usrdef_lookup_td(td->data.at->td);
+	}
+	// Else check through the type denoter list
 	struct type_denoter_list_t *temp_il = usrdef_types;
 	while(temp_il != NULL) {
 		if(temp_il->tden == td)

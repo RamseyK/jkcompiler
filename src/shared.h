@@ -116,6 +116,7 @@ struct range_t {
 struct array_type_t {
     struct range_t *r;
     struct type_denoter_t *td;
+    char *inner_type_name;
 };
 
 #define TYPE_DENOTER_T_ARRAY_TYPE 1
