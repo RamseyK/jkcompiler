@@ -64,6 +64,9 @@ void semantic_analysis(struct program_t *p) {
     temp_cl = p->cl;
     while (temp_cl != NULL) {
     	//printf("Class: %s\n", temp_cl->ci->id);
+    	
+    	struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
+    	
     	// Process the variable declaration list
     	process_variable_declaration_list(temp_cl->cb->vdl);
     	// Check if variable was declared in parent classes
@@ -79,8 +82,9 @@ void semantic_analysis(struct program_t *p) {
     		//check_variable_list_types_defined(temp_fdl->fd->fb->vdl);
 			
 			// Check for semantic errors in all statements within the function block
-			//verify_statements_in_sequence(temp_fdl->fd->fb->ss);
+			struct scope_t *funcScope = symtab_lookup_function(classScope, temp_fdl->fd->fh->id);
     		process_variable_declaration_list(temp_fdl->fd->fb->vdl);
+    		verify_statements_in_sequence(funcScope, temp_fdl->fd->fb->ss);
 
     		temp_fdl = temp_fdl->next;
     	}
@@ -169,14 +173,14 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	return false;
 }
 
-void verify_statements_in_sequence(struct statement_sequence_t *ss) {
+void verify_statements_in_sequence(struct scope_t *scope, struct statement_sequence_t *ss) {
 	if(ss == NULL)
 		return;
 	
 	// Check the statement type and handle accordingly
 	if(ss->s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
-		verify_identifiers_in_variable_access(ss->s->data.as->va);
+		verify_identifiers_in_variable_access(scope, ss->s->data.as->va, ss->s->line_number);
 		
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(ss->s->data.as->oe != NULL) {
@@ -187,7 +191,7 @@ void verify_statements_in_sequence(struct statement_sequence_t *ss) {
 		}
 		
 	} else if(ss->s->type == STATEMENT_T_SEQUENCE) {
-		verify_statements_in_sequence(ss->s->data.ss);
+		verify_statements_in_sequence(scope, ss->s->data.ss);
 	} else if(ss->s->type == STATEMENT_T_IF) {
 		// Combine both statements into a single sequence and check the entire statement as a whole
 		struct statement_sequence_t *ss1 = new_statement_sequence();
@@ -195,7 +199,7 @@ void verify_statements_in_sequence(struct statement_sequence_t *ss) {
 		ss1->s = ss->s->data.is->s1;
 		ss2->s = ss->s->data.is->s2;
 		ss1->next = ss2;
-		verify_statements_in_sequence(ss1);
+		verify_statements_in_sequence(scope, ss1);
 		free(ss1);
 		free(ss2);
 	} else if(ss->s->type == STATEMENT_T_WHILE) {
@@ -203,28 +207,35 @@ void verify_statements_in_sequence(struct statement_sequence_t *ss) {
 		// Check the statement within the while statement
 		struct statement_sequence_t *ss1 = new_statement_sequence();
 		ss1->s = ss->s->data.ws->s;
-		verify_statements_in_sequence(ss1);
+		verify_statements_in_sequence(scope, ss1);
 		free(ss1);
 	} else if(ss->s->type == STATEMENT_T_PRINT) {
-		verify_identifiers_in_variable_access(ss->s->data.ps->va);
+		verify_identifiers_in_variable_access(scope, ss->s->data.ps->va, ss->s->line_number);
 	} else {
 	}
 	
-	verify_statements_in_sequence(ss->next);
+	verify_statements_in_sequence(scope, ss->next);
 }
 
-void verify_identifiers_in_variable_access(struct variable_access_t *va) {
+void verify_identifiers_in_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-		printf("found VA identifier %s\n", va->data.id);
+		//printf("found VA identifier %s\n", va->data.id);
+		if(symtab_lookup_variable(scope, va->data.id) == NULL) {
+			// If the name doesn't match the function name, it's undeclared
+			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
+				error_variable_not_declared(line_number, va->data.id);
+			}
+		}
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
-		verify_identifiers_in_variable_access(va->data.iv->va);
+		verify_identifiers_in_variable_access(scope, va->data.iv->va, line_number);
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
-		verify_identifiers_in_variable_access(va->data.ad->va);
-		printf("found VA attribute designator %s\n", va->data.ad->id);
+		// Accessing fields in a class
+		verify_identifiers_in_variable_access(scope, va->data.ad->va, line_number);
+		//printf("found VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
-		verify_identifiers_in_variable_access(va->data.md->va);
-		printf("found VA method designator %s\n", va->data.md->fd->id);
+		verify_identifiers_in_variable_access(scope, va->data.md->va, line_number);
+		//printf("found VA method designator %s\n", va->data.md->fd->id);
 	} else {
 	}
 }

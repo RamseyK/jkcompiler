@@ -588,24 +588,32 @@ variable_access : identifier
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_IDENTIFIER;
 		$$->data.id = $1;
+		$$->expr = new_expression_data();
+		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 	}
  | indexed_variable
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_INDEXED_VARIABLE;
 		$$->data.iv = $1;
+		$$->expr = new_expression_data();
+		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 	}
  | attribute_designator
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR;
 		$$->data.ad = $1;
+		$$->expr = new_expression_data();
+		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 	}
  | method_designator
 	{
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_METHOD_DESIGNATOR;
 		$$->data.md = $1;
+		$$->expr = new_expression_data();
+		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 	}
  ;
 
@@ -751,7 +759,7 @@ simple_expression : term
 			$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
 			if($2 == OP_OR)
-				$$->expr->val = (int)$1->expr->val | (int)$3->expr->val;
+				$$->expr->val = (int)$1->expr->val || (int)$3->expr->val;
 			else {
 				// Invalid operation with boolean
 				}
@@ -766,11 +774,38 @@ simple_expression : term
 term : factor
 	{
 		$$ = new_term();
-		$$->f = $1;		
+		$$->f = $1;
+		$$->expr = $1->expr;	
 	}
  | term mulop factor
-	{		
+	{
 		add_to_term(&$1, $2, $3);	
+		//Do some kind of type checking ??
+		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER;
+			if($2 == OP_STAR) 
+				$$->expr->val = $1->expr->val * $3->expr->val;
+			else if($2 == OP_SLASH)
+				$$->expr->val = $1->expr->val / $3->expr->val;
+			else if($2 == OP_MOD)
+				$$->expr->val = (int)$1->expr->val % (int)$3->expr->val;
+			else {
+				// Invalid operation with integers
+				}
+		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
+			if($2 == OP_AND)
+				$$->expr->val = (int)$1->expr->val && (int)$3->expr->val;
+			else {
+				// Invalid operation with boolean
+				}
+		} else {
+			//Type mismatch
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		}
 	}
  ;
 
@@ -822,6 +857,8 @@ primary : variable_access
 		$$ = new_primary();
 		$$->type = PRIMARY_T_FUNCTION_DESIGNATOR;
 		$$->data.fd = $1;
+		$$->expr = new_expression_data();
+		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 	}
  | LPAREN expression RPAREN
 	{
@@ -850,7 +887,7 @@ unsigned_integer : DIGSEQ
 		$$ = new_unsigned_number();
 		$$->ui = atoi(yytext);
 		$$->expr = new_expression_data(); 
-        $$->expr->type = new_primitive_type(PRIMITIVE_TYPE_NAME_INTEGER); 
+        $$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER; 
         $$->expr->val = $$->ui;
 	}
  ;

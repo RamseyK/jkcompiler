@@ -15,8 +15,8 @@ bool compatible_arrays(struct array_type_t *a1, struct array_type_t *a2);
 bool compatible_classes(struct class_list_t *c1, struct class_list_t *c2);
 bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *rhs);
 
-void verify_statements_in_sequence(struct statement_sequence_t *ss);
-void verify_identifiers_in_variable_access(struct variable_access_t *va);
+void verify_statements_in_sequence(struct scope_t *scope, struct statement_sequence_t *ss);
+void verify_identifiers_in_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number);
 
 void process_variable_declaration_list(struct variable_declaration_list_t *vdl);
 void check_variable_declared_in_parent(struct class_list_t *cl);
