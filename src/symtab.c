@@ -315,4 +315,30 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
 	return symtab_lookup_variable(scope->parent, name);
 }
 
+/*
+ * Look's up a parameter in the function's parameter list by name and returns the formal_parameter_section node
+ * Return's NULL if the variable was not found
+ */
+struct formal_parameter_section_t *symtab_lookup_function_param(struct scope_t *funcScope, char *name) {
+	if(funcScope->attrId != SYM_ATTR_FUNC)
+		return NULL;
+
+	if(funcScope->fd->fh->fpsl != NULL) {
+		struct formal_parameter_section_list_t *fpsl = funcScope->fd->fh->fpsl;
+		while(fpsl != NULL) {
+			struct identifier_list_t *il = fpsl->fps->il;
+			//char *type = fpsl->fps->id;
+			while(il != NULL) {
+				if(strcmp(name, il->id) == 0) {
+					return fpsl->fps;
+				}
+				il = il->next;
+			}
+			fpsl = fpsl->next;
+		}
+	}
+	
+	return NULL;
+}
+
 

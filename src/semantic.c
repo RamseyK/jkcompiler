@@ -191,7 +191,7 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 		verify_variable_access(scope, s->data.as->va, s->line_number);
 		
 		// Check the RHS of the assignment
-		//verify_expression(scope, ss->s->data.as->e, ss->s->line_number);
+		verify_expression(scope, s->data.as->e, s->line_number);
 		
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(s->data.as->oe != NULL) {
@@ -225,15 +225,8 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
 		//printf("VA identifier %s\n", va->data.id);
 		
-		// Check the formal_parameter_list
-		if(scope->fd->fh->fpsl != NULL) {
-			struct formal_parameter_section_list_t *fpsl = scope->fd->fh->fpsl;
-			while(fpsl != NULL) {
-				
-				fpsl = fpsl->next;
-			}
-		}
-		if(symtab_lookup_variable(scope, va->data.id) == NULL) {
+		// Check the function parameters and variables for the identifier
+		if(symtab_lookup_function_param(scope, va->data.id) == NULL && symtab_lookup_variable(scope, va->data.id) == NULL) {
 			// If the name doesn't match the function name, it's undeclared
 			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
 				error_variable_not_declared(line_number, va->data.id);
@@ -245,6 +238,7 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 		
 		// Check if the array index is out of bounds
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
+		//printf("type: %s\n", va->data.iv->iel->e->expr->type);
 		if(vd != NULL) {
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
@@ -254,6 +248,8 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 					struct range_t *range = vd->tden->data.at->r;
 					if(idx > range->max->ui || idx < range->min->ui)
 						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+				} else {
+					error_array_index_is_not_integer(line_number, va->data.iv->va->data.id);
 				}
 			} else {
 				error_indexed_variable_not_an_array(line_number, va->data.iv->va->data.id);
@@ -287,6 +283,7 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 	if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
 		verify_variable_access(scope, p->data.va, line_number);
 	} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
+		//printf("unsigned constant: %i\n", p->data.un->ui);
 	} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
 		//printf("func desig: %s\n", p->data.fd->id);
 	} else if(p->type == PRIMARY_T_EXPRESSION) {

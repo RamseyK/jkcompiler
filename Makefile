@@ -59,7 +59,7 @@ clean:
 	rm -f $(TESTSDIR)/tests_semantic/out.c
 	rm -f $(TESTSDIR)/tests_semantic/a.out
 
-tests: tests_semantic tests_opt tests_gen
+tests: tests_semantic
 
 tests_semantic: tests_prepare
 	# "runtest" comes from DejaGNU

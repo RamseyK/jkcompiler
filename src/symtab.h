@@ -59,6 +59,7 @@ void symtab_print_recursive(struct scope_t* start, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search
+struct formal_parameter_section_t *symtab_lookup_function_param(struct scope_t *funcScope, char *name);
 
 struct scope_t *new_scope();
 void symtab_create_function_scope(struct function_declaration_t *fd);
