@@ -471,16 +471,21 @@ function_block : variable_declaration_part statement_part
 ;
 
 statement_part : compound_statement
+	{
+		$$ = $1;
+	}
  ;
 
 compound_statement : PBEGIN statement_sequence END
 	{
+		GLOG(("compound_statement : PBEGIN statement_sequence END\n"));
 		$$ = $2;
 	}
  ;
 
 statement_sequence : statement
 	{
+		GLOG(("statement_sequence: statement\n"));
 		// Create head of the statement_sequence list
 		$$ = new_statement_sequence();
 		$$->s = $1;
@@ -488,6 +493,7 @@ statement_sequence : statement
 	}
  | statement_sequence semicolon statement
 	{
+		GLOG(("statement_sequence : statement_sequence semicolon statement\n"));
 		// Add to statement_sequence list
 		add_to_statement_sequence(&$1, $3);
 	}
@@ -495,6 +501,7 @@ statement_sequence : statement
 
 statement : assignment_statement
 	{
+		GLOG(("statement : assignment_statement\n"));
 		$$ = new_statement();
 		$$->type = STATEMENT_T_ASSIGNMENT;
 		$$->data.as = $1;
@@ -502,6 +509,7 @@ statement : assignment_statement
 	}
  | compound_statement
 	{
+		GLOG(("statement : compound_statement\n"));
 		$$ = new_statement();
 		$$->type = STATEMENT_T_SEQUENCE;
 		$$->data.ss = $1;
@@ -509,13 +517,15 @@ statement : assignment_statement
 	}
  | if_statement
 	{
+		GLOG(("statement : if_statement\n"));
 		$$ = new_statement();
 		$$->type = STATEMENT_T_IF;
 		$$->data.is = $1;
-		$$->line_number = line_number;
+		$$->line_number = line_number;	
 	}
  | while_statement
 	{
+		GLOG(("statement : while_statement\n"));
 		$$ = new_statement();
 		$$->type = STATEMENT_T_WHILE;
 		$$->data.ws = $1;
@@ -523,6 +533,7 @@ statement : assignment_statement
 	}
  | print_statement
     {
+    	GLOG(("statement : print_statement\n"));
 		$$ = new_statement();
 		$$->type = STATEMENT_T_PRINT;
 		$$->data.ps = $1;
@@ -540,6 +551,7 @@ while_statement : WHILE boolean_expression DO statement
 
 if_statement : IF boolean_expression THEN statement ELSE statement
 	{
+		GLOG(("if_statement : IF boolean_expression THEN statement ELSE statement\n"));
 		$$ = new_if_statement();
 		$$->e = $2;
 		$$->s1 = $4;
@@ -549,6 +561,7 @@ if_statement : IF boolean_expression THEN statement ELSE statement
 
 assignment_statement : variable_access ASSIGNMENT expression
 	{
+		GLOG(("assignment_statement : variable_access ASSIGNMENT expression\n"));
 		$$ = new_assignment_statement();
 		$$->va = $1;
 		$$->e = $3;
@@ -556,6 +569,7 @@ assignment_statement : variable_access ASSIGNMENT expression
 	}
  | variable_access ASSIGNMENT object_instantiation
 	{
+		GLOG(("assignment_statement : variable_access ASSIGNMENT object_instantiation\n"));
 		$$ = new_assignment_statement();
 		$$->va = $1;
 		$$->e = NULL;
@@ -585,6 +599,7 @@ print_statement : PRINT variable_access
 
 variable_access : identifier
 	{
+		GLOG(("variable_access : identifier = %s\n", $1));
 		$$ = new_variable_access();
 		$$->type = VARIABLE_ACCESS_T_IDENTIFIER;
 		$$->data.id = $1;
@@ -692,21 +707,28 @@ actual_parameter : expression
 	}
  ;
 
-boolean_expression : expression ;
+boolean_expression : expression 
+	{
+		GLOG(("boolean_expression : expression\n"));
+		$$ = $1;
+	}
+;
 
 expression : simple_expression
 	{
+		GLOG(("expression : simple_expression\n"));
 		$$ = new_expression();
 		$$->se1 = $1;
 		$$->expr = $1->expr;
 	}
  | simple_expression relop simple_expression
 	{
+		GLOG(("expression : simple_expression relop=%i simple_expression\n",$2));
 		$$ = new_expression();
 		$$->se1 = $1;
 		$$->relop = $2;
 		$$->se2 = $3;
-		//Do some kind of type checking ??
+		//Do some kind of type checking ??	
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
 			$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
@@ -723,6 +745,8 @@ expression : simple_expression
 			if($2 == OP_LE)
 				$$->expr->val = ($1->expr->val <= $3->expr->val);
 		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
+				$$->expr = new_expression_data();
+				$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
 			if($2 == OP_EQUAL)
 				$$->expr->val = ($1->expr->val == $3->expr->val);
 			if($2 == OP_NOTEQUAL)
@@ -737,12 +761,14 @@ expression : simple_expression
 
 simple_expression : term
 	{
+		GLOG(("simple_expression : term\n"));
 		$$ = new_simple_expression();
 		$$->t = $1;
 		$$->expr = $1->expr;
 	}
  | simple_expression addop term
 	{
+		GLOG(("simple_expression : simple_expressoin addop term\n"));
 		add_to_simple_expression(&$1, $2, $3);
 		//Do some kind of type checking ??
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
@@ -773,12 +799,14 @@ simple_expression : term
 
 term : factor
 	{
+		GLOG(("term : factor\n"));
 		$$ = new_term();
 		$$->f = $1;
 		$$->expr = $1->expr;	
 	}
  | term mulop factor
 	{
+		GLOG(("term : term mulop factor\n"));
 		add_to_term(&$1, $2, $3);	
 		//Do some kind of type checking ??
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
@@ -823,6 +851,7 @@ sign : PLUS
 
 factor : sign factor
 	{
+		GLOG(("factor : sign factor\n"));
 		$$ = new_factor();
 		$$->type = FACTOR_T_SIGNFACTOR;
 		$$->data.f.sign = $1;
@@ -831,6 +860,7 @@ factor : sign factor
 	}
  | primary 
 	{
+		GLOG(("factor : primary\n"));
 		$$ = new_factor();
 		$$->type = FACTOR_T_PRIMARY;
 		$$->data.p = $1;
@@ -840,6 +870,7 @@ factor : sign factor
 
 primary : variable_access
 	{
+		GLOG(("primary : variable_access\n"));
 		$$ = new_primary();
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
 		$$->data.va = $1;
@@ -847,6 +878,7 @@ primary : variable_access
 	}
  | unsigned_constant
 	{
+		GLOG(("primary : unsigned_constant=%lf\n",$1->expr->val));
 		$$ = new_primary();
 		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
 		$$->data.un = $1;
@@ -854,6 +886,7 @@ primary : variable_access
 	}
  | function_designator
 	{
+		GLOG(("primary : function_designator\n"));
 		$$ = new_primary();
 		$$->type = PRIMARY_T_FUNCTION_DESIGNATOR;
 		$$->data.fd = $1;
@@ -862,6 +895,7 @@ primary : variable_access
 	}
  | LPAREN expression RPAREN
 	{
+		GLOG(("primary : LPAREN expression RPAREN\n"));
 		$$ = new_primary();
 		$$->type = PRIMARY_T_EXPRESSION;
 		$$->data.e = $2;
@@ -869,6 +903,7 @@ primary : variable_access
 	}
  | NOT primary
 	{
+		GLOG(("primary : NOT primary\n"));
 		$$ = new_primary();
 		$$->type = PRIMARY_T_PRIMARY;
 		$$->data.p.not = true;
@@ -884,6 +919,7 @@ unsigned_number : unsigned_integer ;
 
 unsigned_integer : DIGSEQ
 	{
+		GLOG(("unsigned_integer : DIGSEQ\n"));
 		$$ = new_unsigned_number();
 		$$->ui = atoi(yytext);
 		$$->expr = new_expression_data(); 
@@ -962,6 +998,7 @@ relop : EQUAL
 identifier : IDENTIFIER
 	{
 		$$ = new_identifier(yytext);
+		GLOG(("identifier : IDENTIFIER = %s\n",$$));
 	}
  ;
 

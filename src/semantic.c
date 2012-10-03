@@ -32,7 +32,9 @@ void semantic_analysis(struct program_t *p) {
 		// Check if the class has a base class
 		if(temp_cl->ci->extend != NULL) {
 			struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
-			if(classScope != NULL) {
+			if(classScope == NULL) {
+				printf("Could not find class %s in symtab\n", temp_cl->ci->id);
+			} else {
 				struct scope_t *extendScope = symtab_lookup_class(temp_cl->ci->extend);
 				if(extendScope == NULL) {
 					error_extending_missing_class(temp_cl->ci->line_number, temp_cl->ci->id, temp_cl->ci->extend);
@@ -81,7 +83,13 @@ void semantic_analysis(struct program_t *p) {
 			// Check for semantic errors in all statements within the function block
 			struct scope_t *funcScope = symtab_lookup_function(classScope, temp_fdl->fd->fh->id);
     		process_variable_declaration_list(funcScope,temp_fdl->fd->fb->vdl);
-    		verify_statements_in_sequence(funcScope, temp_fdl->fd->fb->ss);
+
+    		// Verify each statement in the statement sequence
+    		struct statement_sequence_t *ss = temp_fdl->fd->fb->ss;
+    		while(ss != NULL) {
+    			verify_statements_in_sequence(funcScope, ss->s);
+    			ss = ss->next;
+    		}
 
     		temp_fdl = temp_fdl->next;
     	}
@@ -173,51 +181,41 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	return false;
 }
 
-void verify_statements_in_sequence(struct scope_t *scope, struct statement_sequence_t *ss) {
-	if(ss == NULL)
+void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s) {
+	if(s == NULL)
 		return;
 	
 	// Check the statement type and handle accordingly
-	if(ss->s->type == STATEMENT_T_ASSIGNMENT) {
+	if(s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
-		verify_variable_access(scope, ss->s->data.as->va, ss->s->line_number);
+		verify_variable_access(scope, s->data.as->va, s->line_number);
 		
 		// Check the RHS of the assignment
 		//verify_expression(scope, ss->s->data.as->e, ss->s->line_number);
 		
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
-		if(ss->s->data.as->oe != NULL) {
-			char *clName = ss->s->data.as->oe->id;
+		if(s->data.as->oe != NULL) {
+			char *clName = s->data.as->oe->id;
 			struct type_denoter_t *clTd = usrdef_lookup_name(clName);
 			if(clTd == NULL)
-				error_type_not_defined(ss->s->line_number, clName);
+				error_type_not_defined(s->line_number, clName);
 		}
-		
-	} else if(ss->s->type == STATEMENT_T_SEQUENCE) {
-		verify_statements_in_sequence(scope, ss->s->data.ss);
-	} else if(ss->s->type == STATEMENT_T_IF) {
-		// Combine both statements into a single sequence and check the entire statement as a whole
-		struct statement_sequence_t *ss1 = new_statement_sequence();
-		struct statement_sequence_t *ss2 = new_statement_sequence();
-		ss1->s = ss->s->data.is->s1;
-		ss2->s = ss->s->data.is->s2;
-		ss1->next = ss2;
-		verify_statements_in_sequence(scope, ss1);
-		free(ss1);
-		free(ss2);
-	} else if(ss->s->type == STATEMENT_T_WHILE) {
-	
-		// Check the statement within the while statement
-		struct statement_sequence_t *ss1 = new_statement_sequence();
-		ss1->s = ss->s->data.ws->s;
-		verify_statements_in_sequence(scope, ss1);
-		free(ss1);
-	} else if(ss->s->type == STATEMENT_T_PRINT) {
-		verify_variable_access(scope, ss->s->data.ps->va, ss->s->line_number);
+	} else if(s->type == STATEMENT_T_SEQUENCE) {
+		struct statement_sequence_t *ss = s->data.ss;
+		while(ss != NULL) {
+			verify_statements_in_sequence(scope, s->data.ss->s);
+			ss = ss->next;
+		}
+	} else if(s->type == STATEMENT_T_IF) {
+		//printf("Verifying statements in if statement\n");
+		verify_statements_in_sequence(scope, s->data.is->s1);
+		verify_statements_in_sequence(scope, s->data.is->s2);
+	} else if(s->type == STATEMENT_T_WHILE) {
+		verify_statements_in_sequence(scope, s->data.ws->s);
+	} else if(s->type == STATEMENT_T_PRINT) {
+		verify_variable_access(scope, s->data.ps->va, s->line_number);
 	} else {
 	}
-	
-	verify_statements_in_sequence(scope, ss->next);
 }
 
 void verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
@@ -236,7 +234,6 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 				fpsl = fpsl->next;
 			}
 		}
-		
 		if(symtab_lookup_variable(scope, va->data.id) == NULL) {
 			// If the name doesn't match the function name, it's undeclared
 			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
