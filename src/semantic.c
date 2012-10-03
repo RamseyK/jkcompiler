@@ -238,8 +238,8 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 		
 		// Check if the array index is out of bounds
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
-		//printf("type: %s\n", va->data.iv->iel->e->expr->type);
-		if(vd != NULL) {
+		//printf("%s\n", va->data.iv->iel->e->expr->type);
+		if(vd != NULL) {		
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
 				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
@@ -248,7 +248,10 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 					struct range_t *range = vd->tden->data.at->r;
 					if(idx > range->max->ui || idx < range->min->ui)
 						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
-				} else {
+				} 
+				
+				// Check type of index (works for n dimensions)
+				if(strcmp(vd->tden->data.at->inner_type_name, PRIMITIVE_TYPE_NAME_INTEGER) != 0) {
 					error_array_index_is_not_integer(line_number, va->data.iv->va->data.id);
 				}
 			} else {
