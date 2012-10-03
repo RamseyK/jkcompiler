@@ -336,18 +336,19 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 		}
 		p = factor->data.p;
 		
-		//printf("Primary - type: %i\n", p->type);
 		if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
 			verify_variable_access(scope, p->data.va, line_number);
 		} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
 			//printf("unsigned constant: %i\n", p->data.un->ui);
 		} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
+			// Function calls
 			//printf("func desig: %s\n", p->data.fd->id);
 			
 			// Lookup the function in the parent of the current scope (the class scope)
 			struct scope_t* funcScope = symtab_lookup_function(scope->parent, p->data.fd->id);
 			if(funcScope == NULL) {
-				//error_function_not_declared(line_number, p->data.fd->id);
+				// Attempting to call a function that doesn't exist
+				error_function_not_declared(line_number, p->data.fd->id);
 				return;
 			}
 			
@@ -362,8 +363,7 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 				if(apl->ap->e3 != NULL) numParams++;
 				apl = apl->next;
 			}
-			//printf("Number of params: %i\n", numParams);
-			
+
 			// Count the number of parameters expected for a successful function call
 			if(funcScope->fd->fh->fpsl != NULL) {
 				struct formal_parameter_section_list_t *fpsl = funcScope->fd->fh->fpsl;
