@@ -33,7 +33,7 @@ void error_function_already_declared(int line_number, char *f, int line_number_p
 void error_variable_not_declared(int line_number, char *v);
 void error_function_not_declared(int line_number, char *f);
 void error_variable_name_invalid(int line_number, char *v);
-void error_record_has_no_such_field(int line_number, char *r, char *f);
+void error_class_has_no_such_field(int line_number, char *r, char *f);
 void error_datatype_is_not(int line_number, char *base, char *target);
 void error_indexed_variable_not_an_array(int line_number, char *v);
 void error_too_many_signs(int line_number);

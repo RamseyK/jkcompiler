@@ -258,7 +258,38 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 		
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
 		// Accessing fields in a class
-		verify_variable_access(scope, va->data.ad->va, line_number);
+		struct variable_access_t *ad_va = va->data.ad->va;
+		// Check for "this" reference
+		if(ad_va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+			if(strcmp(ad_va->data.id,"this") == 0) {
+				// Look up the attribute for the class that "this" refers to
+				struct scope_t *thisClass = scope->parent;
+				struct variable_declaration_t *attribute = symtab_lookup_variable(thisClass, va->data.ad->id);
+				if(attribute == NULL)
+					error_variable_not_declared(line_number, va->data.ad->id);
+			} else {
+			// Get the type for the variable
+				struct variable_declaration_t *varDecl = symtab_lookup_variable(scope,ad_va->data.id);
+				if(varDecl != NULL) {
+					// Get the class scope for the variable's types class
+					struct scope_t *classScope = symtab_lookup_class(varDecl->tden->name);
+					if(classScope != NULL) {
+						// Look up the attribute in the scope
+						struct variable_declaration_t *attribute = symtab_lookup_variable(classScope, va->data.ad->id);
+						if(attribute == NULL) {
+							error_class_has_no_such_field(line_number, classScope->cl->ci->id, va->data.ad->id);
+						}
+					} else {
+						// Error?  Class not found?
+					}
+				} else {
+					error_variable_not_declared(line_number, va->data.id);
+				}
+			}
+		// Not an identifier, look into the va
+		} else {
+			verify_variable_access(scope, ad_va, line_number);
+		}
 		//printf("VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
 		verify_variable_access(scope, va->data.md->va, line_number);
