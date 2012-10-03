@@ -18,8 +18,8 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 void verify_statements_in_sequence(struct scope_t *scope, struct statement_sequence_t *ss);
 void verify_identifiers_in_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number);
 
-void process_variable_declaration_list(struct variable_declaration_list_t *vdl);
-void check_variable_declared_in_parent(struct class_list_t *cl);
+void process_variable_declaration_list(struct scope_t *scope, struct variable_declaration_list_t *vdl);
+void check_variable_declared_in_parent(struct scope_t *classScope);
 
 int identifier_list_size(struct identifier_list_t *il);
 bool check_variable_valid_name(char *id);
