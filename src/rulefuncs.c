@@ -70,8 +70,9 @@ long identifier_list_count(struct identifier_list_t *il) {
  */
 struct identifier_list_t *find_identifier_list(struct identifier_list_t *il, char *id) {
     struct identifier_list_t *temp_il = il;
-
+    //printf("Looking for identifier: %s\n", id);
     while(temp_il != NULL) {
+    	//printf("Checking against: %s\n", temp_il->id);
         if(strcmp(temp_il->id, id) == 0)
             return temp_il;
         temp_il = temp_il->next;

@@ -79,7 +79,6 @@ void semantic_analysis(struct program_t *p) {
     		//if(temp_fdl->fd == NULL) printf("Function declaration null\n");
     		//if(temp_fdl->fd->fb == NULL) printf("Function block null\n");
     		//if(temp_fdl->fd->fb->vdl == NULL) printf("Function vdl null\n");
-    		//check_variable_list_types_defined(temp_fdl->fd->fb->vdl);
 			
 			// Check for semantic errors in all statements within the function block
 			struct scope_t *funcScope = symtab_lookup_function(classScope, temp_fdl->fd->fh->id);
@@ -278,6 +277,7 @@ void check_variable_declared_in_parent(struct class_list_t *cl) {
 bool check_variable_valid_name(char *id) {
 	char *id_lower = stringtolower(id);
 	if(strcmp(id_lower,PRIMITIVE_TYPE_NAME_INTEGER) == 0 ||
+		strcmp(id_lower,PRIMITIVE_TYPE_NAME_REAL) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_BOOLEAN) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_POINTER) == 0 ||
 		strcmp(id_lower,PRIMITIVE_TYPE_NAME_UNKNOWN) == 0 ||
@@ -297,6 +297,10 @@ bool check_variable_valid_name(char *id) {
 void process_variable_declaration_list(struct variable_declaration_list_t *vdl) {
 	// Process the variable_declaration_list
 	struct variable_declaration_list_t *temp_vdl = vdl;
+
+	// Master list of identifiers to check for already declared
+	struct identifier_list_t *id_list = NULL;
+
 	// for each variable_declaration_list
 	while(temp_vdl != NULL) {
 		//printf("Variable: %s\n", temp_vdl->vd->il->id);
@@ -324,13 +328,43 @@ void process_variable_declaration_list(struct variable_declaration_list_t *vdl) 
 		}
 
 		// Check if variable name is valid
-		struct identifier_list_t *temp_il = temp_vdl->vd->il;
-		while(temp_il != NULL) {
-			// Check if it is a valid variable name
-			if(!check_variable_valid_name(temp_il->id)) {
-				error_variable_name_invalid(temp_vdl->vd->line_number, temp_il->id);
+		struct variable_declaration_t *temp_vd = temp_vdl->vd;
+		if(temp_vd != NULL) {
+			struct identifier_list_t *temp_il = temp_vd->il;
+			// Reset the id_list
+			id_list = NULL;
+			while(temp_il != NULL) {
+				// Check if it is a valid variable name
+				if(!check_variable_valid_name(temp_il->id)) {
+					error_variable_name_invalid(temp_vdl->vd->line_number, temp_il->id);
+				}
+				// Checks if the variable was declared in the same line, adds it to master list if not
+				//if(full_id_list == NULL) printf("full_id_list null\n");
+				//if(temp_il->id == NULL) printf("temp_il->id null\n");
+				if(find_identifier_list(id_list,temp_il->id) == NULL) {
+					add_to_identifier_list(&id_list,temp_il->id);
+				} else {
+					error_variable_already_declared(temp_vd->line_number,temp_il->id,temp_vd->line_number);
+				}
+
+				// Check the vdl up to this element to see if the variable was declared in a previous vdl
+				struct variable_declaration_list_t *it_vdl = vdl;
+				while(it_vdl != temp_vdl) {
+					struct variable_declaration_t *it_vd = it_vdl->vd;
+					if(it_vd != NULL) {
+						struct identifier_list_t *it_il = it_vd->il;
+						while(it_il != NULL) {
+							if(find_identifier_list(it_il,temp_il->id) != NULL) {
+								error_variable_already_declared(temp_vd->line_number,temp_il->id,it_vd->line_number);
+							}
+							it_il = it_il->next;
+						}
+					}
+					it_vdl = it_vdl->next;
+				}
+
+				temp_il = temp_il->next;
 			}
-			temp_il = temp_il->next;
 		}
 		temp_vdl = temp_vdl->next;
 		//printf("loop iter\n");
