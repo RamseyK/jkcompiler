@@ -32,9 +32,7 @@ void semantic_analysis(struct program_t *p) {
 		// Check if the class has a base class
 		if(temp_cl->ci->extend != NULL) {
 			struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
-			if(classScope == NULL) {
-				printf("Could not find class %s in symtab\n", temp_cl->ci->id);
-			} else {
+			if(classScope != NULL) {
 				struct scope_t *extendScope = symtab_lookup_class(temp_cl->ci->extend);
 				if(extendScope == NULL) {
 					error_extending_missing_class(temp_cl->ci->line_number, temp_cl->ci->id, temp_cl->ci->extend);
@@ -219,7 +217,7 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_seque
 void verify_identifiers_in_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-		//printf("found VA identifier %s\n", va->data.id);
+		//printf("VA identifier %s\n", va->data.id);
 		if(symtab_lookup_variable(scope, va->data.id) == NULL) {
 			// If the name doesn't match the function name, it's undeclared
 			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
@@ -227,14 +225,28 @@ void verify_identifiers_in_variable_access(struct scope_t *scope, struct variabl
 			}
 		}
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
+		// Recursively check the inner variable access for the array var identifier
 		verify_identifiers_in_variable_access(scope, va->data.iv->va, line_number);
+		
+		// Check if the array index is out of bounds
+		//printf("indexed expr %s[%i]\n", va->data.iv->va->data.id, (int)va->data.iv->iel->e->expr->val);
+		int idx = (int)va->data.iv->iel->e->expr->val;
+		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
+		
+		// If we have a variable definition, check if the index is in the range
+		if(vd != NULL && vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+			struct range_t *range = vd->tden->data.at->r;
+			if(idx > range->max->ui || idx < range->min->ui)
+				error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+		}
+		
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
 		// Accessing fields in a class
 		verify_identifiers_in_variable_access(scope, va->data.ad->va, line_number);
-		//printf("found VA attribute designator %s\n", va->data.ad->id);
+		//printf("VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
 		verify_identifiers_in_variable_access(scope, va->data.md->va, line_number);
-		//printf("found VA method designator %s\n", va->data.md->fd->id);
+		//printf("VA method designator %s\n", va->data.md->fd->id);
 	} else {
 	}
 }
