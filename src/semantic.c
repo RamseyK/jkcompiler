@@ -54,6 +54,7 @@ void semantic_analysis(struct program_t *p) {
 		error_missing_program_class();
     
 	//symtab_print(0);
+	//usrdef_print();
 	
 	// Initialize semantic analysis state
 	struct semantic_state_t *sem_state = (struct semantic_state_t*)malloc(sizeof(struct semantic_state_t));
@@ -104,8 +105,10 @@ void semantic_analysis(struct program_t *p) {
  * Checks for compatible types.
  */
 bool compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
+		SLOG(("entered compatible types\n"));
 	if(t1 == NULL || t2 == NULL)
 		return false;
+		SLOG(("not null\n"));
 	// Handle primitive types
 	if(t1->type == TYPE_DENOTER_T_IDENTIFIER && t2->type == TYPE_DENOTER_T_IDENTIFIER) {
 		if(strcmp(t1->data.id,t2->data.id) == 0) {
@@ -114,6 +117,7 @@ bool compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
 	}
 	// Array types
 	if(t1->type == TYPE_DENOTER_T_ARRAY_TYPE && t2->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+		SLOG(("checking compatible arrays\n"));
 		return compatible_arrays(t1->data.at, t2->data.at);
 	}
 	// Class types
@@ -132,6 +136,9 @@ bool compatible_arrays(struct array_type_t *a1, struct array_type_t *a2) {
 		return false;
 	int size1 = a1->r->max - a1->r->min;
 	int size2 = a2->r->max - a2->r->min;
+	
+	SLOG(("sz1: %i sz2: %i\n", size1, size2));
+		
 	return (size1 == size2) && compatible_types(a1->td, a2->td);
 }
 
@@ -200,11 +207,11 @@ void verify_statements_in_sequence(struct semantic_state_t *sem_state, struct st
 	// Check the statement type and handle accordingly
 	if(s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
-		sem_state->left = true;
 		if(s->data.as == NULL) {
 			SLOG(("s->data.as is null\n"));
 		}
 		SLOG(("About to enter verify_variable_access\n"));
+		sem_state->left = true;
 		sem_state->allowThis = true;
 		char *left_type = verify_variable_access(sem_state, s->data.as->va);
 		
@@ -232,6 +239,7 @@ void verify_statements_in_sequence(struct semantic_state_t *sem_state, struct st
 						 error_class_not_base_class(sem_state->line_number, left_type, right_type);
 					 }
 				} else {
+					SLOG(("Checking compatible types\n"));
 					if(!compatible_types(left_td,right_td)) {
 						error_type_mismatch(sem_state->line_number, left_type, right_type);
 					}

@@ -268,6 +268,20 @@ type_denoter : array_type
 		$$->type = TYPE_DENOTER_T_ARRAY_TYPE;
 		$$->name = $1->inner_type_name;
 		$$->data.at = $1;
+		
+		/*$$->name = (char*)malloc(128);
+		sprintf($$->name, "array_%s_%i", $1->inner_type_name, $1->r->max->ui - $1->r->min->ui);
+		
+		struct type_denoter_t *new_type = new_type_denoter();
+		new_type->type = TYPE_DENOTER_T_ARRAY_TYPE;
+		new_type->name = $$->name;
+		new_type->data.at = $1;
+		struct type_denoter_t *found_type = usrdef_lookup_name(new_type->name);
+		if(found_type == NULL) {
+			$$ = usrdef_insert(new_type);
+		} else {
+			$$ = found_type;
+		}*/
 	}
  | identifier
 	{
