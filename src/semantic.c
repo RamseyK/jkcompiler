@@ -228,19 +228,6 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-<<<<<<< HEAD
-		// Plain identifier
-		//printf("VA identifier %s\n", va->data.id);
-		// Check the function parameters and variables for the identifier
-		struct formal_parameter_section_t *fps = symtab_lookup_function_param(scope, va->data.id);
-		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.id);
-		if(fps == NULL && vd == NULL) {
-			// If the name doesn't match the function name, it's undeclared
-			if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
-				error_variable_not_declared(line_number, va->data.id);
-			}
-		}		
-=======
 		SLOG(("%i: VA identifier %s\n", line_number,va->data.id));
 		
 		// Check for "this" reference
@@ -277,8 +264,6 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 		// Return the type of the found variable declaration
 		//SLOG(("%i: Identifier %s has type %s\n",line_number,va->data.id,vd->tden->name));
 		return vd->tden->name;
-
->>>>>>> Attribute designator and method designator for variable access
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
 		// Accessing an indexed variable (array)
 	
@@ -292,7 +277,6 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
 				// Loop through inner ranges and check each index in a comma separated expression list
 				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
-<<<<<<< HEAD
 				struct array_type_t *arr = vd->tden->data.at;
 				struct index_expression_list_t *iel = va->data.iv->iel;
 				
@@ -313,15 +297,6 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 						
 					iel = iel->next;
 				}
-=======
-				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
-					int idx = (int)va->data.iv->iel->e->expr->val;
-					struct range_t *range = vd->tden->data.at->r;
-					if(idx > range->max->ui || idx < range->min->ui)
-						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
-					return PRIMITIVE_TYPE_NAME_INTEGER;
-				} 
->>>>>>> Attribute designator and method designator for variable access
 				
 				// Check type of index
 				if(strcmp(vd->tden->data.at->inner_type_name, PRIMITIVE_TYPE_NAME_INTEGER) != 0) {
