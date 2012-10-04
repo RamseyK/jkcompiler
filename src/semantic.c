@@ -282,10 +282,23 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 			}
 		}
 
+		// Check for the values "true" and "false" not case sensitive and return
+		// this as a bool if found
+		if(strcmp(stringtolower(va->data.id),BOOLEAN_VALUE_TRUE) == 0 || strcmp(stringtolower(va->data.id),BOOLEAN_VALUE_FALSE) == 0) {
+			return PRIMITIVE_TYPE_NAME_BOOLEAN;
+		}
+
+
 		// Check for function name to indicate return value being set
 		if(sem_state->scope->attrId == SYM_ATTR_FUNC) {
 			if(strcmp(va->data.id, sem_state->scope->fd->fh->id) == 0) {
-				return sem_state->scope->fd->fh->res;
+				//If it is the left hand side, return value is allowed
+				if(sem_state->left) {
+					return sem_state->scope->fd->fh->res;
+				} else {
+					error_cannot_set_return_value_on_right_hand_side(sem_state->line_number, va->data.id);
+					return PRIMITIVE_TYPE_NAME_UNKNOWN;
+				}
 			}
 		}
 

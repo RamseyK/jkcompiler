@@ -5,7 +5,7 @@ class testFunctionCallMulti
 BEGIN
    
    VAR
-      compilerWorks : boolean;
+      compilerWorks : integer;
       counter	    : integer;
 
 
