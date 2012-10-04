@@ -1,2 +1,2 @@
-ERROR:26:Class "aa" is not a base class of "bb" in the assignment
+ERROR:26:Class "AA" is not a base class of "BB" in the assignment
 Errors detected. Exiting.
