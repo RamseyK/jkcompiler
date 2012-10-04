@@ -18,8 +18,10 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 
 void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s);
 char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number, bool allowThis);
-void verify_simple_expression(struct scope_t *scope, struct simple_expression_t *se, int line_number);
-void verify_expression(struct scope_t *scope, struct expression_t *e, int line_number);
+char *verify_simple_expression(struct scope_t *scope, struct simple_expression_t *se, int line_number);
+char *verify_expression(struct scope_t *scope, struct expression_t *e, int line_number);
+char *verify_term(struct scope_t *scope, struct term_t *t, int line_number);
+char *verify_primary(struct scope_t *scope, struct primary_t *p, int line_number);
 
 void process_variable_declaration_list(struct scope_t *scope, struct variable_declaration_list_t *vdl);
 void check_variable_declared_in_parent(struct scope_t *classScope);
