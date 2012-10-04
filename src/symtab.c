@@ -261,7 +261,8 @@ struct scope_t *symtab_lookup_class(char *name) {
 }
 
 /*
- * Returns the scope of a function inside of a class scope using its name
+ * Returns the scope of a function inside of a class scope using its name.
+ * Looks up in parent scopes for classes that extend
  */
 
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
@@ -276,6 +277,11 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 		}
 		it = it->nextSibling;
 	}
+	// Look in the parent class if it is not root
+	if(classScope->parent != rootScope) {
+		return symtab_lookup_function(classScope->parent, name);
+	}
+	// Not found, return null
 	return NULL;
 }
 
@@ -304,14 +310,18 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
 		struct identifier_list_t *il = vdl->vd->il;
 		// Go through every identifier in the list
 		while(il != NULL) {
-			if(strcmp(il->id,name) == 0)
+			//printf("Comparing %s to %s\n",il->id,name);
+			if(strcmp(il->id,name) == 0) {
+				//printf("Match found! %s to %s",il->id,name);
 				return vdl->vd;
+			}
 			il = il->next;
 		}
 		vdl = vdl->next;
 	}
 	
 	// Not found, look in parent scope
+	//printf("Looking in parent scope\n");
 	return symtab_lookup_variable(scope->parent, name);
 }
 

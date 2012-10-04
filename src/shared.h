@@ -163,7 +163,7 @@ struct variable_declaration_list_t {
  */
 struct formal_parameter_section_t {
     struct identifier_list_t *il;
-    char *id;
+    char *id; // Type
     int is_var;
 };
 

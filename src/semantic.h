@@ -17,7 +17,7 @@ bool compatible_classes(struct class_list_t *c1, struct class_list_t *c2);
 bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *rhs);
 
 void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s);
-void verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number);
+char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number, bool allowThis);
 void verify_simple_expression(struct scope_t *scope, struct simple_expression_t *se, int line_number);
 void verify_expression(struct scope_t *scope, struct expression_t *e, int line_number);
 

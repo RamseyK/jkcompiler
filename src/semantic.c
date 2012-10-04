@@ -75,6 +75,7 @@ void semantic_analysis(struct program_t *p) {
         // Process the func_declaration_list
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
     	while(temp_fdl != NULL) {
+    		SLOG(("Looking at function %s\n",temp_fdl->fd->fh->id));
     		// Process the variable declaration list in fdl
     		//if(temp_fdl->fd == NULL) printf("Function declaration null\n");
     		//if(temp_fdl->fd->fb == NULL) printf("Function block null\n");
@@ -90,7 +91,7 @@ void semantic_analysis(struct program_t *p) {
     			verify_statements_in_sequence(funcScope, ss->s);
     			ss = ss->next;
     		}
-
+    		// Next function
     		temp_fdl = temp_fdl->next;
     	}
         // Advance to the next class
@@ -188,7 +189,11 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 	// Check the statement type and handle accordingly
 	if(s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
-		verify_variable_access(scope, s->data.as->va, s->line_number);
+		if(s->data.as == NULL) {
+			printf("s->data.as is null\n");
+		}
+		SLOG(("About to enter verify_variable_access\n"));
+		verify_variable_access(scope, s->data.as->va, s->line_number, true);
 		
 		// Check the RHS of the assignment
 		verify_expression(scope, s->data.as->e, s->line_number);
@@ -212,17 +217,18 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 	} else if(s->type == STATEMENT_T_WHILE) {
 		verify_statements_in_sequence(scope, s->data.ws->s);
 	} else if(s->type == STATEMENT_T_PRINT) {
-		verify_variable_access(scope, s->data.ps->va, s->line_number);
+		verify_variable_access(scope, s->data.ps->va, s->line_number, true);
 	} else {
 	}
 }
-
-void verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number) {
+// Returns the identifier of the type that this variable access represents
+char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number, bool allowThis) {
 	if(va == NULL)
-		return;
+		return NULL;
 
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+<<<<<<< HEAD
 		// Plain identifier
 		//printf("VA identifier %s\n", va->data.id);
 		// Check the function parameters and variables for the identifier
@@ -234,11 +240,50 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 				error_variable_not_declared(line_number, va->data.id);
 			}
 		}		
+=======
+		SLOG(("%i: VA identifier %s\n", line_number,va->data.id));
+		
+		// Check for "this" reference
+		if(allowThis) {
+			if(strcmp(va->data.id,"this") == 0) {
+				// Return the type of the parent class for this scope
+				//printf("\"this\" reference found.  Class: %s\n",scope->parent->cl->ci->id);
+				return scope->parent->cl->ci->id;
+			}
+		}
+
+		// Check for function name to indicate return value being set
+		if(scope->attrId == SYM_ATTR_FUNC) {
+			if(strcmp(va->data.id,scope->fd->fh->id) == 0) {
+				return scope->fd->fh->res;
+			}
+		}
+
+		// Check the function parameters and variables for the identifier
+		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.id);
+		if(vd == NULL) {
+			struct formal_parameter_section_t *fps = symtab_lookup_function_param(scope, va->data.id);
+			if(fps == NULL) {
+				// If the name doesn't match the function name, it's undeclared
+				if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
+					error_variable_not_declared(line_number, va->data.id);
+					return NULL;
+				}
+			}
+			// Return the type name of the variable in the parameter section
+			//printf("(In function params)Identifier %s has type %s\n",va->data.id,fps->id);
+			return fps->id;
+		}
+		// Return the type of the found variable declaration
+		//SLOG(("%i: Identifier %s has type %s\n",line_number,va->data.id,vd->tden->name));
+		return vd->tden->name;
+
+>>>>>>> Attribute designator and method designator for variable access
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
 		// Accessing an indexed variable (array)
 	
 		// Recursively check the inner variable access for the array var identifier
-		verify_variable_access(scope, va->data.iv->va, line_number);
+		verify_variable_access(scope, va->data.iv->va, line_number, false);
 		
 		// Check if the array index is out of bounds
 		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
@@ -247,6 +292,7 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
 				// Loop through inner ranges and check each index in a comma separated expression list
 				// The expression MUST be evaluated to an integer. Otherwise variables are involved in the index
+<<<<<<< HEAD
 				struct array_type_t *arr = vd->tden->data.at;
 				struct index_expression_list_t *iel = va->data.iv->iel;
 				
@@ -267,55 +313,111 @@ void verify_variable_access(struct scope_t *scope, struct variable_access_t *va,
 						
 					iel = iel->next;
 				}
+=======
+				if(strcmp(va->data.iv->iel->e->expr->type, PRIMITIVE_TYPE_NAME_INTEGER) == 0) {
+					int idx = (int)va->data.iv->iel->e->expr->val;
+					struct range_t *range = vd->tden->data.at->r;
+					if(idx > range->max->ui || idx < range->min->ui)
+						error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);
+					return PRIMITIVE_TYPE_NAME_INTEGER;
+				} 
+>>>>>>> Attribute designator and method designator for variable access
 				
 				// Check type of index
 				if(strcmp(vd->tden->data.at->inner_type_name, PRIMITIVE_TYPE_NAME_INTEGER) != 0) {
 					error_array_index_is_not_integer(line_number, va->data.iv->va->data.id);
 				}
+				return vd->tden->data.at->inner_type_name;
 			} else {
 				error_indexed_variable_not_an_array(line_number, va->data.iv->va->data.id);
+				return NULL;
 			}
 		}
+		return NULL;
 		
 	} else if(va->type == VARIABLE_ACCESS_T_ATTRIBUTE_DESIGNATOR) {
-		// Accessing fields in a class
-		struct variable_access_t *ad_va = va->data.ad->va;
-		// Check for "this" reference
-		if(ad_va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-			if(strcmp(ad_va->data.id,"this") == 0) {
-				// Look up the attribute for the class that "this" refers to
-				struct scope_t *thisClass = scope->parent;
-				struct variable_declaration_t *attribute = symtab_lookup_variable(thisClass, va->data.ad->id);
-				if(attribute == NULL)
-					error_variable_not_declared(line_number, va->data.ad->id);
-			} else {
-			// Get the type for the variable
-				struct variable_declaration_t *varDecl = symtab_lookup_variable(scope,ad_va->data.id);
-				if(varDecl != NULL) {
-					// Get the class scope for the variable's types class
-					struct scope_t *classScope = symtab_lookup_class(varDecl->tden->name);
-					if(classScope != NULL) {
-						// Look up the attribute in the scope
-						struct variable_declaration_t *attribute = symtab_lookup_variable(classScope, va->data.ad->id);
-						if(attribute == NULL) {
-							error_class_has_no_such_field(line_number, classScope->cl->ci->id, va->data.ad->id);
-						}
-					} else {
-						// Error?  Class not found?
-					}
-				} else {
-					error_variable_not_declared(line_number, va->data.id);
-				}
-			}
-		// Not an identifier, look into the va
+		// Check if the data.ad->id is a field of the data.ad->va->data.id's class
+		// Resolve the variable access part
+		// Determine if "this" should be allowed.  "this" should only be allowed on the innermost
+		// variable_access.  If the inner va type is identifier, then "this" is allowed.
+		SLOG(("Attribute Designator\n"));
+		if(va->data.ad->va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+			allowThis = true;
 		} else {
-			verify_variable_access(scope, ad_va, line_number);
+			allowThis = false;
 		}
+		char *va_class = verify_variable_access(scope, va->data.ad->va, line_number, allowThis);
+		//printf("va_class = %s\n",va_class);
+		if(va_class != NULL) {
+			// Look up the class
+			struct scope_t *va_classScope = symtab_lookup_class(va_class);
+			if(va_classScope == NULL) {
+				//printf("Class scope for %s was null\n",va_class);
+			}
+			//printf("Class scope found: %s\n",va_classScope->cl->ci->id);
+			// Look up the field in the class
+			//printf("Looking for field %s in class\n",va->data.ad->id);
+			struct variable_declaration_t *var = symtab_lookup_variable(va_classScope, va->data.ad->id);
+			if(var == NULL) {
+				//printf("Could not find the field\n");
+				// not declared
+				error_variable_not_declared(line_number, va->data.ad->id);
+				return NULL;
+			}
+			// Variable was found in the class, return the class name..... its type
+			//printf("Variable found in class, returning class name %s\n",var->tden->name);
+			return var->tden->name;
+		}
+		// Class was not found for va
+		return NULL;
 		//printf("VA attribute designator %s\n", va->data.ad->id);
 	} else if(va->type == VARIABLE_ACCESS_T_METHOD_DESIGNATOR) {
-		verify_variable_access(scope, va->data.md->va, line_number);
+		//return verify_variable_access(scope, va->data.md->va, line_number, allowThis);
+		// Should work similar to attribute designator but instead the return type
+		// of the method should be returned.  Check if va->data.md->fd->id
+		// is a function of the class from va->data.md->va;
+		// Allow this if the va is an identifier (left most)
+		SLOG(("Function/Method Designator\n"));
+		if(va->data.md == NULL) {
+			SLOG(("va->data.md is null\n"));
+		}
+		if(va->data.md->va == NULL) {
+			SLOG(("va->data.md->va is null\n"));
+		}
+		if(va->data.md->va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
+			allowThis = true;
+		} else {
+			allowThis = false;
+		}
+		// Verify the left side (recursive)
+		char *va_class = verify_variable_access(scope, va->data.md->va, line_number, allowThis);
+		if(va_class != NULL) {
+			// Look up the class
+			struct scope_t *va_classScope = symtab_lookup_class(va_class);
+			if(va_classScope == NULL) {
+				SLOG(("Class scope for %s was null\n",va_class));
+			}
+			SLOG(("Class scope found: %s\n",va_classScope->cl->ci->id));
+			// Look up the function in the class
+			SLOG(("%i: Looking for method %s in class\n",line_number,va->data.md->fd->id));
+			struct scope_t *func = symtab_lookup_function(va_classScope, va->data.md->fd->id);
+			if(func == NULL) {
+				SLOG(("%i: Could not find the method\n",line_number));
+				// not declared
+				error_function_not_declared(line_number, va->data.md->fd->id);
+				return NULL;
+			}
+			// function was found in the class, return the return type of the function
+			SLOG(("%i: Method found in class, returning return type %s\n",line_number,func->fd->fh->res));
+			return func->fd->fh->res;
+		}
+
+		// Class was not found for va
+		return NULL;
+
 		//printf("VA method designator %s\n", va->data.md->fd->id);
 	} else {
+		return NULL;
 	}
 }
 
@@ -337,7 +439,7 @@ void verify_simple_expression(struct scope_t *scope, struct simple_expression_t 
 		p = factor->data.p;
 		
 		if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
-			verify_variable_access(scope, p->data.va, line_number);
+			verify_variable_access(scope, p->data.va, line_number, true);
 		} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
 			//printf("unsigned constant: %i\n", p->data.un->ui);
 		} else if(p->type == PRIMARY_T_FUNCTION_DESIGNATOR) {
