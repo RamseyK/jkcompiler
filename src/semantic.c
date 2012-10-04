@@ -178,10 +178,10 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 		return true;
 	}
 	// If the right scope is an ancestor of the left, the assignment is valid
-	while(right != NULL) {
+	while(left != NULL) {
 		if(right == left)
 			return true;
-		right = right->parent;
+		left = left->parent;
 	}
 	// If the classes are compatible the assignment is valid
 	if(compatible_classes(lhs,rhs))
@@ -202,10 +202,10 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 		}
 		SLOG(("About to enter verify_variable_access\n"));
 		char *left_type = verify_variable_access(scope, s->data.as->va, s->line_number, true);
-		struct type_denoter_t *left_td = usrdef_lookup_name(left_type);
+		//struct type_denoter_t *left_td = usrdef_lookup_name(left_type);
 		// Check the RHS of the assignment
 		char *right_type = verify_expression(scope, s->data.as->e, s->line_number);
-		struct type_denoter_t *right_td = usrdef_lookup_name(right_type);
+		//struct type_denoter_t *right_td = usrdef_lookup_name(right_type);
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(s->data.as->oe != NULL) {
 			char *clName = s->data.as->oe->id;
@@ -216,9 +216,19 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 			//See if the assignment is valid
 			// Make sure neither type was unknown.  If they were unknown then the mismatch got caught
 			// in simple expression
+			// Look up both types
 			if(strcmp(left_type,PRIMITIVE_TYPE_NAME_UNKNOWN) != 0 && strcmp(right_type,PRIMITIVE_TYPE_NAME_UNKNOWN) != 0){
-				if(!compatible_types(left_td,right_td)) {
-					error_type_mismatch(s->line_number, left_type, right_type);
+				struct type_denoter_t *left_td = usrdef_lookup_name(left_type);
+				struct type_denoter_t *right_td = usrdef_lookup_name(right_type);
+				//printf("Checking if %s and %s are compatible\n",lhs,rhs);
+				if(left_td->type == TYPE_DENOTER_T_CLASS_TYPE && right_td->type == TYPE_DENOTER_T_CLASS_TYPE) {
+					 if(!compatible_class_assignment(left_td->data.cl,right_td->data.cl)) {
+						 error_class_not_base_class(s->line_number, left_type, right_type);
+					 }
+				} else {
+					if(!compatible_types(left_td,right_td)) {
+						error_type_mismatch(s->line_number, left_type, right_type);
+					}
 				}
 			}
 
