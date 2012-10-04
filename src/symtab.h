@@ -1,3 +1,8 @@
+/*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
 /* symtab.h
  *
  * Holds function definitions for the symbol table. The symbol table

@@ -1,4 +1,9 @@
 /*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
+/*
  * main.c
  *
  * Implements an object oriented pascal compiler
@@ -119,8 +124,6 @@ int main(int argc, char **argv) {
 
     /* Perform semantic analysis */
     semantic_analysis(program);
-    //symtab_print_list_addr();
-    //usrdef_print();
 
     /* If there were errors during semantic analysis, exit. */
     exit_on_errors();

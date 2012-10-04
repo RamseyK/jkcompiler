@@ -1,3 +1,8 @@
+/*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
 /* error.h
  *
  * Implements functions that output error messages

@@ -1,5 +1,10 @@
 %{
 /*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
+/*
  * grammar.y
  *
  * Pascal grammar in Yacc format, based originally on BNF given

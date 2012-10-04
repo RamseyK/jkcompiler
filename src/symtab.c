@@ -1,3 +1,8 @@
+/*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
 /* symtab.c
  *
  * Implements the symbol table

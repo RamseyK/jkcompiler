@@ -1,6 +1,11 @@
+/*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
 /* usrdef.h
  *
- * Holds function definitions of a hash table of user defined data types
+ * Holds function definitions of a linked list of user defined data types
  *
  */
 

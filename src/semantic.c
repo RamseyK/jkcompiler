@@ -1,4 +1,9 @@
 /*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
+/*
  * semantic.c
  *
  * Implements all functions that participate in semantic analysis.

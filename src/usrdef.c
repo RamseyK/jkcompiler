@@ -1,3 +1,8 @@
+/*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
 /* usrdef.c
  *
  * Implements the userdefined datatypes hash table.

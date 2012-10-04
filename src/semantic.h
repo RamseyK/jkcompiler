@@ -1,4 +1,9 @@
 /*
+ * jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ */
+
+/*
  * semantic.h
  *
  */
