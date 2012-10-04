@@ -54,12 +54,10 @@ void semantic_analysis(struct program_t *p) {
 		error_missing_program_class();
     
 	//symtab_print(0);
-
 	
-	// Fix up type_denoters and set the appropriate type (determine if class or identifier)
-	//fix_type_denoters();
-	//usrdef_print();
-	//symtab_print(0);
+	// Initialize semantic analysis state
+	struct semantic_state_t *sem_state = (struct semantic_state_t*)malloc(sizeof(struct semantic_state_t));
+
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
     while (temp_cl != NULL) {
@@ -86,9 +84,10 @@ void semantic_analysis(struct program_t *p) {
     		process_variable_declaration_list(funcScope,temp_fdl->fd->fb->vdl);
 
     		// Verify each statement in the statement sequence
+    		sem_state->scope = funcScope;
     		struct statement_sequence_t *ss = temp_fdl->fd->fb->ss;
     		while(ss != NULL) {
-    			verify_statements_in_sequence(funcScope, ss->s);
+    			verify_statements_in_sequence(sem_state, ss->s);
     			ss = ss->next;
     		}
     		// Next function
@@ -97,6 +96,8 @@ void semantic_analysis(struct program_t *p) {
         // Advance to the next class
         temp_cl = temp_cl->next;
     }
+    
+    free(sem_state);
 }
 
 /*
@@ -190,35 +191,42 @@ bool compatible_class_assignment(struct class_list_t *lhs, struct class_list_t *
 	return false;
 }
 
-void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s) {
+void verify_statements_in_sequence(struct semantic_state_t *sem_state, struct statement_t *s) {
 	if(s == NULL)
 		return;
+		
+	sem_state->line_number = s->line_number;
 	
 	// Check the statement type and handle accordingly
 	if(s->type == STATEMENT_T_ASSIGNMENT) {
 		// Check the id (LHS) of the assignment
+		sem_state->left = true;
 		if(s->data.as == NULL) {
 			SLOG(("s->data.as is null\n"));
 		}
 		SLOG(("About to enter verify_variable_access\n"));
-		char *left_type = verify_variable_access(scope, s->data.as->va, s->line_number, true);
+		sem_state->allowThis = true;
+		char *left_type = verify_variable_access(sem_state, s->data.as->va);
 		struct type_denoter_t *left_td = usrdef_lookup_name(left_type);
+		
 		// Check the RHS of the assignment
-		char *right_type = verify_expression(scope, s->data.as->e, s->line_number);
+		sem_state->left = false;
+		char *right_type = verify_expression(sem_state, s->data.as->e);
 		struct type_denoter_t *right_td = usrdef_lookup_name(right_type);
+		
 		// Check the object instantiation identifier to ensure NEW _classname_ is a real class
 		if(s->data.as->oe != NULL) {
 			char *clName = s->data.as->oe->id;
 			struct type_denoter_t *clTd = usrdef_lookup_name(clName);
 			if(clTd == NULL)
-				error_type_not_defined(s->line_number, clName);
+				error_type_not_defined(sem_state->line_number, clName);
 		} else {
-			//See if the assignment is valid
+			// See if the assignment is valid
 			// Make sure neither type was unknown.  If they were unknown then the mismatch got caught
 			// in simple expression
-			if(strcmp(left_type,PRIMITIVE_TYPE_NAME_UNKNOWN) != 0 && strcmp(right_type,PRIMITIVE_TYPE_NAME_UNKNOWN) != 0){
-				if(!compatible_types(left_td,right_td)) {
-					error_type_mismatch(s->line_number, left_type, right_type);
+			if(strcmp(left_type, PRIMITIVE_TYPE_NAME_UNKNOWN) != 0 && strcmp(right_type, PRIMITIVE_TYPE_NAME_UNKNOWN) != 0){
+				if(!compatible_types(left_td, right_td)) {
+					error_type_mismatch(sem_state->line_number, left_type, right_type);
 				}
 			}
 
@@ -226,52 +234,53 @@ void verify_statements_in_sequence(struct scope_t *scope, struct statement_t *s)
 	} else if(s->type == STATEMENT_T_SEQUENCE) {
 		struct statement_sequence_t *ss = s->data.ss;
 		while(ss != NULL) {
-			verify_statements_in_sequence(scope, s->data.ss->s);
+			verify_statements_in_sequence(sem_state, s->data.ss->s);
 			ss = ss->next;
 		}
 	} else if(s->type == STATEMENT_T_IF) {
-		verify_statements_in_sequence(scope, s->data.is->s1);
-		verify_statements_in_sequence(scope, s->data.is->s2);
+		verify_statements_in_sequence(sem_state, s->data.is->s1);
+		verify_statements_in_sequence(sem_state, s->data.is->s2);
 	} else if(s->type == STATEMENT_T_WHILE) {
-		verify_statements_in_sequence(scope, s->data.ws->s);
+		verify_statements_in_sequence(sem_state, s->data.ws->s);
 	} else if(s->type == STATEMENT_T_PRINT) {
-		verify_variable_access(scope, s->data.ps->va, s->line_number, true);
+		sem_state->allowThis = true;
+		verify_variable_access(sem_state, s->data.ps->va);
 	} else {
 	}
 }
 // Returns the identifier of the type that this variable access represents
-char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va, int line_number, bool allowThis) {
+char *verify_variable_access(struct semantic_state_t *sem_state, struct variable_access_t *va) {
 	if(va == NULL)
 		return PRIMITIVE_TYPE_NAME_UNKNOWN;
 
 	// Check the variable access type and find the id accordingly
 	if(va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-		SLOG(("%i: VA identifier %s\n", line_number,va->data.id));
+		SLOG(("%i: VA identifier %s\n", sem_state->line_number,va->data.id));
 		
 		// Check for "this" reference
-		if(allowThis) {
+		if(sem_state->allowThis) {
 			if(strcmp(va->data.id,"this") == 0) {
 				// Return the type of the parent class for this scope
-				SLOG(("\"this\" reference found.  Class: %s\n",scope->parent->cl->ci->id));
-				return scope->parent->cl->ci->id;
+				SLOG(("\"this\" reference found.  Class: %s\n", sem_state->scope->parent->cl->ci->id));
+				return sem_state->scope->parent->cl->ci->id;
 			}
 		}
 
 		// Check for function name to indicate return value being set
-		if(scope->attrId == SYM_ATTR_FUNC) {
-			if(strcmp(va->data.id,scope->fd->fh->id) == 0) {
-				return scope->fd->fh->res;
+		if(sem_state->scope->attrId == SYM_ATTR_FUNC) {
+			if(strcmp(va->data.id, sem_state->scope->fd->fh->id) == 0) {
+				return sem_state->scope->fd->fh->res;
 			}
 		}
 
 		// Check the function parameters and variables for the identifier
-		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.id);
+		struct variable_declaration_t *vd = symtab_lookup_variable(sem_state->scope, va->data.id);
 		if(vd == NULL) {
-			struct formal_parameter_section_t *fps = symtab_lookup_function_param(scope, va->data.id);
+			struct formal_parameter_section_t *fps = symtab_lookup_function_param(sem_state->scope, va->data.id);
 			if(fps == NULL) {
 				// If the name doesn't match the function name, it's undeclared
-				if(strcmp(scope->fd->fh->id, va->data.id) != 0) {
-					error_variable_not_declared(line_number, va->data.id);
+				if(strcmp(sem_state->scope->fd->fh->id, va->data.id) != 0) {
+					error_variable_not_declared(sem_state->line_number, va->data.id);
 					return PRIMITIVE_TYPE_NAME_UNKNOWN;
 				}
 			}
@@ -280,17 +289,18 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 			return fps->id;
 		}
 		// Return the type of the found variable declaration
-		SLOG(("%i: Identifier %s has type %s\n",line_number,va->data.id,vd->tden->name));
+		SLOG(("%i: Identifier %s has type %s\n", sem_state->line_number, va->data.id, vd->tden->name));
 		return vd->tden->name;
 	} else if(va->type == VARIABLE_ACCESS_T_INDEXED_VARIABLE) {
 		SLOG(("Accessing indexed variable\n"));
 		// Accessing an indexed variable (array)
 	
 		// Recursively check the inner variable access for the array var identifier
-		char *inner_va = verify_variable_access(scope, va->data.iv->va, line_number, false);
+		sem_state->allowThis = false;
+		char *inner_va = verify_variable_access(sem_state, va->data.iv->va);
 		SLOG(("inner_va = %s\n",inner_va));
 		// Check if the array index is out of bounds
-		struct variable_declaration_t *vd = symtab_lookup_variable(scope, va->data.iv->va->data.id);
+		struct variable_declaration_t *vd = symtab_lookup_variable(sem_state->scope, va->data.iv->va->data.id);
 		if(vd != NULL) {
 			// Ensure the indexed variable is actually an array
 			if(vd->tden->type == TYPE_DENOTER_T_ARRAY_TYPE) {
@@ -305,7 +315,7 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 						int idx = (int)iel->e->expr->val;
 						struct range_t *range = arr->r;
 						if(idx > range->max->ui || idx < range->min->ui)
-							error_array_index_out_of_bounds(line_number, idx, range->min->ui, range->max->ui);		
+							error_array_index_out_of_bounds(sem_state->line_number, idx, range->min->ui, range->max->ui);		
 					}
 						
 					// If the inner type is an array (another dimension) move to it
@@ -319,10 +329,10 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 				
 				// Check type of index
 				if(strcmp(vd->tden->data.at->inner_type_name, PRIMITIVE_TYPE_NAME_INTEGER) != 0) {
-					error_array_index_is_not_integer(line_number, va->data.iv->va->data.id);
+					error_array_index_is_not_integer(sem_state->line_number, va->data.iv->va->data.id);
 				}
 			} else {
-				error_indexed_variable_not_an_array(line_number, va->data.iv->va->data.id);
+				error_indexed_variable_not_an_array(sem_state->line_number, va->data.iv->va->data.id);
 			}
 		}
 		//SLOG(("Returning array inner type %s",vd->tden->data.at->inner_type_name));
@@ -335,12 +345,12 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 		// variable_access.  If the inner va type is identifier, then "this" is allowed.
 		SLOG(("Attribute Designator\n"));
 		if(va->data.ad->va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-			allowThis = true;
+			sem_state->allowThis = true;
 		} else {
-			allowThis = false;
+			sem_state->allowThis = false;
 		}
-		char *va_class = verify_variable_access(scope, va->data.ad->va, line_number, allowThis);
-		SLOG(("va_class = %s\n",va_class));
+		char *va_class = verify_variable_access(sem_state, va->data.ad->va);
+		SLOG(("va_class = %s\n", va_class));
 		if(va_class != NULL) {
 			// Look up the class
 			struct scope_t *va_classScope = symtab_lookup_class(va_class);
@@ -354,11 +364,11 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 			if(var == NULL) {
 				//printf("Could not find the field\n");
 				// not declared
-				error_variable_not_declared(line_number, va->data.ad->id);
+				error_variable_not_declared(sem_state->line_number, va->data.ad->id);
 				return PRIMITIVE_TYPE_NAME_UNKNOWN;
 			}
 			// Variable was found in the class, return the class name..... its type
-			SLOG(("Variable found in class, returning class name %s\n",var->tden->name));
+			SLOG(("Variable found in class, returning class name %s\n", var->tden->name));
 			return var->tden->name;
 		}
 		// Class was not found for va
@@ -378,12 +388,12 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 			SLOG(("va->data.md->va is null\n"));
 		}
 		if(va->data.md->va->type == VARIABLE_ACCESS_T_IDENTIFIER) {
-			allowThis = true;
+			sem_state->allowThis = true;
 		} else {
-			allowThis = false;
+			sem_state->allowThis = false;
 		}
 		// Verify the left side (recursive)
-		char *va_class = verify_variable_access(scope, va->data.md->va, line_number, allowThis);
+		char *va_class = verify_variable_access(sem_state, va->data.md->va);
 		if(va_class != NULL) {
 			// Look up the class
 			struct scope_t *va_classScope = symtab_lookup_class(va_class);
@@ -392,16 +402,16 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 			}
 			SLOG(("Class scope found: %s\n",va_classScope->cl->ci->id));
 			// Look up the function in the class
-			SLOG(("%i: Looking for method %s in class\n",line_number,va->data.md->fd->id));
+			SLOG(("%i: Looking for method %s in class\n", sem_state->line_number, va->data.md->fd->id));
 			struct scope_t *func = symtab_lookup_function(va_classScope, va->data.md->fd->id);
 			if(func == NULL) {
-				SLOG(("%i: Could not find the method\n",line_number));
+				SLOG(("%i: Could not find the method\n", sem_state->line_number));
 				// not declared
-				error_function_not_declared(line_number, va->data.md->fd->id);
+				error_function_not_declared(sem_state->line_number, va->data.md->fd->id);
 				return PRIMITIVE_TYPE_NAME_UNKNOWN;
 			}
 			// function was found in the class, return the return type of the function
-			SLOG(("%i: Method found in class, returning return type %s\n",line_number,func->fd->fh->res));
+			SLOG(("%i: Method found in class, returning return type %s\n", sem_state->line_number, func->fd->fh->res));
 			return func->fd->fh->res;
 		}
 
@@ -414,7 +424,7 @@ char *verify_variable_access(struct scope_t *scope, struct variable_access_t *va
 	}
 }
 
-char *verify_simple_expression(struct scope_t *scope, struct simple_expression_t *se, int line_number) {
+char *verify_simple_expression(struct semantic_state_t *sem_state, struct simple_expression_t *se) {
 	SLOG(("verify_simple_expression\n"));
 	if(se == NULL)
 		return NULL;
@@ -425,7 +435,7 @@ char *verify_simple_expression(struct scope_t *scope, struct simple_expression_t
 	// Loop through all terms
 	struct term_t *term = se->t;
 	while(term != NULL) {
-		term_type = verify_term(scope, term, line_number);
+		term_type = verify_term(sem_state, term);
 
 		// Check if this term_type is compatible with the se_type thus far
 		if(se_type == NULL) { // First iteration
@@ -447,7 +457,7 @@ char *verify_simple_expression(struct scope_t *scope, struct simple_expression_t
 	
 	// Check if the next simple expression type matches
 	if(se->next != NULL) {
-		char *next_type = verify_simple_expression(scope, se->next, line_number);
+		char *next_type = verify_simple_expression(sem_state, se->next);
 		// Look up each type by name
 		struct type_denoter_t *se_td = usrdef_lookup_name(se_type);
 		struct type_denoter_t *next_td = usrdef_lookup_name(next_type);
@@ -455,30 +465,30 @@ char *verify_simple_expression(struct scope_t *scope, struct simple_expression_t
 			return se_type;
 		} else {
 			// Type mismatch?
-			//error_type_mismatch(line_number,se_type,term_type);
+			//error_type_mismatch(sem_state->line_number,se_type,term_type);
 			se_type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 	}
 	SLOG(("Simple expression type: %s\n",se_type));
 	//if(strcmp(se_type,PRIMITIVE_TYPE_NAME_UNKNOWN) == 0)
-		//error_type_mismatch(line_number,se_type,term_type);
+		//error_type_mismatch(sem_state->line_number,se_type,term_type);
 	return se_type;
 }
 
 /*
  * Verify term
  */
-char *verify_term(struct scope_t *scope, struct term_t *t, int line_number) {
+char *verify_term(struct semantic_state_t *sem_state, struct term_t *t) {
 	SLOG(("verify_term\n"));
 	struct factor_t *factor = t->f;
 	// Check for too many signs
 	if(factor->type == FACTOR_T_SIGNFACTOR){
 		if(factor->data.f.next->type == FACTOR_T_SIGNFACTOR)
-			error_too_many_signs(line_number);
-		SLOG(("Factor expr type: %s\n",factor->expr->type));
+			error_too_many_signs(sem_state->line_number);
+		SLOG(("Factor expr type: %s\n", factor->expr->type));
 		return factor->expr->type;
 	} else {
-		char *pri_type = verify_primary(scope, factor->data.p, line_number);
+		char *pri_type = verify_primary(sem_state, factor->data.p);
 		SLOG(("Factory primary type: %s\n",pri_type));
 		return pri_type;
 	}
@@ -486,13 +496,14 @@ char *verify_term(struct scope_t *scope, struct term_t *t, int line_number) {
 /*
  * Verify primary
  */
-char *verify_primary(struct scope_t *scope, struct primary_t *p, int line_number) {
+char *verify_primary(struct semantic_state_t *sem_state, struct primary_t *p) {
 	SLOG(("verify_primary\n"));
 	if(p == NULL)
 		return PRIMITIVE_TYPE_NAME_UNKNOWN;
 	if(p->type == PRIMARY_T_VARIABLE_ACCESS) {
 		SLOG(("VA\n"));
-		return verify_variable_access(scope, p->data.va, line_number, true);
+		sem_state->allowThis = true;
+		return verify_variable_access(sem_state, p->data.va);
 	} else if(p->type == PRIMARY_T_UNSIGNED_CONSTANT) {
 		SLOG(("Unsigned Constant type: %s\n",p->data.un->expr->type));
 		return p->data.un->expr->type;
@@ -503,19 +514,19 @@ char *verify_primary(struct scope_t *scope, struct primary_t *p, int line_number
 		//printf("func desig: %s\n", p->data.fd->id);
 
 		// Lookup the function in the parent of the current scope (the class scope)
-		struct scope_t* funcScope = symtab_lookup_function(scope->parent, p->data.fd->id);
+		struct scope_t* funcScope = symtab_lookup_function(sem_state->scope->parent, p->data.fd->id);
 		if(funcScope == NULL) {
 			// Attempting to call a function that doesn't exist
-			error_function_not_declared(line_number, p->data.fd->id);
+			error_function_not_declared(sem_state->line_number, p->data.fd->id);
 			return PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 
 		int numParams = 0, actualParams = 0;
 		struct actual_parameter_list_t *apl = p->data.fd->apl;
 		while(apl != NULL) {
-			//verify_expression(scope, apl->ap->e1, line_number);
-			//verify_expression(scope, apl->ap->e2, line_number);
-			//verify_expression(scope, apl->ap->e3, line_number);
+			//verify_expression(sem_state, apl->ap->e1);
+			//verify_expression(sem_state, apl->ap->e2);
+			//verify_expression(sem_state, apl->ap->e3);
 			if(apl->ap->e1 != NULL) numParams++;
 			if(apl->ap->e2 != NULL) numParams++;
 			if(apl->ap->e3 != NULL) numParams++;
@@ -537,16 +548,16 @@ char *verify_primary(struct scope_t *scope, struct primary_t *p, int line_number
 
 		// If the number of parameters in the call doesn't meet the required amount, error
 		if(numParams != actualParams)
-			error_function_not_declared(line_number, funcScope->fd->fh->id);
+			error_function_not_declared(sem_state->line_number, funcScope->fd->fh->id);
 
 		// Return the return type of the function
 		return funcScope->fd->fh->res;
 	} else if(p->type == PRIMARY_T_EXPRESSION) {
 		SLOG(("EXPRESSION\n"));
-		return verify_expression(scope, p->data.e, line_number);
+		return verify_expression(sem_state, p->data.e);
 	} else if(p->type == PRIMARY_T_PRIMARY) {
 		SLOG(("PRIMARY\n"));
-		return verify_primary(scope,p->data.p.next,line_number);
+		return verify_primary(sem_state, p->data.p.next);
 	} else {
 		SLOG(("UNKNOWN\n"));
 		return PRIMITIVE_TYPE_NAME_UNKNOWN;
@@ -556,18 +567,18 @@ char *verify_primary(struct scope_t *scope, struct primary_t *p, int line_number
 /*
  * Returns the id of the type that the expression evaluates to
  */
-char *verify_expression(struct scope_t *scope, struct expression_t *e, int line_number) {
+char *verify_expression(struct semantic_state_t *sem_state, struct expression_t *e) {
 	if(e == NULL)
 		return PRIMITIVE_TYPE_NAME_UNKNOWN;
 
 	// Always evaluate the first simple expression
-	char *type1 = verify_simple_expression(scope, e->se1, line_number);
+	char *type1 = verify_simple_expression(sem_state, e->se1);
 	if(type1 == NULL)
 		return PRIMITIVE_TYPE_NAME_UNKNOWN;
 
 	// Two expressions are present
 	if(e->se2 != NULL) {
-		char *type2 = verify_simple_expression(scope, e->se2, line_number);
+		char *type2 = verify_simple_expression(sem_state, e->se2);
 	
 		// Check for type mismatch
 		//if(strcmp(e->se1->expr->type, e->se2->expr->type) != 0) {
@@ -578,7 +589,7 @@ char *verify_expression(struct scope_t *scope, struct expression_t *e, int line_
 		struct type_denoter_t *td2 = usrdef_lookup_name(type2);
 		if(!compatible_types(td1,td2)) {
 			//printf("%i: Detected incompatible type %s and %s",line_number,td1->name,td2->name);
-			error_type_mismatch(line_number,td1->name,td2->name);
+			error_type_mismatch(sem_state->line_number, td1->name, td2->name);
 			return PRIMITIVE_TYPE_NAME_UNKNOWN;
 		} else {
 			return td1->name;
