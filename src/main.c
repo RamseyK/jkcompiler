@@ -146,7 +146,10 @@ int main(int argc, char **argv) {
         symtab_print(0);
     }
     
-    /* Simple, wasn't it ?!! */
+    /* Free memory */
+    //symtab_destroy
+    //userdef_destroy
+    free_program(program);
 
     return 0;
 }
