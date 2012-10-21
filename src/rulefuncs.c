@@ -1,18 +1,12 @@
 /*
+ * rulefuncs.c
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/*
- * rulefuncs.c
  *
  * Implements all functions that assist in developing the yacc rules
  */
 
 #include "rulefuncs.h"
-#include "shared.h"
-
-
 
 /* -----------------------------------------------------------------------
  * Returns a pointer to a new identifier_list

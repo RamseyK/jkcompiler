@@ -1,11 +1,9 @@
 /*
+ * rulefuncs.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/*
- * rulefuncs.h
  *
+ * Functions that assist in developing the yacc rules
  */
 
 #ifndef RULEFUNCS_H

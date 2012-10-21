@@ -1,12 +1,9 @@
 /*
+ * symtab.c
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* symtab.c
  *
  * Implements the symbol table
- *
  * A flat symbol table is the root of all evil.
  */
 
@@ -30,13 +27,19 @@ struct scope_t *new_scope() {
 	temp_scope->next = NULL;
 	temp_scope->nextSibling = NULL;
 	
-	// Add it to the master list, udpate tail
-	if(tailScope == NULL) {
-		tailScope = temp_scope;
+	// Add it to the master list
+	if(allScopes == NULL) {
+		allScopes = temp_scope;
 	} else {
-		tailScope->next = temp_scope;
-		tailScope = temp_scope;
+		// Find the end of the list
+		struct scope_t *end = allScopes;
+		while(end->next != NULL)
+			end = end->next;
+		
+		// Add temp_scope to the end of the master list
+		end->next = temp_scope;
 	}
+	
 	return temp_scope;
 }
 
@@ -44,10 +47,25 @@ struct scope_t *new_scope() {
  * Initializes the symtab by creating the root node
  */
 void symtab_init(struct program_t *program) {
+	allScopes = NULL;
 	rootScope = new_scope();
 	rootScope->attrId = SYM_ATTR_PROGRAM;
 	rootScope->program = program;
-	currScope = rootScope;
+}
+
+/*
+ * Frees the symbol table (scope nodes) from memory contained in the master list (allScopes)
+ */
+void symtab_destroy() {
+	struct scope_t *it = allScopes;
+	struct scope_t *curr = allScopes;
+	while(it != NULL) {
+		curr = it;
+		it = curr->next;
+		free(curr);
+	}
+	allScopes = NULL;
+	rootScope = NULL;
 }
 
 /*
@@ -278,7 +296,7 @@ struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name) {
 			if(strcmp(it->fd->fh->id, name) == 0)
 				return it;
 		} else {
-			printf("Scope in func_scope for class %s was not properly created", classScope->cl->ci->id);
+			SLOG(("Scope in func_scope for class %s was not properly created", classScope->cl->ci->id));
 		}
 		it = it->nextSibling;
 	}

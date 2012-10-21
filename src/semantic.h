@@ -1,18 +1,19 @@
 /*
+ * semantic.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/*
- * semantic.h
  *
+ * Functions that participate in semantic analysis.
  */
 
 #ifndef SEMANTIC_H
 #define SEMANTIC_H
 
-#include "symtab.h"
 #include "shared.h"
+#include "semantic.h"
+#include "rulefuncs.h"
+#include "usrdef.h"
+#include "symtab.h"
 
 struct semantic_state_t {
 	struct scope_t *scope; // Scope being analyzed

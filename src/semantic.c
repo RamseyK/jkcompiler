@@ -1,20 +1,12 @@
 /*
+ * semantic.c
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/*
- * semantic.c
  *
  * Implements all functions that participate in semantic analysis.
  */
 
-
-#include "shared.h"
 #include "semantic.h"
-#include "rulefuncs.h"
-#include "usrdef.h"
-#include "symtab.h"
 
 /* -----------------------------------------------------------------------
  * Carries out semantic analysis on a program
@@ -38,7 +30,7 @@ void semantic_analysis(struct program_t *p) {
 		if(temp_cl->ci->extend != NULL) {
 			struct scope_t *classScope = symtab_lookup_class(temp_cl->ci->id);
 			if(classScope == NULL) {
-				printf("Could not find class %s in symtab\n", temp_cl->ci->id);
+				SLOG(("Could not find class %s in symtab\n", temp_cl->ci->id));
 			} else {
 				struct scope_t *extendScope = symtab_lookup_class(temp_cl->ci->extend);
 				if(extendScope == NULL) {
@@ -63,6 +55,7 @@ void semantic_analysis(struct program_t *p) {
 	
 	// Initialize semantic analysis state
 	struct semantic_state_t *sem_state = (struct semantic_state_t*)malloc(sizeof(struct semantic_state_t));
+	CHECK_MEM_ERROR(sem_state);
 
     // Now that the class list is fixed, check deeper into the program
     temp_cl = p->cl;
@@ -73,8 +66,6 @@ void semantic_analysis(struct program_t *p) {
     	
     	// Process the variable declaration list
     	process_variable_declaration_list(classScope,temp_cl->cb->vdl);
-    	// Check if variable was declared in parent classes
-		//check_variable_declared_in_parent(temp_cl);
 
         // Process the func_declaration_list
     	struct func_declaration_list_t *temp_fdl = temp_cl->cb->fdl;
@@ -269,6 +260,7 @@ void verify_statements_in_sequence(struct semantic_state_t *sem_state, struct st
 	} else {
 	}
 }
+
 // Returns the identifier of the type that this variable access represents
 char *verify_variable_access(struct semantic_state_t *sem_state, struct variable_access_t *va) {
 	if(va == NULL)

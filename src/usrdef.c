@@ -1,17 +1,12 @@
 /*
+ * usrdef.c
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* usrdef.c
  *
  * Implements the userdefined datatypes hash table.
- *
  */
 
 #include "usrdef.h"
-#include "rulefuncs.h"
-
 
 char * usrdef_new_name() {
     char *n;

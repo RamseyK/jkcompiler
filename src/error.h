@@ -1,12 +1,9 @@
 /*
+ * error.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* error.h
  *
  * Contains function definitions of common error output function
- *
  */
 
 #ifndef ERROR_H

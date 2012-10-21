@@ -61,8 +61,8 @@ clean:
 
 tests: tests_semantic
 
+# "runtest" comes from DejaGNU
 tests_semantic: tests_prepare
-	# "runtest" comes from DejaGNU
 	mkdir -p $(TESTSDIR)/tests_semantic/results
 	(cd $(TESTSDIR)/tests_semantic; runtest --all --output results --tool $(TARGET) tests_semantic.exp)
 

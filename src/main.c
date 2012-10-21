@@ -1,10 +1,7 @@
 /*
+ * main.c
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/*
- * main.c
  *
  * Implements an object oriented pascal compiler
  */
@@ -13,7 +10,7 @@
 #include "symtab.h"
 #include "rulefuncs.h"
 #include "semantic.h"
-
+#include "ir.h"
 
 /* Flags if any errors occured */
 int error_flag = 0;
@@ -26,19 +23,6 @@ struct args_t cmdArgs;
 extern struct program_t *program;
 
 extern void yyparse();
-
-
-/* -----------------------------------------------------------------------
- * Printout on error message and exit
- * -----------------------------------------------------------------------
- */
-void exit_on_errors() {
-    if (error_flag == 1) {
-        printf("Errors detected. Exiting.\n");
-        exit(-1);
-    }
-}
-
 
 
 /* -----------------------------------------------------------------------
@@ -113,22 +97,28 @@ int main(int argc, char **argv) {
 	/* initialize the program */
 	program = new_program();
 
+	// Initialize global data structures: user defined types hashtable, symbol table, control flow graph
     usrdef_init();
     symtab_init(program);
+	ir_init();
 
     /* begin parsing */
     yyparse();
+    if (error_flag == 1) {
+		// Errors during parsing
+        printf("Errors detected. Exiting.\n");
+        exit(-1);
+    }
 
-    /* If there were parsing errors, exit. */
-    exit_on_errors();
-
-    /* Perform semantic analysis */
+    // Perform semantic analysis
     semantic_analysis(program);
+    if (error_flag == 1) {
+		// Errors during semantic analysis
+        printf("Errors detected. Exiting.\n");
+        exit(-1);
+    }
 
-    /* If there were errors during semantic analysis, exit. */
-    exit_on_errors();
-
-    /* If we should only perform semantic analysis, exit */
+    // If we should only perform semantic analysis, exit
     if (cmdArgs.exit_after_sem == 1) {
         exit(0);
     }
@@ -147,8 +137,9 @@ int main(int argc, char **argv) {
     }
     
     /* Free memory */
-    //symtab_destroy
-    //userdef_destroy
+	ir_destroy();
+	symtab_destroy();
+	//usrdef_destroy
     free_program(program);
 
     return 0;

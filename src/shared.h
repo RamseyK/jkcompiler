@@ -1,11 +1,9 @@
 /*
+ * shared.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* shared.h
  *
- * Contains function definitions of all shared subroutines
+ * Contains function definitions and structures of all parts of the compiler
  */
 
 #ifndef SHARED_H

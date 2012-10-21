@@ -1,17 +1,15 @@
 /*
+ * usrdef.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* usrdef.h
  *
- * Holds function definitions of a linked list of user defined data types
- *
+ * Holds function definitions of a userdefined datatypes linked list
  */
 
 #ifndef USRDEF_H
 #define USRDEF_H
 
+#include "rulefuncs.h"
 #include "shared.h"
 
 char * usrdef_new_name();

@@ -4,7 +4,7 @@
 . ../tests_lib_shared_auto.inc
 
 
-function test_diff()
+test_diff()
 {
     SOURCE_FILE=$1
     FLAGS=$2
@@ -24,7 +24,7 @@ function test_diff()
 }
 
 
-function test_diff_sem()
+test_diff_sem()
 {
     SOURCE_FILE=$1
     FLAGS=$2
@@ -32,7 +32,7 @@ function test_diff_sem()
     test_diff $SOURCE_FILE "$FLAGS -exitsem"
 }
 
-function test_diff_ir()
+test_diff_ir()
 {
     SOURCE_FILE=$1
     FLAGS=$2
@@ -41,7 +41,7 @@ function test_diff_ir()
 }
 
 
-function test_diff_gen()
+test_diff_gen()
 {
     SOURCE_FILE=$1
     FLAGS=$2
@@ -62,7 +62,7 @@ function test_diff_gen()
 }
 
 
-function test_diff_failed()
+test_diff_failed()
 {
     echo FAILED
     exit 0

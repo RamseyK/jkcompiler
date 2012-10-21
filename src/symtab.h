@@ -1,9 +1,7 @@
 /*
+ * symtab.h
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
- */
-
-/* symtab.h
  *
  * Holds function definitions for the symbol table. The symbol table
  * is implemented as a global hash table that contains local symbol
@@ -37,7 +35,7 @@ struct scope_t {
 	struct class_list_t *cl; // Class in this scope
 	struct scope_t *func_scopes; // Head node of function scopes in this scope
 	struct function_declaration_t *fd; // Function declaration in this scope
-	struct scope_t *next; // Next class_scope
+	struct scope_t *next; // Next scope in the horizontal master list
 	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
 };
 
@@ -48,8 +46,7 @@ struct scope_t {
 
 bool enterNext;
 struct scope_t *rootScope;
-struct scope_t *currScope;
-struct scope_t *tailScope;
+struct scope_t *allScopes;
 
 
 /* ----------------------------------------------------------------
@@ -59,6 +56,7 @@ struct scope_t *tailScope;
 
 void symtab_print_list_addr();
 void symtab_init(struct program_t* program);
+void symtab_destroy();
 void symtab_print(int numOfTabs);
 void symtab_print_recursive(struct scope_t* start, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root

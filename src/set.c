@@ -1,3 +1,11 @@
+/* 
+ * set.c
+ * From jkcompiler
+ * Keilan Jackson, Ramsey Kant
+ *
+ * A list based implementation of a set
+ */
+
 #include "set.h"
 
 // Allocates memory for a new set_t on the heap
