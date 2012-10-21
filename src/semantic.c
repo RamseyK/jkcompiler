@@ -101,10 +101,10 @@ void semantic_analysis(struct program_t *p) {
  * Checks for compatible types.
  */
 bool compatible_types(struct type_denoter_t *t1, struct type_denoter_t *t2){
-		SLOG(("entered compatible types\n"));
+	SLOG(("entered compatible types\n"));
 	if(t1 == NULL || t2 == NULL)
 		return false;
-		SLOG(("not null\n"));
+	SLOG(("not null\n"));
 	// Handle primitive types
 	if(t1->type == TYPE_DENOTER_T_IDENTIFIER && t2->type == TYPE_DENOTER_T_IDENTIFIER) {
 		if(strcmp(t1->data.id,t2->data.id) == 0) {
@@ -739,17 +739,4 @@ void process_variable_declaration_list(struct scope_t *scope, struct variable_de
 		temp_vdl = temp_vdl->next;
 		//printf("loop iter\n");
 	}
-}
-
-/*
- * Returns the number of elements in an identifier list
- */
-int identifier_list_size(struct identifier_list_t *il) {
-	int count = 0;
-	struct identifier_list_t *temp_il = il;
-	while(temp_il != NULL) {
-		count++;
-		temp_il = temp_il->next;
-	}
-	return count;
 }

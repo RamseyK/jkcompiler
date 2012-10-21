@@ -224,6 +224,7 @@ struct function_designator_t {
 struct expression_data_t {
     float val;
     char *type;
+	char *threeAddrName; // Name used in Intermediate Representation
 };
 
 struct unsigned_number_t {

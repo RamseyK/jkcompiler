@@ -14,6 +14,7 @@
 
 char * usrdef_new_name();
 void usrdef_init();
+void usrdef_destroy();
 void usrdef_print();
 struct type_denoter_t *usrdef_insert(struct type_denoter_t *td);
 struct type_denoter_t *usrdef_lookup_td(struct type_denoter_t *td);

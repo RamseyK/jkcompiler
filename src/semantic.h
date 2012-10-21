@@ -3,7 +3,7 @@
  * jkcompiler
  * Keilan Jackson, Ramsey Kant
  *
- * Functions that participate in semantic analysis.
+ * Functions that participate in semantic analysis (error checking after parsing)
  */
 
 #ifndef SEMANTIC_H
@@ -38,8 +38,6 @@ char *verify_primary(struct semantic_state_t *sem_state, struct primary_t *p);
 
 void process_variable_declaration_list(struct scope_t *scope, struct variable_declaration_list_t *vdl);
 void check_variable_declared_in_parent(struct scope_t *classScope);
-
-int identifier_list_size(struct identifier_list_t *il);
 bool check_variable_valid_name(char *id);
 
 #endif /* SEMANTIC_H */

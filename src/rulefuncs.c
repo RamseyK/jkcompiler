@@ -46,9 +46,9 @@ void add_to_identifier_list(struct identifier_list_t **il, char *id) {
  * Returns the number of identifiers in an identifier list
  * -----------------------------------------------------------------------
  */
-long identifier_list_count(struct identifier_list_t *il) {
+int identifier_list_size(struct identifier_list_t *il) {
     struct identifier_list_t *temp_il;
-    long count = 0;
+    int count = 0;
 
     temp_il = il;
     while (temp_il != NULL) {
@@ -1551,6 +1551,7 @@ struct expression_data_t *new_expression_data() {
     CHECK_MEM_ERROR(ed)
     ed->val = -1;
     ed->type = NULL;
+	ed->threeAddrName = NULL;
 
     return ed;
 }
@@ -1562,7 +1563,7 @@ struct expression_data_t *new_expression_data() {
 void free_expression_data(struct expression_data_t *ed) {
 	if(ed == NULL)
 		return;
-
+	
 	free(ed);
 }
 

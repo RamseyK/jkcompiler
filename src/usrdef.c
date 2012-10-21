@@ -51,7 +51,21 @@ void usrdef_init() {
 }
 
 
-
+/* ------------------------------------------------------------
+ * Cleans up the usrdef list from memory
+ * ------------------------------------------------------------
+ */
+void usrdef_destroy() {
+	struct type_denoter_list_t *it = usrdef_types;
+	struct type_denoter_list_t *current;
+	while(it != NULL) {
+		current = it;
+		it = it->next;
+		free_type_denoter(current->tden);
+		free(current);
+	}
+}
+ 
 /* ------------------------------------------------------------
  * Prints the user defined data types table
  * ------------------------------------------------------------

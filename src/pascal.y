@@ -198,6 +198,7 @@ class_list : class_list class_identification PBEGIN class_block END
 			} else { // Update it
 				found_type->type = TYPE_DENOTER_T_CLASS_TYPE;
 				found_type->data.cl = addedClass;
+				free_type_denoter(new_type);
 			}
 		} else {
 			error_type_already_defined($2->line_number, $2->id, found_type->data.cl->ci->line_number);
@@ -229,6 +230,7 @@ class_list : class_list class_identification PBEGIN class_block END
 			} else { // Update it
 				found_type->type = TYPE_DENOTER_T_CLASS_TYPE;
 				found_type->data.cl = $$;
+				free_type_denoter(new_type);
 			}
 		} else {
 			error_type_already_defined($1->line_number, $1->id, found_type->data.cl->ci->line_number);
@@ -283,6 +285,7 @@ type_denoter : array_type
 			$$ = usrdef_insert(new_type);
 		} else {
 			$$ = found_type;
+			free_type_denoter(new_type);
 		}*/
 	}
  | identifier
@@ -301,6 +304,7 @@ type_denoter : array_type
 			$$ = usrdef_insert(new_type);
 		} else {
 			$$ = found_type;
+			free_type_denoter(new_type);
 		}
 	}
  ;

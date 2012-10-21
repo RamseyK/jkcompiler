@@ -32,7 +32,7 @@ void free_program_heading(struct program_heading_t *ph);
  */
 struct identifier_list_t *new_identifier_list();
 void add_to_identifier_list(struct identifier_list_t **il, char *id);
-long identifier_list_count(struct identifier_list_t *il);
+int identifier_list_size(struct identifier_list_t *il);
 struct identifier_list_t *find_identifier_list(struct identifier_list_t *il, char *id);
 void free_identifier_list(struct identifier_list_t *il);
 

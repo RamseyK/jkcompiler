@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     /* Free memory */
 	ir_destroy();
 	symtab_destroy();
-	//usrdef_destroy
+	usrdef_destroy();
     free_program(program);
 
     return 0;
