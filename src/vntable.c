@@ -20,6 +20,25 @@ void vntable_init() {
 	}
 }
 
+// Frees up memory allocated for the value number table
+void vntable_destroy() {
+	// Free every entry list in the table
+	for(int i = 0; i<TABLE_SIZE; i++) {
+		// Free every entry in the list
+		struct vn_entry_t *it = table[i];
+		struct vn_entry_t *cur = table[i];
+		while(it != NULL) {
+			cur = it;
+			it = it->next;
+			vntable_free_entry(cur);
+		}
+
+	}
+
+	// Free the table pointer
+	free(table);
+}
+
 // Returns a new hash using the counter
 char *vntable_new_hash() {
 	char *temp_name = NULL;
@@ -53,7 +72,6 @@ char *vntable_hash(char *op, char *op1, char *op2) {
  */
 // Does an update/insert on an entry for hash table
 void vntable_hash_insert(char *id, char *val, int block_level) {
-
 	// See if there is already an entry for this node by id
 	struct vn_entry_t *found_entry = vntable_hash_lookup_id(id);
 	if(found_entry != NULL) {
@@ -72,7 +90,7 @@ void vntable_hash_insert(char *id, char *val, int block_level) {
 		vntable_stack_push(&(temp_entry->vn_node), val, block_level);
 
 		// Determine the hash key for this node
-		int key = make_key(id,TABLE_SIZE);
+		int key = makekey(id, TABLE_SIZE);
 
 		// Check the spot in the table
 		if(table[key] == NULL) {
@@ -105,7 +123,7 @@ struct vn_entry_t *vntable_hash_lookup_val(char *val) {
 // Looks up a vn_entry_t by its id
 struct vn_entry_t *vntable_hash_lookup_id(char *id) {
 	// Get the key that corresponds to this id
-	int key = make_key(id);
+	int key = makekey(id, TABLE_SIZE);
 
 	// Iterate through the elements at table[key] until found
 	struct vn_entry_t *vn_entry_it = table[key];
@@ -134,13 +152,34 @@ void vntable_hash_rollback(int block_level) {
 	}
 }
 
+// Free up memory allocated for a hash entry
+void vntable_free_entry(struct vn_entry_t *entry) {
+	// Free the id
+	if(entry->id != NULL)
+		free(entry->id);
+
+	// Free each node in the node stack
+	struct vn_node_t *it = entry->vn_node;
+	struct vn_node_t *cur = entry->vn_node;
+	while(it != NULL) {
+		cur = it;
+		it = it->next;
+		vntable_free_node(cur);
+	}
+
+	// Free the entry
+	free(entry);
+}
+
 /*
  * Stack manipulation
  */
 // Pops the top element from the stack and returns it;
 struct vn_node_t *vntable_stack_pop(struct vn_node_t **stack) {
-	struct vn_node_t *stack_top = stack;
-	*stack = *(stack)->next;
+	struct vn_node_t *stack_top = *stack;
+	if(stack_top == NULL)
+		return NULL;
+	*stack = stack_top->next;
 	return stack_top;
 }
 
@@ -160,6 +199,15 @@ void vntable_stack_push(struct vn_node_t **stack, char *val, int block_level) {
 
 	// Move the top of the stack pointer to the new node
 	stack_top = temp_node;
+}
+
+void vntable_free_node(struct vn_node_t *node) {
+	// Free the val
+	if (node->val != NULL)
+		free(node->val);
+
+	// Free the pointer
+	free(node);
 }
 
 
