@@ -50,6 +50,8 @@ struct basic_block_t *ir_create_block(struct three_address_t *entry) {
 	
 	temp_block->entry = entry;
 	
+	temp_block->block_level = 0;
+
 	// Add to the master list
 	if(allBlocks == NULL) {
 		allBlocks = temp_block;
@@ -119,6 +121,7 @@ char *ir_new_temp_name() {
 	int chars_written = sprintf(buffer, "t_%i", name_counter);
 	temp_name = (char*)malloc(chars_written + 1);
 	strncpy(temp_name, buffer, chars_written+1);
+	name_counter++;
 	
 	return temp_name;
 }

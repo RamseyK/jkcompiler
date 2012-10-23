@@ -38,6 +38,8 @@ struct basic_block_t {
 	struct three_address_t *entry; // Head of TAC list for this block
 	
 	struct basic_block_t *next; // pointer to the next basic block in the master list
+
+	int block_level;
 };
 
 /* ----------------------------------------------------------------
