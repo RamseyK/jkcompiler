@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 	// Initialize global data structures: user defined types hashtable, symbol table, control flow graph
     usrdef_init();
     symtab_init(program);
-	ir_init();
+	cfg_init();
 
     /* begin parsing */
     yyparse();
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
     }
     
     /* Free memory */
-	ir_destroy();
+	cfg_destroy();
 	symtab_destroy();
 	usrdef_destroy();
     free_program(program);
