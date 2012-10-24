@@ -1554,7 +1554,7 @@ struct expression_data_t *new_expression_data() {
     CHECK_MEM_ERROR(ed)
     ed->val = -1;
     ed->type = NULL;
-	ed->threeAddrName = NULL;
+	ed->tacName = NULL;
 
     return ed;
 }

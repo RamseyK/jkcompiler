@@ -45,6 +45,7 @@
 #define OP_GT 11
 #define OP_LE 12
 #define OP_GE 13
+#define OP_NO_OP 14
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \
@@ -353,6 +354,7 @@ struct assignment_statement_t {
     struct variable_access_t *va;
     struct expression_t *e;
     struct object_instantiation_t *oe;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 struct statement_t;

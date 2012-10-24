@@ -49,9 +49,9 @@ void cfg_print_vars_tac() {
 
 // Prints the basic blocks of the cfg
 void cfg_print_blocks() {
-	struct basic_block_t it = rootBlock;
+	struct basic_block_list_t *it = blockList;
 	while(it != NULL) {
-		cfg_print_block(it);
+		cfg_print_block(it->block);
 		printf("\n");
 		it = it->next;
 	}
@@ -130,23 +130,23 @@ void cfg_print_block(struct basic_block_t *block) {
 
 	// Print parents
 	printf("Parents: ");
-	struct basic_block_t *pars = block->parents;
+	struct basic_block_list_t *pars = block->parents;
 	while(pars != NULL) {
-		printf("%s",pars->label);
-		if(pars->nextSibling != NULL)
+		printf("%s",pars->block->label);
+		if(pars->next != NULL)
 			printf(", ");
-		pars = pars->nextSibling;
+		pars = pars->next;
 	}
 	printf("\n");
 
 	// Print children
 	printf("Children: ");
-	struct basic_block_t *chil = block->children;
+	struct basic_block_list_t *chil = block->children;
 	while(chil != NULL) {
-		printf("%s", chil->label);
-		if(chil->nextSibling != NULL)
+		printf("%s", chil->block->label);
+		if(chil->next != NULL)
 			printf(", ");
-		chil = chil->nextSibling;
+		chil = chil->next;
 	}
 	printf("\n");
 	printf("--------------------\n");

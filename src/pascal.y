@@ -609,7 +609,7 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->oe = NULL;
 		
 		//CFG
-		cfg_generate_tac($1->expr->tacName, $3->expr->tacName, NULL, NULL);
+		cfg_generate_tac($1->expr->tacName, $3->expr->tacName, OP_NO_OP, NULL);
 		$$->block = cfg_create_simple_block($1->expr->tacName);
 	}
  | variable_access ASSIGNMENT object_instantiation
@@ -938,7 +938,7 @@ factor : sign factor
 		$$->expr = $2->expr;
 		
 		//CFG
-		$$->expr->tacName = cfg_generate_tac(NULL, "0", $1, $2->expr->tacName);
+		$$->expr->tacName = cfg_generate_tac(NULL, "0", *$1, $2->expr->tacName);
 		cfg_connect_tac($2->expr->tacName, $$->expr->tacName);
 	}
  | primary 

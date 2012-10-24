@@ -7,6 +7,9 @@
  * (Three Address Code, Control Flow Graph, Value Number Table)
  */
 
+#ifndef CFG_H_
+#define CFG_H_
+
 #include <stdio.h>
 #include "shared.h"
 #include "rulefuncs.h"
@@ -136,4 +139,5 @@ struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack);
 void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level);
 void cfg_vnt_free_node(struct vnt_node_t *node);
 
+#endif
 
