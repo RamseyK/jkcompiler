@@ -15,31 +15,28 @@
 
 // Initialize the control flow graph and any state variables
 void cfg_init() {
-	allBlocks = NULL;
+	rootBlock = NULL;
+	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
-	rootBlock = cfg_create_block(NULL);
 }
 
 // Destroy any objects used for intermediate representation
 void cfg_destroy() {
-	// Loop through the master list and free each basic block
-	struct basic_block_t *it = allBlocks;
-	struct basic_block_t *cur = allBlocks;
-	while(it != NULL) {
-		cur = it;
-		it = it->next;
-		cfg_free_block(cur);
-	}
+	// Free master list of blocks
+	cfg_free_block_list();
+		
+	// Free the master list of TAC nodes
+	cfg_free_tac_list();
 
-	allBlocks = NULL;
+	rootBlock = NULL;
+	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
-	rootBlock = NULL;
 }
 
-// Create a new basic block node and set it's TAC entry point
-struct basic_block_t *cfg_create_block(struct three_address_t *entry) {
+// Create a new simple basic block node with a TAC name (that will be resolved to the TAC node)
+struct basic_block_t *cfg_create_simple_block(const char *tacName) {
 	struct basic_block_t *temp_block = (struct basic_block_t *)malloc(sizeof(struct basic_block_t));
 	CHECK_MEM_ERROR(temp_block);
 
@@ -50,71 +47,114 @@ struct basic_block_t *cfg_create_block(struct three_address_t *entry) {
 	strncpy(temp_block->label, buffer, chars_written+1);
 	block_counter++;
 
+	temp_block->type = BLOCK_SIMPLE;
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
 
-	temp_block->entry = entry;
+	// Lookup tac node and set it as the entry point
+	temp_block->entry = cfg_lookup_tac(tacName);
 
 	temp_block->block_level = 0;
 
 	// Add to the master list
-	if(allBlocks == NULL) {
-		allBlocks = temp_block;
+	if(blockList == NULL) {
+		blockList = (struct basic_block_list_t *)malloc(sizeof(struct basic_block_list_t));
+		CHECK_MEM_ERROR(blockList);
+		blockList->block = temp_block;
+		blockList->next = NULL;
 	} else {
-		// Add to end of master list
-		struct basic_block_t *end = allBlocks;
+		// Find the end of the TAC list
+		struct basic_block_list_t *end = blockList;
 		while(end->next != NULL)
 			end = end->next;
-
-		end->next = temp_block;
+		
+		// Link to the end of the list
+		end->next = (struct basic_block_list_t *)malloc(sizeof(struct basic_block_list_t));
+		CHECK_MEM_ERROR(end->next);
+		end->next->block = temp_block;
+		end->next->next = NULL;
 	}
 
 	return temp_block;
 }
 
-// Free a basic block node, it's children, and associated TAC
-void cfg_free_block(struct basic_block_t *block) {
-	// Free TAC list
-	struct three_address_t *it = block->entry;
-	struct three_address_t *cur = block->entry;
+// Free the master list of blocks
+void cfg_free_block_list() {
+	struct basic_block_list_t *it = blockList;
+	struct basic_block_list_t *cur = blockList;
+	
 	while(it != NULL) {
 		cur = it;
 		it = it->next;
-		cfg_free_tac(cur);
+		cfg_free_block(cur->block);
+		free(cur);
 	}
+	
+	rootBlock = NULL;
+	blockList = NULL;
+}
 
+// Free a basic block node and other components ??
+void cfg_free_block(struct basic_block_t *block) {
 	// Free the basic block
+	free(block->label);
 	free(block);
 }
 
-// Generate a TAC node
-struct three_address_t *cfg_generate_tac(char *lhs_id, int op, char *op1, char *op2) {
-	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
-	CHECK_MEM_ERROR(temp_tac);
-
-	temp_tac->lhs_id = lhs_id;
-	temp_tac->op = op;
-	temp_tac->op1 = op1;
-	temp_tac->op2 = op2;
-	temp_tac->next = NULL;
-
-	return temp_tac;
+struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch) {
+	//if(condition == NULL)
+		return NULL;
+	// Link branches to a dummy node at the bottom
 }
 
-// Free TAC node
-void cfg_free_tac(struct three_address_t *tac) {
-	// Free any non null names / operand names
-	if(tac->lhs_id != NULL)
-		free(tac->lhs_id);
+struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock) {
+	//if(condition == NULL)
+		return NULL;
+	// Dummy child is the false branch
+	// Link branches to a dummy node at the bottom
+}
 
-	if(tac->op1 != NULL)
-		free(tac->op1);
+// Find the bottom of the control flow graph given a starting block
+// Return's NULL if it couldn't be found
+struct basic_block_t *cfg_find_bottom(struct basic_block_t *block) {
+	if(block == NULL)
+		return NULL;
 
-	if(tac->op2 != NULL)
-		free(tac->op2);
+	struct basic_block_list_t *childList = block->children;
+	
+	// Bottom doesn't have children. Found it!
+	if(childList == NULL)
+		return block;
+	
+	// Traverse differently depending on the block type
+	if(block->type == BLOCK_WHILE) {
+		// Find a child that isn't a TRUE child - otherwise we'll be in an infinite loop
+		struct basic_block_list_t *it = childList;
+		struct basic_block_t *child = NULL;
+		while(it != NULL && child == NULL) {
+			if(it->block->type != BLOCK_TRUE) {
+				child = it->block;
+			}
+			it = it->next;
+		}
+		
+		// Not found??
+		if(child == NULL)
+			return NULL;
+		
+		return cfg_find_bottom(child);
+	} else { // IF, SIMPLE, TRUE, FALSE
+		// Any child will work. First child in the list
+		return cfg_find_bottom(childList->block);
+	}
+}
 
-	// Free the actual TAC node
-	free(tac);
+struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
+	//if(b1 == NULL || b2 == NULL)
+		return NULL;
+	// First block is the pointer to the HEAD of a list of blocks
+	// Second block is 
+	// Check types of b1 and b2
 }
 
 // Generate a temporary name for TAC
@@ -131,6 +171,101 @@ char *cfg_new_temp_name() {
 	return temp_name;
 }
 
+// Generate a TAC node and add it to the master list. Returns the name of the tac
+// If lhs_id is NULL, a temporary name is generated
+char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2) {
+	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
+	CHECK_MEM_ERROR(temp_tac);
+	
+	if(lhs_id == NULL)
+		temp_tac->lhs_id = cfg_new_temp_name();
+	else
+		temp_tac->lhs_id = new_identifier(lhs_id);
+	temp_tac->op = op;
+	temp_tac->op1 = new_identifier(op1);
+	temp_tac->op2 = new_identifier(op2);
+	temp_tac->next = NULL;
+	temp_tac->prev = NULL;
+	
+	// Insert the TAC node into the master list
+	if(tacList == NULL) {
+		tacList = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(tacList);
+		tacList->tac = temp_tac;
+		tacList->next = NULL;
+	} else {
+		// Find the end of the TAC list
+		struct three_address_list_t *end = tacList;
+		while(end->next != NULL)
+			end = end->next;
+		
+		// Link to the end of the list
+		end->next = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(end->next);
+		end->next->tac = temp_tac;
+		end->next->next = NULL;
+	}
+
+	return temp_tac->lhs_id;
+}
+
+// Frees the master TAC list and TAC nodes
+void cfg_free_tac_list() {
+	// Free TAC list
+	struct three_address_list_t *it = tacList;
+	struct three_address_list_t *cur = tacList;
+	while(it != NULL) {
+		cur = it;
+		it = it->next;
+		
+		// Free the TAC node
+		cfg_free_tac(cur->tac);
+		
+		// Free the list entry
+		free(cur);
+	}
+	
+	tacList = NULL;
+}
+
+// Frees a TAC node and it's components
+void cfg_free_tac(struct three_address_t *tac) {
+	// Free any non null names / operand names
+	free(tac->lhs_id);
+	
+	if(tac->op1 != NULL)
+		free(tac->op1);
+
+	if(tac->op2 != NULL)
+		free(tac->op2);
+
+	// Free the TAC node
+	free(tac);
+}
+
+// Given a temporary TAC name, lookup the TAC node in the master list
+// Returns NULL if not found
+struct three_address_t *cfg_lookup_tac(const char *id) {
+	struct three_address_list_t *it = tacList;
+	while(it != NULL) {
+		if(strcmp(it->tac->lhs_id, id) == 0)
+			return it->tac;
+		it = it->next;
+	}
+	
+	return NULL;
+}
+
+// Connect two tacs together. tac1 will precede tac2
+void cfg_connect_tac(const char *tac1, const char *tac2) {
+	struct three_address_t *node1 = cfg_lookup_tac(tac1);
+	struct three_address_t *node2 = cfg_lookup_tac(tac2);
+	if(node1 == NULL || node2 == NULL)
+		return;
+		
+	node1->next = node2;
+	node2->prev = node1;
+}
 
 /* ----------------------------------
  * Value Number Table Functions

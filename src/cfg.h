@@ -11,6 +11,13 @@
 #include "shared.h"
 #include "rulefuncs.h"
 
+// Block Types
+#define BLOCK_IF 0
+#define BLOCK_WHILE 1
+#define BLOCK_SIMPLE 2
+#define BLOCK_TRUE 3
+#define BLOCk_FALSE 4
+
 #define TABLE_SIZE 29
 
 /* ----------------------------------
@@ -24,22 +31,33 @@ struct three_address_t {
 	int op; // Operator
 	char *op1; // Operand 1
 	char *op2; // Operand 2
-	struct three_address_t *next; // Next statement
+	struct three_address_t *next; // Next TAC code
+	struct three_address_t *prev; // Previous TAC code
 };
 
-// A maximal list of sequential statements that comprise the control flow graph
+// List entries for the master list of TAC nodes
+struct three_address_list_t {
+	struct three_address_t *tac;
+	struct three_address_list_t *next;
+};
+
+// Definition for a node that comprise the control flow graph
 struct basic_block_t {
+	int type; // Block types (see defines)
 	char *label; // Name of the block (jump label)
 
-	struct basic_block_t *parents; // Head of successor blocks: All nodes that exit to this block
-	struct basic_block_t *children; // Head of predecessor blocks: All nodes that may be entered from this block
-	struct basic_block_t *nextSibling; // Next basic block on the same level as the previous basic block in the list
+	struct basic_block_list_t *parents;
+	struct basic_block_list_t *children;
 
 	struct three_address_t *entry; // Head of TAC list for this block
 
-	struct basic_block_t *next; // pointer to the next basic block in the master list
-
 	int block_level;
+};
+
+// A linked list of basic blocks
+struct basic_block_list_t {
+	struct basic_block_t *block;
+	struct basic_block_list_t *next;
 };
 
 // Represents a stack node that holds the hash value associated with a block level
@@ -62,9 +80,10 @@ struct vnt_entry_t {
  */
 
 struct basic_block_t *rootBlock; // root of the cfg
-struct basic_block_t *allBlocks; // master list of blocks
+struct basic_block_list_t *blockList; // Master list of basic blocks
 int block_counter; // Used for labeling new blocks
 
+struct three_address_list_t *tacList;
 int name_counter; // Temporary name counter used for TAC names
 
 /* Value Number Table State Variables */
@@ -79,12 +98,20 @@ struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 void cfg_init();
 void cfg_destroy();
 
-struct basic_block_t *cfg_create_block(struct three_address_t *entry);
+struct basic_block_t *cfg_create_simple_block(const char *tacName);
+void cfg_free_block_list();
 void cfg_free_block(struct basic_block_t *block);
+struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
+struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock);
+struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
+struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
 
-struct three_address_t *cfg_generate_tac(char *lhs_id, int op, char *op1, char *op2);
+char *cfg_new_temp_name();
+char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2);
+void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
-char *cfg_new_name(struct three_address_t *tac);
+struct three_address_t *cfg_lookup_tac(const char *id);
+void cfg_connect_tac(const char *tac1, const char *tac2);
 
 /* Value Number Table Functions */
 void cfg_vnt_init();

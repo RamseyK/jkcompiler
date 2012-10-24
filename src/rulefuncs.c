@@ -95,7 +95,10 @@ void free_identifier_list(struct identifier_list_t *il) {
  * Returns a pointer to a new identifier
  * -----------------------------------------------------------------------
  */
-char *new_identifier(char *text) {
+char *new_identifier(const char *text) {
+	if(text == NULL)
+		return NULL;
+	
     char *id;
 
     id = (char *) malloc(strlen(text) + 1); /* +1 for '\0' */

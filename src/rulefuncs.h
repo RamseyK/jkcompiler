@@ -36,7 +36,7 @@ int identifier_list_size(struct identifier_list_t *il);
 struct identifier_list_t *find_identifier_list(struct identifier_list_t *il, char *id);
 void free_identifier_list(struct identifier_list_t *il);
 
-char *new_identifier(char *text);
+char *new_identifier(const char *text);
 void free_identifier(char *id);
 
 /* -----------------------------------------------------------------------
