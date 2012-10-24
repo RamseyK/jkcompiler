@@ -494,7 +494,9 @@ function_block : variable_declaration_part statement_part
 statement_part : compound_statement
 	{
 		$$ = $1;
+		
 		// Set the rootBlock for the cfg here
+		// This is the best place to do it for project 2, right before the beginning of a function
 		rootBlock = $1->block;
 	}
  ;
@@ -504,6 +506,8 @@ compound_statement : PBEGIN statement_sequence END
 		GLOG(("compound_statement : PBEGIN statement_sequence END\n"));
 		$$ = $2;
 		
+		// CFG
+		// Propagate statement_sequence block to compound_statement block
 		$$->block = $2->block;
 	}
  ;
@@ -516,6 +520,8 @@ statement_sequence : statement
 		$$->s = $1;
 		$$->next = NULL;
 		
+		// CFG
+		// Propagate statement CFG to statement_sequence CFG
 		$$->block = $1->block;
 	}
  | statement_sequence semicolon statement
@@ -524,6 +530,7 @@ statement_sequence : statement
 		// Add to statement_sequence list
 		add_to_statement_sequence(&$1, $3);
 		
+		// CFG: Link statement to larger statement_sequence CFG
 		$$->block = cfg_connect_block($1->block, $3->block);
 	}
  ;
@@ -536,6 +543,7 @@ statement : assignment_statement
 		$$->data.as = $1;
 		$$->line_number = line_number;
 		
+		// CFG
 		$$->block = $1->block;
 	}
  | compound_statement
@@ -546,6 +554,7 @@ statement : assignment_statement
 		$$->data.ss = $1;
 		$$->line_number = line_number;
 		
+		// CFG
 		$$->block = $1->block;
 	}
  | if_statement
@@ -556,6 +565,7 @@ statement : assignment_statement
 		$$->data.is = $1;
 		$$->line_number = line_number;	
 		
+		// CFG
 		$$->block = $1->block;
 	}
  | while_statement
@@ -566,6 +576,7 @@ statement : assignment_statement
 		$$->data.ws = $1;
 		$$->line_number = line_number;
 		
+		// CFG
 		$$->block = $1->block;
 	}
  | print_statement
@@ -584,6 +595,7 @@ while_statement : WHILE boolean_expression DO statement
 		$$->e = $2;
 		$$->s = $4;
 		
+		// CFG
 		$$->block = cfg_create_while_block($2->block, $4->block);
 	}
  ;
@@ -596,6 +608,7 @@ if_statement : IF boolean_expression THEN statement ELSE statement
 		$$->s1 = $4;
 		$$->s2 = $6;
 		
+		// CFG
 		$$->block = cfg_create_if_block($2->block, $4->block, $6->block);
 	}
  ;
@@ -608,9 +621,9 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->e = $3;
 		$$->oe = NULL;
 		
-		//CFG
+		// CFG
 		cfg_generate_tac($1->expr->tacName, $3->expr->tacName, OP_NO_OP, NULL);
-		$$->block = cfg_create_simple_block($1->expr->tacName);
+		$$->block = cfg_create_simple_block(cfg_lookup_tac($1->expr->tacName));
 	}
  | variable_access ASSIGNMENT object_instantiation
 	{
@@ -650,7 +663,8 @@ variable_access : identifier
 		$$->data.id = $1;
 		$$->expr = new_expression_data();
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
-		// For CFG
+		
+		// CFG
 		$$->expr->tacName = new_identifier($1);
 	}
  | indexed_variable
@@ -761,6 +775,7 @@ boolean_expression : expression
 		GLOG(("boolean_expression : expression\n"));
 		$$ = $1;
 		
+		// CFG
 		$$->expr->tacName = $1->expr->tacName;
 	}
 ;
@@ -772,7 +787,7 @@ expression : simple_expression
 		$$->se1 = $1;
 		$$->expr = $1->expr;
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = $1->expr->tacName;
 	}
  | simple_expression relop simple_expression
@@ -811,7 +826,7 @@ expression : simple_expression
 			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
 		cfg_connect_tac($1->expr->tacName, $$->expr->tacName);
 		cfg_connect_tac($3->expr->tacName, $1->expr->tacName);
@@ -825,7 +840,7 @@ simple_expression : term
 		$$->t = $1;
 		$$->expr = $1->expr;
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = $1->expr->tacName;
 	}
  | simple_expression addop term
@@ -857,7 +872,7 @@ simple_expression : term
 			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
 		cfg_connect_tac($1->expr->tacName, $$->expr->tacName);
 		cfg_connect_tac($3->expr->tacName, $1->expr->tacName);
@@ -871,7 +886,7 @@ term : factor
 		$$->f = $1;
 		$$->expr = $1->expr;	
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = $1->expr->tacName;
 	}
  | term mulop factor
@@ -905,7 +920,7 @@ term : factor
 			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
 		cfg_connect_tac($1->expr->tacName,$$->expr->tacName);
 		cfg_connect_tac($3->expr->tacName,$1->expr->tacName);
@@ -937,7 +952,7 @@ factor : sign factor
 		$$->data.f.next = $2;
 		$$->expr = $2->expr;
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = cfg_generate_tac(NULL, "0", *$1, $2->expr->tacName);
 		cfg_connect_tac($2->expr->tacName, $$->expr->tacName);
 	}
@@ -949,7 +964,7 @@ factor : sign factor
 		$$->data.p = $1;
 		$$->expr = $1->expr;
 		
-		//CFG
+		// CFG
 		$$->expr->tacName = $1->expr->tacName;
 	}
  ;
@@ -1011,6 +1026,8 @@ unsigned_integer : DIGSEQ
 		$$->expr = new_expression_data(); 
         $$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER; 
         $$->expr->val = $$->ui;
+        
+        // CFG
         $$->expr->tacName = new_identifier(yytext);
 	}
  ;

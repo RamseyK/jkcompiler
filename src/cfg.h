@@ -11,6 +11,7 @@
 #define CFG_H_
 
 #include <stdio.h>
+
 #include "shared.h"
 #include "rulefuncs.h"
 
@@ -48,13 +49,12 @@ struct three_address_list_t {
 struct basic_block_t {
 	int type; // Block types (see defines)
 	char *label; // Name of the block (jump label)
-
+	int block_level; // Level of the block in the overall CFG
+	
 	struct basic_block_list_t *parents;
 	struct basic_block_list_t *children;
 
 	struct three_address_t *entry; // Head of TAC list for this block
-
-	int block_level;
 };
 
 // A linked list of basic blocks
@@ -104,8 +104,13 @@ void cfg_destroy();
 void cfg_print_vars_tac();
 void cfg_print_blocks();
 
-struct basic_block_t *cfg_create_simple_block(const char *tacName);
-void cfg_free_block_list();
+// CFG Block List Functions
+struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
+void cfg_append_block_list(struct basic_block_list_t *list, struct basic_block_t *block);
+void cfg_free_block_list(struct basic_block_list_t *list, bool includeBlockEntry);
+
+// CFG Block Functions
+struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac);
 void cfg_free_block(struct basic_block_t *block);
 void cfg_print_block(struct basic_block_t *block);
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
@@ -113,21 +118,20 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
 struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
 
+// CFG Three Address Code Functions
 char *cfg_new_temp_name();
-char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2);
 void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
+void cfg_print_tac(struct three_address_t *tac);
+char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(const char *tac1, const char *tac2);
-void cfg_print_tac(struct three_address_t *tac);
 
-/* Value Number Table Functions */
+// Value Number Table Functions
 void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(char *op, char *op1, char *op2); // Creates name by hashing operator and operands
-
-// Hash table functions
 void cfg_vnt_hash_insert(char *id, char *val, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
 struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id); // Lookup by the vn_entry_t id

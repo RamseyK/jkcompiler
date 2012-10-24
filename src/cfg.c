@@ -23,8 +23,8 @@ void cfg_init() {
 
 // Destroy any objects used for intermediate representation
 void cfg_destroy() {
-	// Free master list of blocks
-	cfg_free_block_list();
+	// Free master list of blocks and all block objects
+	cfg_free_block_list(blockList, true);
 		
 	// Free the master list of TAC nodes
 	cfg_free_tac_list();
@@ -34,6 +34,7 @@ void cfg_destroy() {
 	block_counter = 0;
 	name_counter = 0;
 }
+
 // Prints A list of all variables including all temporary variables produced
 // followed by the body of the method in 3-address code.
 void cfg_print_vars_tac() {
@@ -57,8 +58,49 @@ void cfg_print_blocks() {
 	}
 }
 
-// Create a new simple basic block node with a TAC name (that will be resolved to the TAC node)
-struct basic_block_t *cfg_create_simple_block(const char *tacName) {
+// Create a new CFG block list
+struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock) {
+	struct basic_block_list_t *list = NULL;
+	list = (struct basic_block_list_t *)malloc(sizeof(struct basic_block_list_t));
+	CHECK_MEM_ERROR(list);
+	
+	list->block = firstBlock;
+	list->next = NULL;
+	
+	return list;
+}
+
+// Append to an existing CFG block list
+void cfg_append_block_list(struct basic_block_list_t *list, struct basic_block_t *block) {
+	if(list == NULL || block == NULL)
+		return;
+
+	// Find the end of the list
+	struct basic_block_list_t *end = list;
+	while(end->next != NULL)
+		end = end->next;
+		
+	// Link to the end of the list
+	end->next = cfg_new_block_list(block);
+}
+
+// Free an existing list of blocks
+// If includeBlockEntry is true, block pointers within the block_list object will also be freed
+void cfg_free_block_list(struct basic_block_list_t *list, bool includeBlockEntry) {
+	struct basic_block_list_t *it = list;
+	struct basic_block_list_t *cur = list;
+	
+	while(it != NULL) {
+		cur = it;
+		it = it->next;
+		if(includeBlockEntry)
+			cfg_free_block(cur->block);
+		free(cur);
+	}
+}
+
+// Create a new simple basic block node
+struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac) {
 	struct basic_block_t *temp_block = (struct basic_block_t *)malloc(sizeof(struct basic_block_t));
 	CHECK_MEM_ERROR(temp_block);
 
@@ -70,56 +112,32 @@ struct basic_block_t *cfg_create_simple_block(const char *tacName) {
 	block_counter++;
 
 	temp_block->type = BLOCK_SIMPLE;
+	temp_block->block_level = 0;
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
-
-	// Lookup tac node and set it as the entry point
-	temp_block->entry = cfg_lookup_tac(tacName);
-
-	temp_block->block_level = 0;
+	temp_block->entry = tac;
 
 	// Add to the master list
 	if(blockList == NULL) {
-		blockList = (struct basic_block_list_t *)malloc(sizeof(struct basic_block_list_t));
-		CHECK_MEM_ERROR(blockList);
-		blockList->block = temp_block;
-		blockList->next = NULL;
+		blockList = cfg_new_block_list(temp_block);
 	} else {
-		// Find the end of the TAC list
-		struct basic_block_list_t *end = blockList;
-		while(end->next != NULL)
-			end = end->next;
-		
-		// Link to the end of the list
-		end->next = (struct basic_block_list_t *)malloc(sizeof(struct basic_block_list_t));
-		CHECK_MEM_ERROR(end->next);
-		end->next->block = temp_block;
-		end->next->next = NULL;
+		cfg_append_block_list(blockList, temp_block);
 	}
 
 	return temp_block;
 }
 
-// Free the master list of blocks
-void cfg_free_block_list() {
-	struct basic_block_list_t *it = blockList;
-	struct basic_block_list_t *cur = blockList;
-	
-	while(it != NULL) {
-		cur = it;
-		it = it->next;
-		cfg_free_block(cur->block);
-		free(cur);
-	}
-	
-	rootBlock = NULL;
-	blockList = NULL;
-}
-
-// Free a basic block node and other components ??
+// Free a basic block node
+// The TAC nodes, parents and children blocks are not released here. They will be freed through the master list
 void cfg_free_block(struct basic_block_t *block) {
-	// Free the basic block
+	// Free the label
 	free(block->label);
+	
+	// Only free the list objects associated in parents and children, not the actual parents and children block objects
+	cfg_free_block_list(block->parents, false);
+	cfg_free_block_list(block->children, false);
+
+	// Free the basic block
 	free(block);
 }
 
@@ -152,17 +170,51 @@ void cfg_print_block(struct basic_block_t *block) {
 	printf("--------------------\n");
 }
 
+// Create an isolated IF block for the CFG
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch) {
-	//if(condition == NULL)
+	if(condition == NULL)
 		return NULL;
-	// Link branches to a dummy node at the bottom
+	
+	// Create a simple block first with the tac nodes of the condition block
+	struct basic_block_t *if_block = cfg_create_simple_block(condition->entry);
+	
+	// Set IF block properties and children
+	if_block->type = BLOCK_IF;
+	if_block->children = cfg_new_block_list(trueBranch);
+	cfg_append_block_list(if_block->children, falseBranch);
+	
+	// Link True and False branches to a dummy node at the bottom
+	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
+	dummy->parents = cfg_new_block_list(trueBranch);
+	cfg_append_block_list(dummy->parents, falseBranch);
+	trueBranch->children = cfg_new_block_list(dummy);
+	falseBranch->children = cfg_new_block_list(dummy);
+	
+	// What do we do with the condition block? free?
+	
+	return if_block;
 }
 
+// Create an isolated WHILE block for the CFG
 struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock) {
 	//if(condition == NULL)
 		return NULL;
-	// Dummy child is the false branch
+	
+	// Create a simple block first with the tac nodes of the condition block
+	struct basic_block_t *wh_block = cfg_create_simple_block(condition->entry);
+	
+	// Set WHITE block properties and children
+	wh_block->type = BLOCK_WHILE;
+	wh_block->children = cfg_new_block_list(bodyBlock);
+	
 	// Link branches to a dummy node at the bottom
+	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
+	dummy->parents = cfg_new_block_list(wh_block);
+	cfg_append_block_list(wh_block->children, dummy);
+	
+	// What do we do with the condition block? free?
+	
+	return wh_block;
 }
 
 // Find the bottom of the control flow graph given a starting block
@@ -200,19 +252,23 @@ struct basic_block_t *cfg_find_bottom(struct basic_block_t *block) {
 	}
 }
 
+// Not complete
 struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
-	//if(b1 == NULL || b2 == NULL)
+	if(b1 == NULL || b2 == NULL)
 		return NULL;
-	// First block is the pointer to the HEAD of a list of blocks
-	// Second block is 
-	// Check types of b1 and b2
+	
+	// First block is the root of a CFG. b2 will be linked to the bottom of b1
+	struct basic_block_t *bottom = cfg_find_bottom(b1);
+	bottom->children = cfg_new_block_list(b2);
+	
+	return b1;
 }
 
 // Prints the three address code recursively in the format:
 // LHS = OP1 op OP2
 void cfg_print_tac(struct three_address_t *tac) {
 	if(tac == NULL) return;
-	printf("%s = %s %s %s\n", tac->lhs_id, tac->op1, tac->op, tac->op2);
+	printf("%s = %s %i %s\n", tac->lhs_id, tac->op1, tac->op, tac->op2);
 	cfg_print_tac(tac->next);
 }
 
