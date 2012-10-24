@@ -208,7 +208,9 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	// Create a simple block first with the tac nodes of the condition block
 	struct basic_block_t *if_block = cfg_create_simple_block(condition->entry);
 	
-	// Set IF block properties and children
+	// Set IF, TRUE, and FALSE block properties and children
+	trueBranch->type = BLOCK_TRUE;
+	falseBranch->type = BLOCK_FALSE;
 	if_block->type = BLOCK_IF;
 	cfg_append_block_list(&if_block->children, trueBranch);
 	cfg_append_block_list(&if_block->children, falseBranch);
@@ -237,7 +239,8 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 	// Create a simple block first with the tac nodes of the condition block
 	struct basic_block_t *wh_block = cfg_create_simple_block(condition->entry);
 	
-	// Set WHITE block properties and children
+	// Set WHILE, TRUE, block properties and children
+	bodyBlock->type = BLOCK_TRUE;
 	wh_block->type = BLOCK_WHILE;
 	cfg_append_block_list(&wh_block->children, bodyBlock);
 	

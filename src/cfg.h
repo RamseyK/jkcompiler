@@ -20,7 +20,7 @@
 #define BLOCK_WHILE 1
 #define BLOCK_SIMPLE 2
 #define BLOCK_TRUE 3
-#define BLOCk_FALSE 4
+#define BLOCK_FALSE 4
 
 #define TABLE_SIZE 29
 
@@ -88,9 +88,7 @@ int block_counter; // Used for labeling new blocks
 
 struct three_address_list_t *tacList;
 int name_counter; // Temporary name counter used for TAC names
-// Need global tac llist HERE
 
-/* Value Number Table State Variables */
 int vnt_counter; // Name counter used for value numbering
 struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 
@@ -119,7 +117,7 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
 void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
 
-// CFG Three Address Code Functions
+// Three Address Code Functions
 char *cfg_new_temp_name();
 void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
