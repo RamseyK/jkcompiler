@@ -90,12 +90,15 @@ void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_
 
 // Drop a block from the block_list
 void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
+	if(*list == NULL || block == NULL)
+		return;
+
 	if((*list)->block == block) {
 		// b2 is the HEAD
 		(*list)->block = NULL;
 		*list = (*list)->next;
 	} else {
-		// b2 is somewhere else in the master list
+		// 'block' is somewhere else in the master list
 		struct basic_block_list_t *it = *list;
 		while(it != NULL) {
 			if(it->next->block == block) {
@@ -217,7 +220,11 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	cfg_append_block_list(&trueBranch->children, dummy);
 	cfg_append_block_list(&falseBranch->children, dummy);
 	
-	// What do we do with the condition block? free?
+	// Drop condition block from the master list
+	cfg_drop_block_list(&blockList, condition);
+	
+	// Safely free the condition block (no longer needed)
+	cfg_free_block(condition);
 	
 	return if_block;
 }
@@ -239,7 +246,11 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 	cfg_append_block_list(&dummy->parents, wh_block);
 	cfg_append_block_list(&wh_block->children, dummy);
 	
-	// What do we do with the condition block? free?
+	// Drop condition block from the master list
+	cfg_drop_block_list(&blockList, condition);
+	
+	// Safely free the condition block (no longer needed)
+	cfg_free_block(condition);
 	
 	return wh_block;
 }
