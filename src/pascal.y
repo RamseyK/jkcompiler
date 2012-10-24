@@ -531,7 +531,8 @@ statement_sequence : statement
 		add_to_statement_sequence(&$1, $3);
 		
 		// CFG: Link statement to larger statement_sequence CFG
-		$$->block = cfg_connect_block($1->block, $3->block);
+		cfg_connect_block($1->block, $3->block);
+		$$->block = $1->block;
 	}
  ;
 

@@ -24,7 +24,7 @@ void cfg_init() {
 // Destroy any objects used for intermediate representation
 void cfg_destroy() {
 	// Free master list of blocks and all block objects
-	cfg_free_block_list(blockList, true);
+	cfg_free_block_list(&blockList, true);
 		
 	// Free the master list of TAC nodes
 	cfg_free_tac_list();
@@ -71,32 +71,60 @@ struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock) 
 }
 
 // Append to an existing CFG block list
-void cfg_append_block_list(struct basic_block_list_t *list, struct basic_block_t *block) {
-	if(list == NULL || block == NULL)
+void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
+	if(block == NULL)
 		return;
-
-	// Find the end of the list
-	struct basic_block_list_t *end = list;
-	while(end->next != NULL)
-		end = end->next;
+	
+	if(*list == NULL) {
+		*list = cfg_new_block_list(block);
+	} else {
+		// Find the end of the list
+		struct basic_block_list_t *end = *list;
+		while(end->next != NULL)
+			end = end->next;
 		
-	// Link to the end of the list
-	end->next = cfg_new_block_list(block);
+		// Link to the end of the list
+		end->next = cfg_new_block_list(block);
+	}
+}
+
+// Drop a block from the block_list
+void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
+	if((*list)->block == block) {
+		// b2 is the HEAD
+		(*list)->block = NULL;
+		*list = (*list)->next;
+	} else {
+		// b2 is somewhere else in the master list
+		struct basic_block_list_t *it = *list;
+		while(it != NULL) {
+			if(it->next->block == block) {
+				it->next->block = NULL;
+				it->next = it->next->next;
+				break;
+			}
+			it = it->next;	
+		}
+	}
 }
 
 // Free an existing list of blocks
 // If includeBlockEntry is true, block pointers within the block_list object will also be freed
-void cfg_free_block_list(struct basic_block_list_t *list, bool includeBlockEntry) {
-	struct basic_block_list_t *it = list;
-	struct basic_block_list_t *cur = list;
+void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry) {
+	struct basic_block_list_t *it = *list;
+	struct basic_block_list_t *cur = *list;
 	
 	while(it != NULL) {
 		cur = it;
 		it = it->next;
-		if(includeBlockEntry)
+		if(includeBlockEntry) {
 			cfg_free_block(cur->block);
+			cur->block = NULL;
+		}
 		free(cur);
 	}
+	
+	*list = NULL;
 }
 
 // Create a new simple basic block node
@@ -118,11 +146,7 @@ struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac) {
 	temp_block->entry = tac;
 
 	// Add to the master list
-	if(blockList == NULL) {
-		blockList = cfg_new_block_list(temp_block);
-	} else {
-		cfg_append_block_list(blockList, temp_block);
-	}
+	cfg_append_block_list(&blockList, temp_block);
 
 	return temp_block;
 }
@@ -132,10 +156,13 @@ struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac) {
 void cfg_free_block(struct basic_block_t *block) {
 	// Free the label
 	free(block->label);
+	block->label = NULL;
 	
 	// Only free the list objects associated in parents and children, not the actual parents and children block objects
-	cfg_free_block_list(block->parents, false);
-	cfg_free_block_list(block->children, false);
+	cfg_free_block_list(&block->parents, false);
+	cfg_free_block_list(&block->children, false);
+	block->parents = NULL;
+	block->children = NULL;
 
 	// Free the basic block
 	free(block);
@@ -180,15 +207,15 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	
 	// Set IF block properties and children
 	if_block->type = BLOCK_IF;
-	if_block->children = cfg_new_block_list(trueBranch);
-	cfg_append_block_list(if_block->children, falseBranch);
+	cfg_append_block_list(&if_block->children, trueBranch);
+	cfg_append_block_list(&if_block->children, falseBranch);
 	
 	// Link True and False branches to a dummy node at the bottom
 	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
-	dummy->parents = cfg_new_block_list(trueBranch);
-	cfg_append_block_list(dummy->parents, falseBranch);
-	trueBranch->children = cfg_new_block_list(dummy);
-	falseBranch->children = cfg_new_block_list(dummy);
+	cfg_append_block_list(&dummy->parents, trueBranch);
+	cfg_append_block_list(&dummy->parents, falseBranch);
+	cfg_append_block_list(&trueBranch->children, dummy);
+	cfg_append_block_list(&falseBranch->children, dummy);
 	
 	// What do we do with the condition block? free?
 	
@@ -205,12 +232,12 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 	
 	// Set WHITE block properties and children
 	wh_block->type = BLOCK_WHILE;
-	wh_block->children = cfg_new_block_list(bodyBlock);
+	cfg_append_block_list(&wh_block->children, bodyBlock);
 	
 	// Link branches to a dummy node at the bottom
 	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
-	dummy->parents = cfg_new_block_list(wh_block);
-	cfg_append_block_list(wh_block->children, dummy);
+	cfg_append_block_list(&dummy->parents, wh_block);
+	cfg_append_block_list(&wh_block->children, dummy);
 	
 	// What do we do with the condition block? free?
 	
@@ -252,16 +279,34 @@ struct basic_block_t *cfg_find_bottom(struct basic_block_t *block) {
 	}
 }
 
-// Not complete
-struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
+// Connect CFG b1 to CFG b2
+void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
 	if(b1 == NULL || b2 == NULL)
-		return NULL;
+		return;
 	
 	// First block is the root of a CFG. b2 will be linked to the bottom of b1
 	struct basic_block_t *bottom = cfg_find_bottom(b1);
-	bottom->children = cfg_new_block_list(b2);
 	
-	return b1;
+	// If the bottom is a dummy, replace the dummy block with b2
+	if(bottom->entry == NULL) {
+		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
+		bottom->label = new_identifier(b2->label);
+		bottom->children = b2->children;
+		bottom->entry = b2->entry;
+	} else { // Bottom isn't a dummy, merge the TACs making a maximal basic block
+		// Stick the end of b1's TACs to the beginning of b2's TACs
+		struct three_address_t *end = bottom->entry;
+		while(end->next != NULL)
+			end = end->next;
+		
+		end->next = b2->entry;
+	}
+	
+	// Drop b2 from the master list
+	cfg_drop_block_list(&blockList, b2);
+	
+	// Safely destroy b2
+	cfg_free_block(b2);
 }
 
 // Prints the three address code recursively in the format:

@@ -106,8 +106,9 @@ void cfg_print_blocks();
 
 // CFG Block List Functions
 struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
-void cfg_append_block_list(struct basic_block_list_t *list, struct basic_block_t *block);
-void cfg_free_block_list(struct basic_block_list_t *list, bool includeBlockEntry);
+void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
+void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
+void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);
 
 // CFG Block Functions
 struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac);
@@ -116,7 +117,7 @@ void cfg_print_block(struct basic_block_t *block);
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
 struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock);
 struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
-struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
+void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
 
 // CFG Three Address Code Functions
 char *cfg_new_temp_name();
