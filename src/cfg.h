@@ -97,10 +97,13 @@ struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 
 void cfg_init();
 void cfg_destroy();
+void cfg_print_vars_tac();
+void cfg_print_blocks();
 
 struct basic_block_t *cfg_create_simple_block(const char *tacName);
 void cfg_free_block_list();
 void cfg_free_block(struct basic_block_t *block);
+void cfg_print_block(struct basic_block_t *block);
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
 struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock);
 struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
@@ -112,6 +115,7 @@ void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(const char *tac1, const char *tac2);
+void cfg_print_tac(struct three_address_t *tac);
 
 /* Value Number Table Functions */
 void cfg_vnt_init();

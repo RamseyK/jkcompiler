@@ -34,6 +34,28 @@ void cfg_destroy() {
 	block_counter = 0;
 	name_counter = 0;
 }
+// Prints A list of all variables including all temporary variables produced
+// followed by the body of the method in 3-address code.
+void cfg_print_vars_tac() {
+	// Print all variables?
+	// Supposed to print all of the variables along with temp variables
+	// Sounds like we just print a list of all the lhs, op1, and op2 of the tacs
+	// In a giant list but without repeating
+
+	// Print tac for every block
+	// How to traverse the cfg and print things sensibly?
+	// Possibly use pre order traversal and the "marking" of blocks
+}
+
+// Prints the basic blocks of the cfg
+void cfg_print_blocks() {
+	struct basic_block_t it = rootBlock;
+	while(it != NULL) {
+		cfg_print_block(it);
+		printf("\n");
+		it = it->next;
+	}
+}
 
 // Create a new simple basic block node with a TAC name (that will be resolved to the TAC node)
 struct basic_block_t *cfg_create_simple_block(const char *tacName) {
@@ -101,6 +123,35 @@ void cfg_free_block(struct basic_block_t *block) {
 	free(block);
 }
 
+// Prints the label of the block, and the labels of its parents and children
+void cfg_print_block(struct basic_block_t *block) {
+	printf("--------------------\n");
+	printf("Block: %s\n",block->label);
+
+	// Print parents
+	printf("Parents: ");
+	struct basic_block_t *pars = block->parents;
+	while(pars != NULL) {
+		printf("%s",pars->label);
+		if(pars->nextSibling != NULL)
+			printf(", ");
+		pars = pars->nextSibling;
+	}
+	printf("\n");
+
+	// Print children
+	printf("Children: ");
+	struct basic_block_t *chil = block->children;
+	while(chil != NULL) {
+		printf("%s", chil->label);
+		if(chil->nextSibling != NULL)
+			printf(", ");
+		chil = chil->nextSibling;
+	}
+	printf("\n");
+	printf("--------------------\n");
+}
+
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch) {
 	//if(condition == NULL)
 		return NULL;
@@ -155,6 +206,14 @@ struct basic_block_t *cfg_connect_block(struct basic_block_t *b1, struct basic_b
 	// First block is the pointer to the HEAD of a list of blocks
 	// Second block is 
 	// Check types of b1 and b2
+}
+
+// Prints the three address code recursively in the format:
+// LHS = OP1 op OP2
+void cfg_print_tac(struct three_address_t *tac) {
+	if(tac == NULL) return;
+	printf("%s = %s %s %s\n", tac->lhs_id, tac->op1, tac->op, tac->op2);
+	cfg_print_tac(tac->next);
 }
 
 // Generate a temporary name for TAC
