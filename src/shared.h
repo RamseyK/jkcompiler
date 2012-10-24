@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include "cfg.h"
 
 #define K 1024
 #define MAX_ERROR_SIZE 1 * K
@@ -224,7 +225,7 @@ struct function_designator_t {
 struct expression_data_t {
     float val;
     char *type;
-	char *threeAddrName; // Name used in Intermediate Representation
+	char *tacName; // Name used in Intermediate Representation
 };
 
 struct unsigned_number_t {
@@ -295,6 +296,7 @@ struct expression_t {
     int relop;
     struct simple_expression_t *se2;
     struct expression_data_t *expr;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 struct index_expression_list_t;
@@ -358,11 +360,13 @@ struct if_statement_t {
     struct expression_t *e;
     struct statement_t *s1;
     struct statement_t *s2;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 struct while_statement_t {
     struct expression_t *e;
     struct statement_t *s;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 struct print_statement_t {
@@ -396,11 +400,13 @@ struct statement_t {
         struct print_statement_t *ps;
     } data;
     int line_number;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 struct statement_sequence_t {
     struct statement_t *s;
     struct statement_sequence_t *next;
+    struct basic_block_t *block; // Temporary pointer for building CFG
 };
 
 /* ---------------------------------------------------------------- */

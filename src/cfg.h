@@ -85,6 +85,7 @@ int block_counter; // Used for labeling new blocks
 
 struct three_address_list_t *tacList;
 int name_counter; // Temporary name counter used for TAC names
+// Need global tac llist HERE
 
 /* Value Number Table State Variables */
 int vnt_counter; // Name counter used for value numbering
