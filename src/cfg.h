@@ -78,13 +78,17 @@ struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 
 void cfg_init();
 void cfg_destroy();
+void cfg_print_vars_tac();
+void cfg_print_blocks();
 
 struct basic_block_t *cfg_create_block(struct three_address_t *entry);
 void cfg_free_block(struct basic_block_t *block);
+void cfg_print_block(struct basic_block_t *block);
 
 struct three_address_t *cfg_generate_tac(char *lhs_id, int op, char *op1, char *op2);
 void cfg_free_tac(struct three_address_t *tac);
 char *cfg_new_name(struct three_address_t *tac);
+void cfg_print_tac(struct three_address_t *tac);
 
 /* Value Number Table Functions */
 void cfg_vnt_init();
