@@ -129,6 +129,7 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 void cfg_add_to_varlist(const char *id);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
+struct three_address_t *cfg_generate_goto_tac(const char *cond, const char *label); // Creates tac for branching
 
 // Value Number Table Functions
 void cfg_vnt_init();

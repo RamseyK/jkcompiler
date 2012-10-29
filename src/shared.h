@@ -46,6 +46,7 @@
 #define OP_LE 12
 #define OP_GE 13
 #define OP_NO_OP 14
+#define OP_GOTO 15
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \

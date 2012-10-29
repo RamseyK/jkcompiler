@@ -50,7 +50,10 @@ void set_print(struct set_t *set) {
 	}
 	struct set_t *set_it = set;
 	while(set_it != NULL) {
-		printf("%s ",set_it->value);
+		printf("%s",set_it->value);
+		if(set_it->next != NULL) {
+			printf(", ");
+		}
 		set_it = set_it->next;
 	}
 	printf("\n");

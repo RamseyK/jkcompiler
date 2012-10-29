@@ -274,6 +274,17 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	cfg_append_block_list(&trueBranch->children, dummy);
 	cfg_append_block_list(&falseBranch->children, dummy);
 	
+	// Add the branch/goto statement for the condition block and the true/false branches
+	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs_id,trueBranch->label);
+	struct three_address_t *condFals = cfg_generate_goto_tac("true",falseBranch->label);
+	cfg_connect_tac(condition->entry,condTrue);
+	cfg_connect_tac(condition->entry,condFals);
+
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",condition->label);
+	cfg_connect_tac(trueBranch->entry,checkCond1);
+	struct three_address_t *checkCond2 = cfg_generate_goto_tac("true",condition->label);
+	cfg_connect_tac(falseBranch->entry,checkCond2);
+
 	//Debug
 	IRLOG(("If block created\n"));
 	cfg_print_block(condition);
@@ -304,6 +315,17 @@ struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, st
 	cfg_append_block_list(&dummy->parents, condition);
 	cfg_append_block_list(&condition->children, dummy);
 	
+	// Add the branch/goto statement for the condition block and the true/false branches
+	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs_id,bodyBlock->label);
+	//struct three_address_t *condFals = cfg_generate_goto_tac("true",falseBranch->label);
+	cfg_connect_tac(condition->entry,condTrue);
+	//cfg_connect_tac(condition->entry,condFals);
+
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",condition->label);
+	cfg_connect_tac(bodyBlock->entry,checkCond1);
+	//struct three_address_t *checkCond2 = cfg_generate_goto_tac("true",condition->label);
+	//cfg_connect_tac(falseBranch->entry,checkCond2);
+
 	//Debug
 	IRLOG(("While block created\n"));
 	cfg_print_block(condition);
@@ -362,6 +384,11 @@ void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
 	// If the bottom is a dummy, replace the dummy block with b2
 	if(bottom->entry == NULL) {
 		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
+		// TODO:  The dummy node is the target of a jump in the case of while loop (false branch)
+		// Need to create and maintain a table to traverse later to fix labels that have been changed
+		// So that everything is consistent and not mislabeled.  Involves traversing all of the tac nodes
+		// In every block and replacing old label with new Label.  LList of Sets.  Also modify tac print
+		// So that gotos are printed better.
 		bottom->label = new_identifier(b2->label);
 		bottom->children = b2->children;
 		bottom->entry = b2->entry;
@@ -511,6 +538,38 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 	cfg_add_to_varlist(temp_tac->lhs_id);
 
 	return temp_tac->lhs_id;
+}
+
+struct three_address_t *cfg_generate_goto_tac(const char *cond, const char *label) {
+	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
+	CHECK_MEM_ERROR(temp_tac);
+	temp_tac->lhs_id = new_identifier("if");
+	temp_tac->op = OP_GOTO;
+	temp_tac->op1 = new_identifier(cond);
+	temp_tac->op2 = new_identifier(label);
+	temp_tac->next = NULL;
+	temp_tac->prev = NULL;
+
+	// Insert the TAC node into the master list
+	if(tacList == NULL) {
+		tacList = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(tacList);
+		tacList->tac = temp_tac;
+		tacList->next = NULL;
+	} else {
+		// Find the end of the TAC list
+		struct three_address_list_t *end = tacList;
+		while(end->next != NULL)
+			end = end->next;
+
+		// Link to the end of the list
+		end->next = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(end->next);
+		end->next->tac = temp_tac;
+		end->next->next = NULL;
+	}
+
+	return temp_tac;
 }
 
 // Adds an element to the varList for tac nodes
