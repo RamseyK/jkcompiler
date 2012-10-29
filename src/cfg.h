@@ -14,6 +14,7 @@
 
 #include "shared.h"
 #include "rulefuncs.h"
+#include "Set.h"
 
 // Block Types
 #define BLOCK_IF 0
@@ -87,7 +88,9 @@ struct basic_block_list_t *blockList; // Master list of basic blocks
 int block_counter; // Used for labeling new blocks
 
 struct three_address_list_t *tacList;
+struct three_address_t *lastConnectedTac; // Pointer to the last tac list that was added to a block
 int name_counter; // Temporary name counter used for TAC names
+struct set_t *varList; // Holds all of the declared and used variables and constants
 
 int vnt_counter; // Name counter used for value numbering
 struct vnt_entry_t **vntable; // Represents the entire Value Number Table
@@ -111,7 +114,7 @@ void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t 
 void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);
 
 // CFG Block Functions
-struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac);
+struct basic_block_t *cfg_create_simple_block();
 void cfg_free_block(struct basic_block_t *block);
 void cfg_print_block(struct basic_block_t *block);
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
@@ -125,8 +128,9 @@ void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
 void cfg_print_tac(struct three_address_t *tac);
 char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2);
+void cfg_add_to_varlist(const char *id);
 struct three_address_t *cfg_lookup_tac(const char *id);
-void cfg_connect_tac(const char *tac1, const char *tac2);
+void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
 
 // Value Number Table Functions
 void cfg_vnt_init();

@@ -58,5 +58,13 @@ void ir_evn(struct basic_block_t *block) {
 
 void ir_optimize() {
 
+	// Print the CFG blocks
+	printf("\nPrint Blocks:\n");
+	cfg_print_blocks();
+	printf("\n");
+	printf("\nPrint variables and TAC:\n");
+	cfg_print_vars_tac();
+	printf("\n");
+
 }
 

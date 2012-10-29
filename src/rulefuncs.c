@@ -467,6 +467,7 @@ struct variable_access_t *new_variable_access() {
     va->type = -1;
     va->recordname = NULL;
     va->expr = NULL;
+    va->tacName = NULL;
 
     return va;
 }
@@ -545,6 +546,7 @@ struct assignment_statement_t *new_assignment_statement() {
     as->va = NULL;
     as->e = NULL;
     as->oe = NULL;
+    as->block = NULL;
 
     return as;
 }
@@ -600,6 +602,7 @@ struct expression_t *new_expression() {
     e->relop = -1;
     e->se2 = NULL;
     e->expr = NULL;
+    e->tacName = NULL;
 
     return e;
 }
@@ -632,6 +635,7 @@ struct statement_t *new_statement() {
     CHECK_MEM_ERROR(s)
     s->type = -1;
     s->line_number = -1;
+    s->block = NULL;
 
     return s;
 }
@@ -686,6 +690,7 @@ struct statement_sequence_t *new_statement_sequence() {
     CHECK_MEM_ERROR(ss)
     ss->s = NULL;
     ss->next = NULL;
+    ss->block = NULL;
 
     return ss;
 }
@@ -768,6 +773,7 @@ struct if_statement_t *new_if_statement() {
     is->e = NULL;
     is->s1 = NULL;
     is->s2 = NULL;
+    is->block = NULL;
 
     return is;
 }
@@ -795,6 +801,7 @@ struct while_statement_t *new_while_statement() {
     CHECK_MEM_ERROR(ws)
     ws->e = NULL;
     ws->s = NULL;
+    ws->block = NULL;
 
     return ws;
 }
@@ -1007,6 +1014,7 @@ struct simple_expression_t *new_simple_expression() {
     se->addop = -1;
     se->next = NULL;
     se->expr = NULL;
+    se->tacName = NULL;
 
     return se;
 }
@@ -1068,6 +1076,7 @@ struct term_t *new_term() {
     t->mulop = -1;
     t->next = NULL;
     t->expr = NULL;
+    t->tacName = NULL;
 
     return t;
 }
@@ -1123,6 +1132,7 @@ struct factor_t *new_factor() {
     CHECK_MEM_ERROR(f)
     f->type = -1;
     f->expr = NULL;
+    f->tacName = NULL;
 
     return f;
 }
@@ -1181,6 +1191,7 @@ struct primary_t *new_primary() {
     CHECK_MEM_ERROR(p)
     p->type = -1;
     p->expr = NULL;
+    p->tacName = NULL;
 
     return p;
 }
@@ -1239,6 +1250,7 @@ struct unsigned_number_t *new_unsigned_number() {
     un = (struct unsigned_number_t *) malloc(sizeof(struct unsigned_number_t));
     CHECK_MEM_ERROR(un)
     un->expr = NULL;
+    un->tacName = NULL;
 
     return un;
 }
@@ -1554,7 +1566,6 @@ struct expression_data_t *new_expression_data() {
     CHECK_MEM_ERROR(ed)
     ed->val = -1;
     ed->type = NULL;
-	ed->tacName = NULL;
 
     return ed;
 }
