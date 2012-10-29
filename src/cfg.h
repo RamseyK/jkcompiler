@@ -98,12 +98,14 @@ struct vnt_entry_t **vntable; // Represents the entire Value Number Table
  */
 
 void cfg_init();
+struct basic_block_t *cfg_get_root();
 void cfg_destroy();
 void cfg_print_vars_tac();
 void cfg_print_blocks();
 
 // CFG Block List Functions
 struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
+int cfg_block_list_size(struct basic_block_list_t **list);
 void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);

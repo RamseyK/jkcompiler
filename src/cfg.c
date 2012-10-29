@@ -21,6 +21,11 @@ void cfg_init() {
 	name_counter = 0;
 }
 
+// Return the root of the CFG
+struct basic_block_t *cfg_get_root() {
+	return rootBlock;
+}
+
 // Destroy any objects used for intermediate representation
 void cfg_destroy() {
 	// Free master list of blocks and all block objects
@@ -70,6 +75,17 @@ struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock) 
 	return list;
 }
 
+// Determine the size of the list
+int cfg_block_list_size(struct basic_block_list_t **list) {
+	int count = 0;
+	struct basic_block_list_t *cur = *list;
+	while(cur != NULL) {
+		count++;
+		cur = cur->next;
+	}
+	return count;
+}
+
 // Append to an existing CFG block list
 void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
 	if(block == NULL)
@@ -92,18 +108,32 @@ void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_
 void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
 	if(*list == NULL || block == NULL)
 		return;
+		
+	struct basic_block_list_t *drop = NULL;
 
 	if((*list)->block == block) {
 		// b2 is the HEAD
-		(*list)->block = NULL;
+		// Save the 'old' head
+		drop = *list;
+		// Adjust the head of the list to point to the new head
 		*list = (*list)->next;
+		// Remove and free the old head from memory
+		drop->block = NULL;
+		free(drop);
 	} else {
 		// 'block' is somewhere else in the master list
 		struct basic_block_list_t *it = *list;
 		while(it != NULL) {
 			if(it->next->block == block) {
-				it->next->block = NULL;
+				// Save the pointer to the node being dropped
+				drop = it->next;
+				drop->block = NULL;
+				
+				// Adjust the pointer of the current list node to skip the node being dropped
 				it->next = it->next->next;
+				
+				// Free the found node in memory
+				free(drop);
 				break;
 			}
 			it = it->next;	

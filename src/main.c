@@ -136,7 +136,12 @@ int main(int argc, char **argv) {
         symtab_print(0);
     }
     
+    // Intermediate Representation
+    cfg_vnt_init();
+    ir_generate_vnt();
+    
     /* Free memory */
+    cfg_vnt_destroy();
 	//cfg_destroy();
 	symtab_destroy();
 	usrdef_destroy();
