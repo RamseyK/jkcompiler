@@ -1467,7 +1467,6 @@ struct variable_declaration_t *new_variable_declaration() {
  */
 void free_variable_declaration(struct variable_declaration_t *vd) {
 	free_identifier_list(vd->il);
-	free_type_denoter(vd->tden);
 	free(vd);
 }
 
