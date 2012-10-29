@@ -469,6 +469,7 @@ struct program_t {
  * Function declarations
  * ----------------------------------------------------------------
  */
+char *op_str(int i_op);
 int makekey(char* lexeme, int max_hashkeys);
 void print_tabs(int numOfTabs);
 char *inttostring(int value);

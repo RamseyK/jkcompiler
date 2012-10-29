@@ -124,8 +124,10 @@ int main(int argc, char **argv) {
         exit(0);
     }
 
-    // Perform IR
+    // Perform Intermediate Representation
     ir_optimize();
+    cfg_vnt_init();
+    //ir_value_numbering();
 
     if (cmdArgs.verbose == 1) {
         /* print the user defined data types */
@@ -139,10 +141,6 @@ int main(int argc, char **argv) {
         printf("-------------\n");
         symtab_print(0);
     }
-    
-    // Intermediate Representation
-    cfg_vnt_init();
-    ir_generate_vnt();
     
     /* Free memory */
     cfg_vnt_destroy();

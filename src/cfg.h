@@ -50,7 +50,6 @@ struct three_address_list_t {
 struct basic_block_t {
 	int type; // Block types (see defines)
 	char *label; // Name of the block (jump label)
-	int block_level; // Level of the block in the overall CFG
 	
 	struct basic_block_list_t *parents;
 	struct basic_block_list_t *children;
@@ -68,12 +67,14 @@ struct basic_block_list_t {
 struct vnt_node_t {
 	char *val;  // The hash value of the node
 	int block_level; // Associate a block level with the node
+	char *pretty_name; // Human readable numbering for debug
 	struct vnt_node_t *next; // Point to the next node down the stack
 };
 
 // An entry in the hash table with the variable id and stack of hash values
 struct vnt_entry_t {
 	char *id;  	// The id of the variable
+	char *pretty_name; // Human readable numbering for debug
 	struct vnt_node_t *vnt_node; // The stack of nodes containing the hash information for an entry
 	struct vnt_entry_t *next; // The next entry (for hashtable chaining)
 };
@@ -93,6 +94,7 @@ int name_counter; // Temporary name counter used for TAC names
 struct set_t *varList; // Holds all of the declared and used variables and constants
 
 int vnt_counter; // Name counter used for value numbering
+int vnt_pretty_counter; // Pretty name counter used for outputting and debug
 struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 
 /* ----------------------------------
@@ -136,10 +138,10 @@ void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2)
 void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
-char *cfg_vnt_hash(char *op, char *op1, char *op2); // Creates name by hashing operator and operands
-void cfg_vnt_hash_insert(char *id, char *val, int block_level); // Creates an inserts a node
+char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
+void cfg_vnt_hash_insert(char *key, char *val, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
-struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id); // Lookup by the vn_entry_t id
+struct vnt_entry_t *cfg_vnt_hash_lookup_key(char *id); // Lookup by the vn_entry_t id
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level
 void cfg_vnt_free_entry(struct vnt_entry_t *entry);
 

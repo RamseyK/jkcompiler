@@ -186,7 +186,6 @@ struct basic_block_t *cfg_create_simple_block() {
 	block_counter++;
 
 	temp_block->type = BLOCK_SIMPLE;
-	temp_block->block_level = 0;
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
 
@@ -430,56 +429,16 @@ void cfg_print_tac(struct three_address_t *tac) {
 		IRLOG(("Infinite loop detected in print tac\n"));
 		return;
 	}
-	// Figure out which OP should be printed
-	char op [3];
-	switch(tac->op) {
-	case OP_PLUS:
-		sprintf(op, "+");
-		break;
-	case OP_MINUS:
-		sprintf(op, "-");
-		break;
-	case OP_OR:
-		sprintf(op, "|");
-		break;
-	case OP_STAR:
-		sprintf(op, "*");
-		break;
-	case OP_SLASH:
-		sprintf(op, "/");
-		break;
-	case OP_MOD:
-		sprintf(op, "%%");
-		break;
-	case OP_AND:
-		sprintf(op, "&");
-		break;
-	case OP_EQUAL:
-		sprintf(op, "=");
-		break;
-	case OP_NOTEQUAL:
-		sprintf(op, "!=");
-		break;
-	case OP_LT:
-		sprintf(op, "<");
-		break;
-	case OP_GT:
-		sprintf(op, ">");
-		break;
-	case OP_LE:
-		sprintf(op, "<=");
-		break;
-	case OP_GE:
-		sprintf(op, ">=");
-		break;
-	default:
-		break;
-	}
+	
+	char *op = op_str(tac->op);
 
 	if(tac->op != OP_NO_OP)
 		printf("\t%s = %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
 	else
 		printf("\t%s = %s\n", tac->lhs_id, tac->op1);
+		
+	free(op);
+	
 	cfg_print_tac(tac->next);
 }
 
@@ -620,6 +579,7 @@ void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2)
 // Initialize the table
 void cfg_vnt_init() {
 	vnt_counter = 0;
+	vnt_pretty_counter = 0;
 	vntable = (struct vnt_entry_t **) calloc(TABLE_SIZE,sizeof(struct vnt_entry_t *));
 
 	// Initialize all entries in the table to null
@@ -663,13 +623,13 @@ char *cfg_vnt_new_name() {
 }
 
 // Returns a hash of the operator and operands
-char *cfg_vnt_hash(char *op, char *op1, char *op2) {
+char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 	// Concatenate the strings together with #
 	char *temp_name = NULL;
 	char buffer[1024];
 
 	// Concatenate the strings to make the hash
-	int chars_written = sprintf(buffer, "%s%s%s", op, op1, op2);
+	int chars_written = sprintf(buffer, "%s%i%s", op1, op, op2);
 	temp_name = (char *)malloc(chars_written +1);
 	strncpy(temp_name, buffer, chars_written+1);
 
@@ -678,9 +638,9 @@ char *cfg_vnt_hash(char *op, char *op1, char *op2) {
 
 /* Hash Table manipulation */
 // Does an update/insert on an entry for hash table
-void cfg_vnt_hash_insert(char *id, char *val, int block_level) {
+void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 	// See if there is already an entry for this node by id
-	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_id(id);
+	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_key(key);
 	if(found_entry != NULL) {
 		// See if the value is different from what is already on the stack
 		if(strcmp(found_entry->vnt_node->val,val) != 0) {
@@ -691,25 +651,32 @@ void cfg_vnt_hash_insert(char *id, char *val, int block_level) {
 		// Create the vnt_entry node
 		struct vnt_entry_t *temp_entry = (struct vnt_entry_t *)malloc(sizeof(struct vnt_entry_t));
 		CHECK_MEM_ERROR(temp_entry);
-		temp_entry->id = new_identifier(id);
+		temp_entry->id = new_identifier(key);
 		temp_entry->vnt_node = NULL;
+		
+		// Create a pretty name for the entry and set it (for debug)
+		char buffer[8];
+		int chars_written = sprintf(buffer, "#%i", vnt_pretty_counter);
+		temp_entry->pretty_name = (char*)malloc(chars_written + 1);
+		strncpy(temp_entry->pretty_name, buffer, chars_written+1);
+		vnt_pretty_counter++;
+		
 		// Push the vnt_node onto the empty stack
 		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, block_level);
 
 		// Determine the hash key for this node
-		int key = makekey(id, TABLE_SIZE);
+		int hkey = makekey(key, TABLE_SIZE);
 
 		// Check the spot in the table
-		if(vntable[key] == NULL) {
-			vntable[key] = temp_entry;
+		if(vntable[hkey] == NULL) {
+			vntable[hkey] = temp_entry;
 		} else {
 			// Resolve with chaining
-			struct vnt_entry_t *vnt_entry_it = vntable[key];
+			struct vnt_entry_t *vnt_entry_it = vntable[hkey];
 			GOTO_END_OF_LIST(vnt_entry_it);
 			vnt_entry_it->next = temp_entry;
 		}
 	}
-
 }
 
 // Looks up a vnt_entry_t by its current value using top of the vnt_node stack
@@ -727,8 +694,8 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val) {
 	return NULL;
 }
 
-// Looks up a vnt_entry_t by its id
-struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id) {
+// Looks up a vnt_entry_t by its key
+struct vnt_entry_t *cfg_vnt_hash_lookup_key(char *id) {
 	// Get the key that corresponds to this id
 	int key = makekey(id, TABLE_SIZE);
 
@@ -764,6 +731,8 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 	// Free the id
 	if(entry->id != NULL)
 		free(entry->id);
+	if(entry->pretty_name != NULL)
+		free(entry->pretty_name);
 
 	// Free each node in the node stack
 	struct vnt_node_t *it = entry->vnt_node;
@@ -798,6 +767,13 @@ void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level) {
 	CHECK_MEM_ERROR(temp_node);
 	temp_node->val = new_identifier(val);
 	temp_node->block_level = block_level;
+	
+	// Create a pretty name for the stack node and set it (for debug)
+	char buffer[8];
+	int chars_written = sprintf(buffer, "#%i", vnt_pretty_counter);
+	temp_node->pretty_name = (char*)malloc(chars_written + 1);
+	strncpy(temp_node->pretty_name, buffer, chars_written+1);
+	vnt_pretty_counter++;
 
 	// Attach the rest of the stack to this node
 	temp_node->next = stack_top;
@@ -811,6 +787,8 @@ void cfg_vnt_free_node(struct vnt_node_t *node) {
 	// Free the val
 	if (node->val != NULL)
 		free(node->val);
+	if (node->pretty_name != NULL)
+		free(node->pretty_name);
 
 	// Free the pointer
 	free(node);

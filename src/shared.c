@@ -8,6 +8,65 @@
 
 #include "shared.h"
 
+/* -----------------------------------------------------------------------
+ * Returns a string representation of the long value
+ * -----------------------------------------------------------------------
+ */
+char *op_str(int i_op) {
+	// Figure out which OP should be printed
+	char *temp = NULL;
+	char op [3];
+	int cw = 0; // characters written
+	switch(i_op) {
+	case OP_PLUS:
+		cw = sprintf(op, "+");
+		break;
+	case OP_MINUS:
+		cw = sprintf(op, "-");
+		break;
+	case OP_OR:
+		cw = sprintf(op, "|");
+		break;
+	case OP_STAR:
+		cw = sprintf(op, "*");
+		break;
+	case OP_SLASH:
+		cw = sprintf(op, "/");
+		break;
+	case OP_MOD:
+		cw = sprintf(op, "%%");
+		break;
+	case OP_AND:
+		cw = sprintf(op, "&");
+		break;
+	case OP_EQUAL:
+		cw = sprintf(op, "=");
+		break;
+	case OP_NOTEQUAL:
+		cw = sprintf(op, "!=");
+		break;
+	case OP_LT:
+		cw = sprintf(op, "<");
+		break;
+	case OP_GT:
+		cw = sprintf(op, ">");
+		break;
+	case OP_LE:
+		cw = sprintf(op, "<=");
+		break;
+	case OP_GE:
+		cw = sprintf(op, ">=");
+		break;
+	default:
+		cw = sprintf(op, " ");
+		break;
+	}
+	
+	temp = (char*)malloc(cw + 1);
+	strncpy(temp, op, cw+1);
+	
+	return temp;
+}
 
 
 /* -----------------------------------------------------------------------
