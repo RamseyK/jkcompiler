@@ -19,6 +19,7 @@ void cfg_init() {
 	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
+	varList = NULL;
 }
 
 // Destroy any objects used for intermediate representation
@@ -43,9 +44,21 @@ void cfg_print_vars_tac() {
 	// Sounds like we just print a list of all the lhs, op1, and op2 of the tacs
 	// In a giant list but without repeating
 
+	printf("All of the vars:\n");
+	set_print(varList);
+
 	// Print tac for every block
 	// How to traverse the cfg and print things sensibly?
 	// Possibly use pre order traversal and the "marking" of blocks
+	printf("All of the TAC:\n");
+	struct basic_block_list_t *it = blockList;
+	while(it != NULL) {
+		printf("%s:\n",it->block->label);
+		cfg_print_tac(it->block->entry);
+		printf("\n");
+		it = it->next;
+	}
+
 }
 
 // Prints the basic blocks of the cfg
@@ -131,7 +144,7 @@ void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntr
 }
 
 // Create a new simple basic block node
-struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac) {
+struct basic_block_t *cfg_create_simple_block() {
 	struct basic_block_t *temp_block = (struct basic_block_t *)malloc(sizeof(struct basic_block_t));
 	CHECK_MEM_ERROR(temp_block);
 
@@ -146,10 +159,45 @@ struct basic_block_t *cfg_create_simple_block(struct three_address_t *tac) {
 	temp_block->block_level = 0;
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
-	temp_block->entry = tac;
+
+	// Connect all the tac
+	// Go to the last connected tac
+	IRLOG(("Going to the last connected tac\n"));
+	struct three_address_list_t *tl_it = tacList;
+	if(lastConnectedTac != NULL) {
+		while(tl_it->tac != lastConnectedTac) {
+			tl_it = tl_it->next;
+		}
+		IRLOG(("Moving one past it\n"));
+		// Move one past the last connected
+		tl_it = tl_it->next;
+	}
+	// Associate with the block
+	// If its a dummy node then tl_it should be null because
+	// the lastConnectedTac was the end of the list, so skip
+	if(tl_it != NULL) {
+		temp_block->entry = tl_it->tac;
+
+		IRLOG(("Connecting the tacs\n"));
+		while(tl_it->next != NULL) {
+			tl_it->tac->next = tl_it->next->tac;
+			tl_it->tac->next->prev = tl_it->tac;
+			tl_it = tl_it->next;
+		}
+		// Update the last connected
+		lastConnectedTac = tl_it->tac;
+	} else {
+		temp_block->entry = NULL;
+	}
+
+
 
 	// Add to the master list
 	cfg_append_block_list(&blockList, temp_block);
+
+	//Debug
+	IRLOG(("Simple block created\n"));
+	cfg_print_block(temp_block);
 
 	return temp_block;
 }
@@ -176,6 +224,9 @@ void cfg_print_block(struct basic_block_t *block) {
 	printf("--------------------\n");
 	printf("Block: %s\n",block->label);
 
+	// Print type
+	printf("Type: %i\n",block->type);
+
 	// Print parents
 	printf("Parents: ");
 	struct basic_block_list_t *pars = block->parents;
@@ -197,23 +248,24 @@ void cfg_print_block(struct basic_block_t *block) {
 		chil = chil->next;
 	}
 	printf("\n");
+	printf("TAC:");
+	cfg_print_tac(block->entry);
 	printf("--------------------\n");
 }
 
 // Create an isolated IF block for the CFG
 struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch) {
+	IRLOG(("Creating if block\n"));
+
 	if(condition == NULL)
 		return NULL;
-	
-	// Create a simple block first with the tac nodes of the condition block
-	struct basic_block_t *if_block = cfg_create_simple_block(condition->entry);
 	
 	// Set IF, TRUE, and FALSE block properties and children
 	trueBranch->type = BLOCK_TRUE;
 	falseBranch->type = BLOCK_FALSE;
-	if_block->type = BLOCK_IF;
-	cfg_append_block_list(&if_block->children, trueBranch);
-	cfg_append_block_list(&if_block->children, falseBranch);
+	condition->type = BLOCK_IF;
+	cfg_append_block_list(&condition->children, trueBranch);
+	cfg_append_block_list(&condition->children, falseBranch);
 	
 	// Link True and False branches to a dummy node at the bottom
 	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
@@ -222,40 +274,41 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	cfg_append_block_list(&trueBranch->children, dummy);
 	cfg_append_block_list(&falseBranch->children, dummy);
 	
-	// Drop condition block from the master list
-	cfg_drop_block_list(&blockList, condition);
-	
-	// Safely free the condition block (no longer needed)
-	cfg_free_block(condition);
-	
-	return if_block;
+	//Debug
+	IRLOG(("If block created\n"));
+	cfg_print_block(condition);
+
+	return condition;
 }
 
 // Create an isolated WHILE block for the CFG
 struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock) {
-	//if(condition == NULL)
+	IRLOG(("Creating while block\n"));
+
+	if(condition == NULL)
 		return NULL;
 	
 	// Create a simple block first with the tac nodes of the condition block
-	struct basic_block_t *wh_block = cfg_create_simple_block(condition->entry);
+	//struct basic_block_t *wh_block = cfg_create_simple_block(condition->entry);
 	
 	// Set WHILE, TRUE, block properties and children
 	bodyBlock->type = BLOCK_TRUE;
-	wh_block->type = BLOCK_WHILE;
-	cfg_append_block_list(&wh_block->children, bodyBlock);
+	condition->type = BLOCK_WHILE;
+
+	// Link bodyBlock
+	cfg_append_block_list(&condition->children, bodyBlock);
+	cfg_append_block_list(&bodyBlock->parents,condition);
 	
 	// Link branches to a dummy node at the bottom
 	struct basic_block_t *dummy = cfg_create_simple_block(NULL);
-	cfg_append_block_list(&dummy->parents, wh_block);
-	cfg_append_block_list(&wh_block->children, dummy);
+	cfg_append_block_list(&dummy->parents, condition);
+	cfg_append_block_list(&condition->children, dummy);
 	
-	// Drop condition block from the master list
-	cfg_drop_block_list(&blockList, condition);
-	
-	// Safely free the condition block (no longer needed)
-	cfg_free_block(condition);
-	
-	return wh_block;
+	//Debug
+	IRLOG(("While block created\n"));
+	cfg_print_block(condition);
+
+	return condition;
 }
 
 // Find the bottom of the control flow graph given a starting block
@@ -295,39 +348,108 @@ struct basic_block_t *cfg_find_bottom(struct basic_block_t *block) {
 
 // Connect CFG b1 to CFG b2
 void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
-	if(b1 == NULL || b2 == NULL)
+	if(b1 == NULL || b2 == NULL) {
+		IRLOG(("b1 or b2 was null\n"));
 		return;
-	
+	}
+	IRLOG(("Connecting blocks\nb1: %s\tb2: %s\n",b1->label,b2->label));
+
 	// First block is the root of a CFG. b2 will be linked to the bottom of b1
 	struct basic_block_t *bottom = cfg_find_bottom(b1);
 	
+	IRLOG(("Bottom block: %s\n",bottom->label));
+
 	// If the bottom is a dummy, replace the dummy block with b2
 	if(bottom->entry == NULL) {
 		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
 		bottom->label = new_identifier(b2->label);
 		bottom->children = b2->children;
 		bottom->entry = b2->entry;
+		bottom->type = b2->type;
+
+		// Drop the dummy and destroy it
+		cfg_drop_block_list(&blockList, b2);
+		cfg_free_block(b2);
 	} else { // Bottom isn't a dummy, merge the TACs making a maximal basic block
 		// Stick the end of b1's TACs to the beginning of b2's TACs
 		struct three_address_t *end = bottom->entry;
 		while(end->next != NULL)
 			end = end->next;
-		
 		end->next = b2->entry;
+		
+		// Update parent and children pointers for the blocks
+		// Add b2 as a child to b1
+		cfg_append_block_list(&b1->children,b2);
+
+		// Add b1 as a parent to b2
+		cfg_append_block_list(&b2->parents,b1);
+
 	}
 	
-	// Drop b2 from the master list
-	cfg_drop_block_list(&blockList, b2);
-	
-	// Safely destroy b2
-	cfg_free_block(b2);
+	//Debug
+	IRLOG(("Blocks connected\n\n"));
+	cfg_print_blocks();
+
 }
 
 // Prints the three address code recursively in the format:
 // LHS = OP1 op OP2
 void cfg_print_tac(struct three_address_t *tac) {
 	if(tac == NULL) return;
-	printf("%s = %s %i %s\n", tac->lhs_id, tac->op1, tac->op, tac->op2);
+	if(tac == tac->prev) {
+		IRLOG(("Infinite loop detected in print tac\n"));
+		return;
+	}
+	// Figure out which OP should be printed
+	char op [3];
+	switch(tac->op) {
+	case OP_PLUS:
+		sprintf(op, "+");
+		break;
+	case OP_MINUS:
+		sprintf(op, "-");
+		break;
+	case OP_OR:
+		sprintf(op, "|");
+		break;
+	case OP_STAR:
+		sprintf(op, "*");
+		break;
+	case OP_SLASH:
+		sprintf(op, "/");
+		break;
+	case OP_MOD:
+		sprintf(op, "%%");
+		break;
+	case OP_AND:
+		sprintf(op, "&");
+		break;
+	case OP_EQUAL:
+		sprintf(op, "=");
+		break;
+	case OP_NOTEQUAL:
+		sprintf(op, "!=");
+		break;
+	case OP_LT:
+		sprintf(op, "<");
+		break;
+	case OP_GT:
+		sprintf(op, ">");
+		break;
+	case OP_LE:
+		sprintf(op, "<=");
+		break;
+	case OP_GE:
+		sprintf(op, ">=");
+		break;
+	default:
+		break;
+	}
+
+	if(tac->op != OP_NO_OP)
+		printf("\t%s = %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
+	else
+		printf("\t%s = %s\n", tac->lhs_id, tac->op1);
 	cfg_print_tac(tac->next);
 }
 
@@ -367,6 +489,9 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 		CHECK_MEM_ERROR(tacList);
 		tacList->tac = temp_tac;
 		tacList->next = NULL;
+
+		// Set this as the lastConnectedTac
+		//lastConnectedTac = temp_tac;
 	} else {
 		// Find the end of the TAC list
 		struct three_address_list_t *end = tacList;
@@ -379,8 +504,18 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 		end->next->tac = temp_tac;
 		end->next->next = NULL;
 	}
+	IRLOG(("Tac node just created: "));
+	cfg_print_tac(temp_tac);
+
+	// Add to the varlist
+	cfg_add_to_varlist(temp_tac->lhs_id);
 
 	return temp_tac->lhs_id;
+}
+
+// Adds an element to the varList for tac nodes
+void cfg_add_to_varlist(const char *id) {
+	varList = set_union(varList,new_set(id));
 }
 
 // Frees the master TAC list and TAC nodes
@@ -431,14 +566,20 @@ struct three_address_t *cfg_lookup_tac(const char *id) {
 }
 
 // Connect two tacs together. tac1 will precede tac2
-void cfg_connect_tac(const char *tac1, const char *tac2) {
-	struct three_address_t *node1 = cfg_lookup_tac(tac1);
+void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2) {
+	/*struct three_address_t *node1 = cfg_lookup_tac(tac1);
 	struct three_address_t *node2 = cfg_lookup_tac(tac2);
-	if(node1 == NULL || node2 == NULL)
+	if(node1 == NULL || node2 == NULL) {
+		IRLOG(("One of them was null\n"));
 		return;
-		
-	node1->next = node2;
-	node2->prev = node1;
+	}*/
+	struct three_address_t *end1 = tac1;
+	GOTO_END_OF_LIST(end1);
+	end1->next = tac2;
+	tac2->prev = end1;
+
+	IRLOG(("Connected this: \n"));
+	cfg_print_tac(tac1);
 }
 
 /* ----------------------------------

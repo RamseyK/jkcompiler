@@ -623,8 +623,17 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->oe = NULL;
 		
 		// CFG
-		cfg_generate_tac($1->expr->tacName, $3->expr->tacName, OP_NO_OP, NULL);
-		$$->block = cfg_create_simple_block(cfg_lookup_tac($1->expr->tacName));
+		if($1->tacName == NULL) {
+			printf("variable_access tacName is null\n");
+		}
+		if($3->tacName == NULL) {
+			printf("expression tacName null\n");
+		}
+		
+		cfg_generate_tac($1->tacName, $3->tacName, OP_NO_OP, NULL);
+		IRLOG(("About to create block\n"));
+		$$->block = cfg_create_simple_block();
+		IRLOG(("Created block\n"));
 	}
  | variable_access ASSIGNMENT object_instantiation
 	{
@@ -666,7 +675,7 @@ variable_access : identifier
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		
 		// CFG
-		$$->expr->tacName = new_identifier($1);
+		$$->tacName = $1;
 	}
  | indexed_variable
 	{
@@ -777,7 +786,9 @@ boolean_expression : expression
 		$$ = $1;
 		
 		// CFG
-		$$->expr->tacName = $1->expr->tacName;
+		//$$->tac = $1->tac;
+		//$$->block = cfg_create_simple_block($1->tac);
+		$$->block = cfg_create_simple_block();
 	}
 ;
 
@@ -789,7 +800,8 @@ expression : simple_expression
 		$$->expr = $1->expr;
 		
 		// CFG
-		$$->expr->tacName = $1->expr->tacName;
+		$$->tacName = $1->tacName;
+		//$$->block = cfg_create_simple_block($1->tac);
 	}
  | simple_expression relop simple_expression
 	{
@@ -828,9 +840,9 @@ expression : simple_expression
 		}
 		
 		// CFG
-		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
-		cfg_connect_tac($1->expr->tacName, $$->expr->tacName);
-		cfg_connect_tac($3->expr->tacName, $1->expr->tacName);
+		//$$->tac = 
+		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
+
 	}
  ;
 
@@ -842,7 +854,7 @@ simple_expression : term
 		$$->expr = $1->expr;
 		
 		// CFG
-		$$->expr->tacName = $1->expr->tacName;
+		$$->tacName = $1->tacName;
 	}
  | simple_expression addop term
 	{
@@ -874,9 +886,8 @@ simple_expression : term
 		}
 		
 		// CFG
-		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
-		cfg_connect_tac($1->expr->tacName, $$->expr->tacName);
-		cfg_connect_tac($3->expr->tacName, $1->expr->tacName);
+		//$$->tac = 
+		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
 	}
  ;
 
@@ -888,7 +899,8 @@ term : factor
 		$$->expr = $1->expr;	
 		
 		// CFG
-		$$->expr->tacName = $1->expr->tacName;
+		$$->tacName = $1->tacName;
+		//IRLOG(("Term:Factor -> %s : %s\n",$$->tac->lhs_id, $1->tac->lhs_id));
 	}
  | term mulop factor
 	{
@@ -922,9 +934,13 @@ term : factor
 		}
 		
 		// CFG
-		$$->expr->tacName = cfg_generate_tac(NULL, $1->expr->tacName, $2, $3->expr->tacName);
-		cfg_connect_tac($1->expr->tacName,$$->expr->tacName);
-		cfg_connect_tac($3->expr->tacName,$1->expr->tacName);
+		// If the factor has a negative sign in front, make a tac node for that
+		//if($3->type == FACTOR_T_SIGNFACTOR && *($3->data.f.sign) == OP_MINUS) {
+		//	$3->tacName = cfg_generate_tac(NULL, "0", OP_MINUS, $3->tacName);
+			//$3->tacName = facTac->lhs_id;		
+		//}
+		//$$->tac = cfg_generate_tac(NULL, $1->tac->lhs_id, $2, $3->tacName);
+		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
 	}
  ;
 
@@ -954,8 +970,8 @@ factor : sign factor
 		$$->expr = $2->expr;
 		
 		// CFG
-		$$->expr->tacName = cfg_generate_tac(NULL, "0", *$1, $2->expr->tacName);
-		cfg_connect_tac($2->expr->tacName, $$->expr->tacName);
+		$$->tacName = cfg_generate_tac(NULL, "0", *$1, $2->tacName);
+		//$$->tacName = $2->tacName;
 	}
  | primary 
 	{
@@ -966,7 +982,9 @@ factor : sign factor
 		$$->expr = $1->expr;
 		
 		// CFG
-		$$->expr->tacName = $1->expr->tacName;
+		//$$->tac = cfg_generate_tac($1->tacName, $1->tacName, OP_NO_OP, NULL);
+		cfg_add_to_varlist($1->tacName);
+		$$->tacName = $1->tacName;
 	}
  ;
 
@@ -977,6 +995,8 @@ primary : variable_access
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
 		$$->data.va = $1;
 		$$->expr = $1->expr;
+		$$->tacName = $1->tacName;
+		cfg_add_to_varlist($1->tacName);
 	}
  | unsigned_constant
 	{
@@ -985,6 +1005,8 @@ primary : variable_access
 		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
 		$$->data.un = $1;
 		$$->expr = $1->expr;
+		$$->tacName = $1->tacName;
+		cfg_add_to_varlist($1->tacName);
 	}
  | function_designator
 	{
@@ -1029,7 +1051,8 @@ unsigned_integer : DIGSEQ
         $$->expr->val = $$->ui;
         
         // CFG
-        $$->expr->tacName = new_identifier(yytext);
+        // Set the tacName equal to the constant value
+        $$->tacName = new_identifier(yytext);
 	}
  ;
 

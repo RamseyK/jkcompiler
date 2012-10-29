@@ -111,7 +111,8 @@ int main(int argc, char **argv) {
     }
 
     // Perform semantic analysis
-    semantic_analysis(program);
+    // Disabled for proj2
+    //semantic_analysis(program);
     if (error_flag == 1) {
 		// Errors during semantic analysis
         printf("Errors detected. Exiting.\n");
@@ -122,6 +123,9 @@ int main(int argc, char **argv) {
     if (cmdArgs.exit_after_sem == 1) {
         exit(0);
     }
+
+    // Perform IR
+    ir_optimize();
 
     if (cmdArgs.verbose == 1) {
         /* print the user defined data types */
@@ -138,9 +142,9 @@ int main(int argc, char **argv) {
     
     /* Free memory */
 	//cfg_destroy();
-	symtab_destroy();
-	usrdef_destroy();
-    free_program(program);
+	//symtab_destroy();
+	//usrdef_destroy();
+    //free_program(program);
 
     return 0;
 }
