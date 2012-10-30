@@ -47,20 +47,20 @@ struct three_address_list_t {
 };
 
 // Definition for a node that comprise the control flow graph
-struct basic_block_t {
+struct block_t {
 	int type; // Block types (see defines)
 	char *label; // Name of the block (jump label)
 	
-	struct basic_block_list_t *parents;
-	struct basic_block_list_t *children;
+	struct block_list_t *parents;
+	struct block_list_t *children;
 
 	struct three_address_t *entry; // Head of TAC list for this block
 };
 
 // A linked list of basic blocks
-struct basic_block_list_t {
-	struct basic_block_t *block;
-	struct basic_block_list_t *next;
+struct block_list_t {
+	struct block_t *block;
+	struct block_list_t *next;
 };
 
 // Represents a stack node that holds the hash value associated with a block level
@@ -78,16 +78,21 @@ struct vnt_entry_t {
 	struct vnt_entry_t *next; // The next entry (for hashtable chaining)
 };
 
+struct set_list_t {
+	struct set_t *set;
+	struct set_list_t *next;
+};
+
 /* ----------------------------------
  * CFG State Variables
  * ----------------------------------
  */
 
-struct basic_block_t *rootBlock; // root of the cfg
-struct basic_block_list_t *blockList; // Master list of basic blocks
+struct block_t *rootBlock; // root of the cfg
+struct block_list_t *blockList; // Master list of basic blocks
 int block_counter; // Used for labeling new blocks
 
-struct three_address_list_t *tacList;
+struct three_address_list_t *tacList; // Master list of all the tac
 struct three_address_t *lastConnectedTac; // Pointer to the last tac list that was added to a block
 int name_counter; // Temporary name counter used for TAC names
 struct set_t *varList; // Holds all of the declared and used variables and constants
@@ -96,33 +101,44 @@ int vnt_counter; // Name counter used for value numbering
 int vnt_pretty_counter; // Pretty name counter used for outputting and debug
 struct vnt_entry_t **vntable; // Represents the entire Value Number Table
 
+struct set_list_t *label_aliases; // Represents labels that are aliases to fixup after CFG is built
+
 /* ----------------------------------
  * CFG Functions
  * ----------------------------------
  */
 
 void cfg_init();
-struct basic_block_t *cfg_get_root();
+struct block_t *cfg_get_root();
 void cfg_destroy();
 void cfg_print_vars_tac();
 void cfg_print_blocks();
 
 // CFG Block List Functions
+<<<<<<< HEAD
 struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
 int cfg_block_list_size(struct basic_block_list_t **list);
 bool cfg_exists_in_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);
+=======
+struct block_list_t *cfg_new_block_list(struct block_t *firstBlock);
+int cfg_block_list_size(struct block_list_t **list);
+void cfg_append_block_list(struct block_list_t **list, struct block_t *block);
+void cfg_drop_block_list(struct block_list_t **list, struct block_t *block);
+void cfg_free_block_list(struct block_list_t **list, bool includeBlockEntry);
+>>>>>>> Label alias resolution, refactoring basic_block to block
 
 // CFG Block Functions
-struct basic_block_t *cfg_create_simple_block();
-void cfg_free_block(struct basic_block_t *block);
-void cfg_print_block(struct basic_block_t *block);
-struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struct basic_block_t *trueBranch, struct basic_block_t *falseBranch);
-struct basic_block_t *cfg_create_while_block(struct basic_block_t *condition, struct basic_block_t *bodyBlock);
-struct basic_block_t *cfg_find_bottom(struct basic_block_t *block);
-void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2);
+struct block_t *cfg_create_simple_block();
+void cfg_free_block(struct block_t *block);
+void cfg_print_block(struct block_t *block);
+struct block_t *cfg_create_if_block(struct block_t *condition, struct block_t *trueBranch, struct block_t *falseBranch);
+struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t *bodyBlock);
+struct block_t *cfg_find_bottom(struct block_t *block);
+void cfg_connect_block(struct block_t *b1, struct block_t *b2);
+void cfg_add_label_alias(char *label1, char *label2);
 
 // Three Address Code Functions
 char *cfg_new_temp_name();

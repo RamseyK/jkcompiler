@@ -43,4 +43,6 @@ void ir_print_vnt();
 
 void ir_optimize();
 
+void ir_resolve_label_aliases();
+
 #endif

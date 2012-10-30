@@ -313,7 +313,7 @@ struct expression_t {
     struct simple_expression_t *se2;
     struct expression_data_t *expr;
     char *tacName;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 struct index_expression_list_t;
@@ -371,7 +371,7 @@ struct assignment_statement_t {
     struct variable_access_t *va;
     struct expression_t *e;
     struct object_instantiation_t *oe;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 struct statement_t;
@@ -379,13 +379,13 @@ struct if_statement_t {
     struct expression_t *e;
     struct statement_t *s1;
     struct statement_t *s2;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 struct while_statement_t {
     struct expression_t *e;
     struct statement_t *s;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 struct print_statement_t {
@@ -419,13 +419,13 @@ struct statement_t {
         struct print_statement_t *ps;
     } data;
     int line_number;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 struct statement_sequence_t {
     struct statement_t *s;
     struct statement_sequence_t *next;
-    struct basic_block_t *block; // Temporary pointer for building CFG
+    struct block_t *block; // Temporary pointer for building CFG
 };
 
 /* ---------------------------------------------------------------- */

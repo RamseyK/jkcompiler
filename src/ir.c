@@ -171,5 +171,47 @@ void ir_print_vnt() {
 }
 
 void ir_optimize() {
+
+	ir_resolve_label_aliases();
+
+    printf("\nPrint variables and TAC:\n");
+	cfg_print_vars_tac();
+	printf("\n");
+
+	printf("\nPrint Blocks:\n");
+	cfg_print_blocks();
+	printf("\n");
+
+	ir_value_numbering();
+
+	printf("\nPrint value numbering:\n");
+	ir_print_vnt();
+	printf("\n");
+}
+
+// Changes the target for any jump/branch tac nodes to a single block
+// If that block had an alias added in label_aliases
+void ir_resolve_label_aliases() {
+	// Go through each tac node
+	struct three_address_list_t *tac_it = tacList;
+	while(tac_it != NULL) {
+		// If the tac is a jump tac
+		if(tac_it->tac->op == OP_GOTO) {
+			// See if its label is in the alias list
+			struct set_list_t *al_it = label_aliases;
+			while(al_it != NULL) {
+				// If the label is in the set
+				if(set_contains(al_it->set,tac_it->tac->op2)) {
+					// Free the old op2
+					free(tac_it->tac->op2);
+					// Set to the first element in the alias set
+					tac_it->tac->op2 = new_identifier(al_it->set->value);
+					break;
+				}
+				al_it = al_it->next;
+			}
+		}
+		tac_it = tac_it->next;
+	}
 }
 
