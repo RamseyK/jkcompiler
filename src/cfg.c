@@ -309,9 +309,9 @@ struct basic_block_t *cfg_create_if_block(struct basic_block_t *condition, struc
 	cfg_connect_tac(condition->entry,condTrue);
 	cfg_connect_tac(condition->entry,condFals);
 
-	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",condition->label);
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",dummy->label);
 	cfg_connect_tac(trueBranch->entry,checkCond1);
-	struct three_address_t *checkCond2 = cfg_generate_goto_tac("true",condition->label);
+	struct three_address_t *checkCond2 = cfg_generate_goto_tac("true",dummy->label);
 	cfg_connect_tac(falseBranch->entry,checkCond2);
 
 	//Debug
@@ -413,11 +413,10 @@ void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
 	// If the bottom is a dummy, replace the dummy block with b2
 	if(bottom->entry == NULL) {
 		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
-		// TODO:  The dummy node is the target of a jump in the case of while loop (false branch)
+		// TODO:  The dummy node is the target of a jump in the case of while loop and if (false branch)
 		// Need to create and maintain a table to traverse later to fix labels that have been changed
 		// So that everything is consistent and not mislabeled.  Involves traversing all of the tac nodes
-		// In every block and replacing old label with new Label.  LList of Sets.  Also modify tac print
-		// So that gotos are printed better.
+		// In every block and replacing old label with new Label.  LList of Sets.
 		bottom->label = new_identifier(b2->label);
 		bottom->children = b2->children;
 		bottom->entry = b2->entry;
@@ -459,11 +458,14 @@ void cfg_print_tac(struct three_address_t *tac) {
 	
 	char *op = op_str(tac->op);
 
-	if(tac->op != OP_NO_OP)
-		printf("\t%s = %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
-	else
+	if(tac->op == OP_NO_OP)
 		printf("\t%s = %s\n", tac->lhs_id, tac->op1);
+	else if(tac->op == OP_GOTO)
+		printf("\t%s %s %s %s\n", tac->lhs_id, tac->op1, "goto", tac->op2);
+	else
+		printf("\t%s = %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
 		
+
 	free(op);
 	
 	cfg_print_tac(tac->next);
