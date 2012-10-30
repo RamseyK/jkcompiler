@@ -19,7 +19,7 @@
  * ----------------------------------------------------------------
  */
 
-struct basic_block_list_t *workList; // Used in value numbering
+struct block_list_t *workList; // Used in value numbering
 
 /* ----------------------------------------------------------------
  * State variables
@@ -38,7 +38,7 @@ void ir_destroy();
 
 // Value Numbering
 void ir_value_numbering();
-void ir_evn(struct basic_block_t *block, int block_level);
+void ir_evn(struct block_t *block, int block_level);
 void ir_print_vnt();
 
 void ir_optimize();

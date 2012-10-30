@@ -100,8 +100,8 @@ int cfg_block_list_size(struct block_list_t **list) {
 }
 
 // Check if a block exists in a list
-bool cfg_exists_in_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
-	struct basic_block_list_t *cur = *list;
+bool cfg_exists_in_block_list(struct block_list_t **list, struct block_t *block) {
+	struct block_list_t *cur = *list;
 	while(cur != NULL) {
 		if(cur->block == block)
 			return true;

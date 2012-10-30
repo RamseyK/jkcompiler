@@ -27,7 +27,7 @@ void ir_value_numbering() {
 	
 	// Recursively perform extended value numbering on all nodes in the workList
 	// workList will expand on the first pass through the root node
-	struct basic_block_list_t *it = workList;
+	struct block_list_t *it = workList;
 	while(it != NULL) {
 		// Process the current node in the workList
 		ir_evn(it->block, 0);
@@ -43,7 +43,7 @@ void ir_value_numbering() {
 }
 
 // Recursive worker function to perform extended value numbering (evn)
-void ir_evn(struct basic_block_t *block, int block_level) {
+void ir_evn(struct block_t *block, int block_level) {
 	// Don't value number for IF and WHILE blocks because their TAC nodes have already been numbered in the parent blocks
 	if(block->type != BLOCK_IF && block->type != BLOCK_WHILE) {
 		// Mark the block in the output
@@ -147,7 +147,7 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 	}
 	
 	// Go through the children of this block and perform numbering
-	struct basic_block_list_t *child = block->children;
+	struct block_list_t *child = block->children;
 	while(child != NULL) {
 		// Child has multiple parents
 		if(cfg_block_list_size(&child->block->parents) > 1) {

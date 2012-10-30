@@ -115,21 +115,12 @@ void cfg_print_vars_tac();
 void cfg_print_blocks();
 
 // CFG Block List Functions
-<<<<<<< HEAD
-struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
-int cfg_block_list_size(struct basic_block_list_t **list);
-bool cfg_exists_in_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
-void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
-void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
-void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);
-=======
 struct block_list_t *cfg_new_block_list(struct block_t *firstBlock);
 int cfg_block_list_size(struct block_list_t **list);
 bool cfg_exists_in_block_list(struct block_list_t **list, struct block_t *block);
 void cfg_append_block_list(struct block_list_t **list, struct block_t *block);
 void cfg_drop_block_list(struct block_list_t **list, struct block_t *block);
 void cfg_free_block_list(struct block_list_t **list, bool includeBlockEntry);
->>>>>>> Label alias resolution, refactoring basic_block to block
 
 // CFG Block Functions
 struct block_t *cfg_create_simple_block();
