@@ -32,6 +32,9 @@ struct basic_block_list_t *workList; // Used in value numbering
  * Intermediate Representation functions
  * ----------------------------------------------------------------
  */
+ 
+void ir_init();
+void ir_destroy();
 
 // Value Numbering
 void ir_value_numbering();

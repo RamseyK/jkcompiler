@@ -8,6 +8,15 @@
 
 #include "ir.h"
 
+void ir_init() {
+	workList = NULL;
+	cfg_vnt_init(); // Initialize value numbering table
+}
+
+void ir_destroy() {
+	cfg_vnt_destroy();
+}
+
 // Start value numbering on the CFG
 void ir_value_numbering() {
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_evn
@@ -50,7 +59,7 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 			struct vnt_entry_t *e_op2 = cfg_vnt_hash_lookup_key(k_op2);
 			struct vnt_entry_t *e_lhs = cfg_vnt_hash_lookup_key(k_lhs);
 			if(e_op1 != NULL && e_op2 != NULL && e_lhs != NULL) {
-				IRLOG(("%s = %s %s %s\n", e_lhs->pretty_name, e_op1->pretty_name, op, e_op2->pretty_name));
+				printf("%s = %s %s %s\n", e_lhs->pretty_name, e_op1->pretty_name, op, e_op2->pretty_name);
 			}
 			free(op);
 			

@@ -777,8 +777,10 @@ void cfg_vnt_hash_rollback(int block_level) {
 		struct vnt_entry_t *vnt_entry_it = vntable[i];
 		while(vnt_entry_it != NULL) {
 			// Pop from the stack until the block level is right
-			while(vnt_entry_it->vnt_node->block_level > block_level) {
-				cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+			if(vnt_entry_it->vnt_node != NULL) {
+				while(vnt_entry_it->vnt_node->block_level > block_level) {
+					cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+				}
 			}
 			vnt_entry_it = vnt_entry_it->next;
 		}

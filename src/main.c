@@ -125,9 +125,9 @@ int main(int argc, char **argv) {
     }
 
     // Perform Intermediate Representation
+    ir_init();
     ir_optimize();
-    cfg_vnt_init();
-    //ir_value_numbering();
+    ir_value_numbering();
 
     if (cmdArgs.verbose == 1) {
         /* print the user defined data types */
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
     }
     
     /* Free memory */
-    cfg_vnt_destroy();
+    ir_destroy();
 	cfg_destroy();
 	symtab_destroy();
 	usrdef_destroy();
