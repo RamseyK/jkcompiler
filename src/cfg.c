@@ -701,7 +701,7 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 // Does an update/insert on an entry for hash table
 void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 	// See if there is already an entry for this node by id
-	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_key(key);
+	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_id(key);
 	if(found_entry != NULL) {
 		// See if the value is different from what is already on the stack
 		if(strcmp(found_entry->vnt_node->val,val) != 0) {
@@ -714,13 +714,6 @@ void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 		CHECK_MEM_ERROR(temp_entry);
 		temp_entry->id = new_identifier(key);
 		temp_entry->vnt_node = NULL;
-		
-		// Create a pretty name for the entry and set it (for debug)
-		char buffer[8];
-		int chars_written = sprintf(buffer, "#%i", vnt_pretty_counter);
-		temp_entry->pretty_name = (char*)malloc(chars_written + 1);
-		strncpy(temp_entry->pretty_name, buffer, chars_written+1);
-		vnt_pretty_counter++;
 		
 		// Push the vnt_node onto the empty stack
 		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, block_level);
@@ -747,8 +740,10 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val) {
 		// Go through each entry that is chained at this table entry
 		struct vnt_entry_t *vnt_entry_it = vntable[i];
 		while(vnt_entry_it != NULL) {
-			if(strcmp(vnt_entry_it->vnt_node->val,val) == 0)
-				return vntable[i];
+			if(vnt_entry_it->vnt_node != NULL) {
+				if(strcmp(vnt_entry_it->vnt_node->val,val) == 0)
+					return vntable[i];
+			}
 			vnt_entry_it = vnt_entry_it->next;
 		}
 	}
@@ -756,7 +751,7 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val) {
 }
 
 // Looks up a vnt_entry_t by its key
-struct vnt_entry_t *cfg_vnt_hash_lookup_key(char *id) {
+struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id) {
 	// Get the key that corresponds to this id
 	int key = makekey(id, TABLE_SIZE);
 
@@ -779,10 +774,8 @@ void cfg_vnt_hash_rollback(int block_level) {
 		struct vnt_entry_t *vnt_entry_it = vntable[i];
 		while(vnt_entry_it != NULL) {
 			// Pop from the stack until the block level is right
-			if(vnt_entry_it->vnt_node != NULL) {
-				while(vnt_entry_it->vnt_node->block_level > block_level) {
-					cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
-				}
+			while((vnt_entry_it->vnt_node != NULL) && (vnt_entry_it->vnt_node->block_level > block_level)) {
+				cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
 			}
 			vnt_entry_it = vnt_entry_it->next;
 		}
@@ -794,8 +787,6 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 	// Free the id
 	if(entry->id != NULL)
 		free(entry->id);
-	if(entry->pretty_name != NULL)
-		free(entry->pretty_name);
 
 	// Free each node in the node stack
 	struct vnt_node_t *it = entry->vnt_node;
@@ -813,18 +804,15 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 /* Stack Manipulation */
 // Pops the top element from the stack and returns it;
 struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack) {
-	struct vnt_node_t *stack_top = *stack;
-	if(stack_top == NULL)
+	if(*stack == NULL)
 		return NULL;
-	*stack = stack_top->next;
+	struct vnt_node_t *stack_top = *stack;
+	*stack = (*stack)->next;
 	return stack_top;
 }
 
 // Pushes a new element to the top of the stack
 void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level) {
-	// Keep track of the top of the stack
-	struct vnt_node_t *stack_top = *stack;
-
 	// Make the node
 	struct vnt_node_t *temp_node = (struct vnt_node_t *) malloc(sizeof(struct vnt_node_t));
 	CHECK_MEM_ERROR(temp_node);
@@ -839,10 +827,10 @@ void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level) {
 	vnt_pretty_counter++;
 
 	// Attach the rest of the stack to this node
-	temp_node->next = stack_top;
+	temp_node->next = *stack;
 
 	// Move the top of the stack pointer to the new node
-	stack_top = temp_node;
+	*stack = temp_node;
 }
 
 // Frees the memory allocated for a node

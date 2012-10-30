@@ -46,21 +46,66 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 		// Number each TAC and insert it into the VNT
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
-			char *k_op1 = cfg_vnt_new_name();
 			char *op = op_str(tac->op);
-			char *k_op2 = cfg_vnt_new_name();
-			char *k_lhs = cfg_vnt_hash(tac->op1, tac->op, tac->op2);
-			cfg_vnt_hash_insert(k_op1, tac->op1, block_level);
-			cfg_vnt_hash_insert(k_op2, tac->op2, block_level);
-			cfg_vnt_hash_insert(k_lhs, tac->lhs_id, block_level);
+			
+			struct vnt_entry_t *e_op1 = NULL, *e_op2 = NULL, *e_lhs = NULL;
+			char *v_op1 = NULL, *v_op2 = NULL, *v_lhs = NULL; // Numbering values
+			
+			// Lookup op1 in the VNT
+			e_op1 = cfg_vnt_hash_lookup_id(tac->op1);
+			if(e_op1 == NULL) {
+				// op1 doesn't exist, insert it with a numbering value
+				v_op1 = cfg_vnt_new_name();
+				cfg_vnt_hash_insert(tac->op1, v_op1, block_level);
+			} else {
+				// op1 is already in the VNT, copy the numbering value
+				v_op1 = e_op1->vnt_node->val;
+			}
+			
+			// Case: a = b (no op2)
+			if(tac->op == OP_NO_OP) {
+				// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
+				v_lhs = v_op1;
+				cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+			} else { // Case: a = b + c (op2 exists)
+				// Lookup op2 in the VNT
+				e_op2 = cfg_vnt_hash_lookup_id(tac->op2);
+				if(e_op2 == NULL) {
+					// op2 doesn't exist, insert it with a numbering value
+					v_op2 = cfg_vnt_new_name();
+					cfg_vnt_hash_insert(tac->op2, v_op2, block_level);
+				} else {
+					// op2 is already in the VNT, copy the numbering value
+					v_op2 = e_op2->vnt_node->val;
+				}
+				
+				// Lookup the lhs_id in the VNT
+				e_lhs = cfg_vnt_hash_lookup_id(tac->lhs_id);
+				if(e_lhs == NULL) {
+					// lhs_id doesn't exist, insert it with a numbering value
+					v_lhs = cfg_vnt_hash(v_op1, tac->op, v_op2);
+					cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+				} else {
+					// lhs_id is already in the VNT, copy the numbering value
+					v_lhs = e_lhs->vnt_node->val;
+				}
+			}
+
+			// Lookup the latest entries in the VNT for each component of the TAC if we don't have it already
+			if(e_op1 == NULL)
+				e_op1 = cfg_vnt_hash_lookup_val(v_op1);
+			if(e_op2 == NULL && v_op2 != NULL)
+				e_op2 = cfg_vnt_hash_lookup_val(v_op2);
+			if(e_lhs == NULL)
+				e_lhs = cfg_vnt_hash_lookup_val(v_lhs);
 			
 			// Pretty print the value numbered TAC
-			struct vnt_entry_t *e_op1 = cfg_vnt_hash_lookup_key(k_op1);
-			struct vnt_entry_t *e_op2 = cfg_vnt_hash_lookup_key(k_op2);
-			struct vnt_entry_t *e_lhs = cfg_vnt_hash_lookup_key(k_lhs);
-			if(e_op1 != NULL && e_op2 != NULL && e_lhs != NULL) {
-				printf("%s = %s %s %s\n", e_lhs->pretty_name, e_op1->pretty_name, op, e_op2->pretty_name);
+			if(tac->op == OP_NO_OP) {
+				printf("%s = %s\n", e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
+			} else {
+				printf("%s = %s %s %s\n", e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
 			}
+			
 			free(op);
 			
 			tac = tac->next;

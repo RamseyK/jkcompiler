@@ -15,7 +15,7 @@
 char *op_str(int i_op) {
 	// Figure out which OP should be printed
 	char *temp = NULL;
-	char op [3];
+	char op [4];
 	int cw = 0; // characters written
 	switch(i_op) {
 	case OP_PLUS:

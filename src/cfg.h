@@ -74,7 +74,6 @@ struct vnt_node_t {
 // An entry in the hash table with the variable id and stack of hash values
 struct vnt_entry_t {
 	char *id;  	// The id of the variable
-	char *pretty_name; // Human readable numbering for debug
 	struct vnt_node_t *vnt_node; // The stack of nodes containing the hash information for an entry
 	struct vnt_entry_t *next; // The next entry (for hashtable chaining)
 };
@@ -142,7 +141,7 @@ char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
 void cfg_vnt_hash_insert(char *key, char *val, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
-struct vnt_entry_t *cfg_vnt_hash_lookup_key(char *id); // Lookup by the vn_entry_t id
+struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id); // Lookup by the vn_entry_t id
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level
 void cfg_vnt_free_entry(struct vnt_entry_t *entry);
 
