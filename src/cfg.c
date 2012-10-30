@@ -439,6 +439,12 @@ void cfg_connect_block(struct basic_block_t *b1, struct basic_block_t *b2) {
 		// Add b1 as a parent to b2
 		cfg_append_block_list(&b2->parents,b1);
 
+		// If the second block is a simple block, drop it
+		if(b2->type == BLOCK_SIMPLE) {
+			cfg_drop_block_list(&blockList, b2);
+			cfg_free_block(b2);
+		}
+
 	}
 	
 	//Debug

@@ -15,7 +15,7 @@
 char *op_str(int i_op) {
 	// Figure out which OP should be printed
 	char *temp = NULL;
-	char op [4];
+	char op [8];
 	int cw = 0; // characters written
 	switch(i_op) {
 	case OP_PLUS:
@@ -57,8 +57,15 @@ char *op_str(int i_op) {
 	case OP_GE:
 		cw = sprintf(op, ">=");
 		break;
+	case OP_NO_OP:
+		cw = 0;
+		op[0] = '\0';
+		break;
+	case OP_GOTO:
+		cw = sprintf(op, "goto");
+		break;
 	default:
-		cw = sprintf(op, " ");
+		cw = sprintf(op, "uhoh");
 		break;
 	}
 	
