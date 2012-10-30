@@ -128,6 +128,18 @@ int main(int argc, char **argv) {
     ir_init();
     ir_optimize();
     ir_value_numbering();
+    
+	printf("\nPrint Blocks:\n");
+	cfg_print_blocks();
+	printf("\n");
+	
+	printf("\nPrint variables and TAC:\n");
+	cfg_print_vars_tac();
+	printf("\n");
+	
+	printf("\nPrint value numbering:\n");
+	ir_print_vnt();
+	printf("\n");
 
     if (cmdArgs.verbose == 1) {
         /* print the user defined data types */

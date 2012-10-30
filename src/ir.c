@@ -19,6 +19,9 @@ void ir_destroy() {
 
 // Start value numbering on the CFG
 void ir_value_numbering() {
+	// Clear the output buffer
+	memset(ir_vnt_out_buffer, 0, sizeof(ir_vnt_out_buffer));
+
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_evn
 	workList = cfg_new_block_list(cfg_get_root());
 	
@@ -101,9 +104,9 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 			
 			// Pretty print the value numbered TAC
 			if(tac->op == OP_NO_OP) {
-				printf("%s = %s\n", e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s%s = %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
 			} else {
-				printf("%s = %s %s %s\n", e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s%s = %s %s %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
 			}
 			
 			free(op);
@@ -129,15 +132,10 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 	}
 }
 
+void ir_print_vnt() {
+	printf("%s", ir_vnt_out_buffer);
+}
+
 void ir_optimize() {
-
-	// Print the CFG blocks
-	printf("\nPrint Blocks:\n");
-	cfg_print_blocks();
-	printf("\n");
-	printf("\nPrint variables and TAC:\n");
-	cfg_print_vars_tac();
-	printf("\n");
-
 }
 

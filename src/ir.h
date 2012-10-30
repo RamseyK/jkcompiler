@@ -25,8 +25,8 @@ struct basic_block_list_t *workList; // Used in value numbering
  * State variables
  * ----------------------------------------------------------------
  */
- 
 
+char ir_vnt_out_buffer[1024];
  
 /* ----------------------------------------------------------------
  * Intermediate Representation functions
@@ -39,6 +39,7 @@ void ir_destroy();
 // Value Numbering
 void ir_value_numbering();
 void ir_evn(struct basic_block_t *block, int block_level);
+void ir_print_vnt();
 
 void ir_optimize();
 
