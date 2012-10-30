@@ -76,10 +76,6 @@ void ir_evn(struct block_t *block, int block_level) {
 				// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
 				IRLOG(("lhs insert (nop)\n"));
 				v_lhs = v_op1;
-				if(v_lhs == NULL)
-					IRLOG(("v_lhs is null\n"));
-				if(tac->lhs_id)
-					IRLOG(("lhs_id is null\n"));
 				e_lhs = cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
 			} else { // Case: a = b + c (op2 exists)
 				// Lookup op2 in the VNT
@@ -110,7 +106,7 @@ void ir_evn(struct block_t *block, int block_level) {
 					// Previous computation existed, perform optimization
 					if(e_lhs_exist != NULL) {
 						// Optimize the TAC node
-						tac->op1 = e_lhs_exist->id;
+						tac->op1 = new_identifier(e_lhs_exist->id);
 						tac->op = OP_NO_OP;
 						free(tac->op2);
 						tac->op2 = NULL;
