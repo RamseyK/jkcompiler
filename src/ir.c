@@ -46,6 +46,9 @@ void ir_value_numbering() {
 void ir_evn(struct basic_block_t *block, int block_level) {
 	// Don't value number for IF and WHILE blocks because their TAC nodes have already been numbered in the parent blocks
 	if(block->type != BLOCK_IF && block->type != BLOCK_WHILE) {
+		// Mark the block in the output
+		sprintf(ir_vnt_out_buffer, "%s%s:\n", ir_vnt_out_buffer, block->label);
+	
 		// Number each TAC and insert it into the VNT
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
@@ -55,78 +58,109 @@ void ir_evn(struct basic_block_t *block, int block_level) {
 			char *v_op1 = NULL, *v_op2 = NULL, *v_lhs = NULL; // Numbering values
 			
 			// Lookup op1 in the VNT
+			IRLOG(("tac op1: %s\n", tac->op1));
 			e_op1 = cfg_vnt_hash_lookup_id(tac->op1);
 			if(e_op1 == NULL) {
 				// op1 doesn't exist, insert it with a numbering value
+				IRLOG(("op1 insert\n"));
 				v_op1 = cfg_vnt_new_name();
-				cfg_vnt_hash_insert(tac->op1, v_op1, block_level);
+				e_op1 = cfg_vnt_hash_insert(tac->op1, v_op1, block_level);
 			} else {
 				// op1 is already in the VNT, copy the numbering value
+				IRLOG(("op1 found\n"));
 				v_op1 = e_op1->vnt_node->val;
 			}
 			
 			// Case: a = b (no op2)
 			if(tac->op == OP_NO_OP) {
 				// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
+				IRLOG(("lhs insert (nop)\n"));
 				v_lhs = v_op1;
-				cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+				if(v_lhs == NULL)
+					IRLOG(("v_lhs is null\n"));
+				if(tac->lhs_id)
+					IRLOG(("lhs_id is null\n"));
+				e_lhs = cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
 			} else { // Case: a = b + c (op2 exists)
 				// Lookup op2 in the VNT
+				IRLOG(("tac op2: %s\n", tac->op2));
 				e_op2 = cfg_vnt_hash_lookup_id(tac->op2);
 				if(e_op2 == NULL) {
 					// op2 doesn't exist, insert it with a numbering value
+					IRLOG(("op2 insert\n"));
 					v_op2 = cfg_vnt_new_name();
-					cfg_vnt_hash_insert(tac->op2, v_op2, block_level);
+					e_op2 = cfg_vnt_hash_insert(tac->op2, v_op2, block_level);
 				} else {
 					// op2 is already in the VNT, copy the numbering value
+					IRLOG(("op2 found\n"));
 					v_op2 = e_op2->vnt_node->val;
 				}
 				
 				// Lookup the lhs_id in the VNT
+				IRLOG(("tac lhs: %s\n", tac->lhs_id));
 				e_lhs = cfg_vnt_hash_lookup_id(tac->lhs_id);
 				if(e_lhs == NULL) {
 					// lhs_id doesn't exist, insert it with a numbering value
+					IRLOG(("lhs insert\n"));
 					v_lhs = cfg_vnt_hash(v_op1, tac->op, v_op2);
-					cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+					
+					// Lookup the v_lhs to check for previous computations of the TAC right hand side
+					struct vnt_entry_t *e_lhs_exist = cfg_vnt_hash_lookup_val(v_lhs);
+					
+					// Previous computation existed, perform optimization
+					if(e_lhs_exist != NULL) {
+						// Optimize the TAC node
+						tac->op1 = e_lhs_exist->id;
+						tac->op = OP_NO_OP;
+						free(tac->op2);
+						tac->op2 = NULL;
+						
+						// Lookup the new op1
+						e_op1 = cfg_vnt_hash_lookup_id(tac->op1);
+						
+						// Insert the optimized left hand side
+						e_lhs = cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+					} else {
+						e_lhs = cfg_vnt_hash_insert(tac->lhs_id, v_lhs, block_level);
+					}
 				} else {
 					// lhs_id is already in the VNT, copy the numbering value
+					IRLOG(("lhs found\n"));
 					v_lhs = e_lhs->vnt_node->val;
 				}
 			}
-
-			// Lookup the latest entries in the VNT for each component of the TAC if we don't have it already
-			if(e_op1 == NULL)
-				e_op1 = cfg_vnt_hash_lookup_val(v_op1);
-			if(e_op2 == NULL && v_op2 != NULL)
-				e_op2 = cfg_vnt_hash_lookup_val(v_op2);
-			if(e_lhs == NULL)
-				e_lhs = cfg_vnt_hash_lookup_val(v_lhs);
 			
 			// Pretty print the value numbered TAC
 			if(tac->op == OP_NO_OP) {
-				sprintf(ir_vnt_out_buffer, "%s%s = %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s\t%s := %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
+				IRLOG(("%s", ir_vnt_out_buffer));
 			} else {
-				sprintf(ir_vnt_out_buffer, "%s%s = %s %s %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s\t%s := %s %s %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
+				IRLOG(("%s", ir_vnt_out_buffer));
 			}
 			
 			free(op);
 			
 			tac = tac->next;
 		}
+		sprintf(ir_vnt_out_buffer, "%s\n", ir_vnt_out_buffer);
 	}
 	
 	// Go through the children of this block and perform numbering
 	struct basic_block_list_t *child = block->children;
 	while(child != NULL) {
-		// Value number the current child block
-		ir_evn(child->block, block_level+1);
-		
-		// Roll back the numbering before moving to the next sibling
-		cfg_vnt_hash_rollback(block_level);
-		
-		// If the child has multiple parents, add it the workList for later
-		if(cfg_block_list_size(&child->block->parents) > 1)
-			cfg_append_block_list(&workList, child->block);
+		// Child has multiple parents
+		if(cfg_block_list_size(&child->block->parents) > 1) {
+			// Base case, Add to the work list for later if it doesn't already exist
+			if(!cfg_exists_in_block_list(&workList, child->block))
+				cfg_append_block_list(&workList, child->block);
+			
+			// Roll back the numbering before moving to the next sibling
+			cfg_vnt_hash_rollback(block_level);
+		} else {
+			// Value number the current child block recursively
+			ir_evn(child->block, block_level+1);
+		}
 		
 		child = child->next;
 	}

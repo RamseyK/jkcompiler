@@ -26,7 +26,7 @@ struct basic_block_list_t *workList; // Used in value numbering
  * ----------------------------------------------------------------
  */
 
-char ir_vnt_out_buffer[1024];
+char ir_vnt_out_buffer[2048];
  
 /* ----------------------------------------------------------------
  * Intermediate Representation functions

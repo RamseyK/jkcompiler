@@ -110,6 +110,7 @@ void cfg_print_blocks();
 // CFG Block List Functions
 struct basic_block_list_t *cfg_new_block_list(struct basic_block_t *firstBlock);
 int cfg_block_list_size(struct basic_block_list_t **list);
+bool cfg_exists_in_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_drop_block_list(struct basic_block_list_t **list, struct basic_block_t *block);
 void cfg_free_block_list(struct basic_block_list_t **list, bool includeBlockEntry);
@@ -139,7 +140,7 @@ void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
-void cfg_vnt_hash_insert(char *key, char *val, int block_level); // Creates an inserts a node
+struct vnt_entry_t *cfg_vnt_hash_insert(char *key, char *val, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
 struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id); // Lookup by the vn_entry_t id
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level

@@ -99,6 +99,17 @@ int cfg_block_list_size(struct basic_block_list_t **list) {
 	return count;
 }
 
+// Check if a block exists in a list
+bool cfg_exists_in_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
+	struct basic_block_list_t *cur = *list;
+	while(cur != NULL) {
+		if(cur->block == block)
+			return true;
+		cur = cur->next;
+	}
+	return false;
+}
+
 // Append to an existing CFG block list
 void cfg_append_block_list(struct basic_block_list_t **list, struct basic_block_t *block) {
 	if(block == NULL)
@@ -467,11 +478,11 @@ void cfg_print_tac(struct three_address_t *tac) {
 	char *op = op_str(tac->op);
 
 	if(tac->op == OP_NO_OP)
-		printf("\t%s = %s\n", tac->lhs_id, tac->op1);
+		printf("\t%s := %s\n", tac->lhs_id, tac->op1);
 	else if(tac->op == OP_GOTO)
 		printf("\t%s %s %s %s\n", tac->lhs_id, tac->op1, "goto", tac->op2);
 	else
-		printf("\t%s = %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
+		printf("\t%s := %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
 		
 
 	free(op);
@@ -706,8 +717,8 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 }
 
 /* Hash Table manipulation */
-// Does an update/insert on an entry for hash table
-void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
+// Does an update/insert on an entry for hash table and returns the newly created entry
+struct vnt_entry_t *cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 	// See if there is already an entry for this node by id
 	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_id(key);
 	if(found_entry != NULL) {
@@ -716,6 +727,7 @@ void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 			// Push onto the stack
 			cfg_vnt_stack_push(&(found_entry->vnt_node), val, block_level);
 		}
+		return found_entry;
 	} else {
 		// Create the vnt_entry node
 		struct vnt_entry_t *temp_entry = (struct vnt_entry_t *)malloc(sizeof(struct vnt_entry_t));
@@ -738,6 +750,7 @@ void cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 			GOTO_END_OF_LIST(vnt_entry_it);
 			vnt_entry_it->next = temp_entry;
 		}
+		return temp_entry;
 	}
 }
 
