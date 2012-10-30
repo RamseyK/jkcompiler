@@ -237,7 +237,7 @@ struct block_t *cfg_create_simple_block() {
 
 	//Debug
 	IRLOG(("Simple block created\n"));
-	cfg_print_block(temp_block);
+	//cfg_print_block(temp_block);
 
 	return temp_block;
 }
@@ -327,7 +327,7 @@ struct block_t *cfg_create_if_block(struct block_t *condition, struct block_t *t
 
 	//Debug
 	IRLOG(("If block created\n"));
-	cfg_print_block(condition);
+	//cfg_print_block(condition);
 
 	return condition;
 }
@@ -367,7 +367,7 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 
 	//Debug
 	IRLOG(("While block created\n"));
-	cfg_print_block(condition);
+	//cfg_print_block(condition);
 
 	return condition;
 }
@@ -463,7 +463,7 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 	
 	//Debug
 	IRLOG(("Blocks connected\n\n"));
-	cfg_print_blocks();
+	//cfg_print_blocks();
 
 }
 
@@ -566,7 +566,7 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 		end->next->next = NULL;
 	}
 	IRLOG(("Tac node just created: "));
-	cfg_print_tac(temp_tac);
+	//cfg_print_tac(temp_tac);
 
 	// Add to the varlist
 	cfg_add_to_varlist(temp_tac->lhs_id);
@@ -672,7 +672,7 @@ void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2)
 	tac2->prev = end1;
 
 	IRLOG(("Connected this: \n"));
-	cfg_print_tac(tac1);
+	//cfg_print_tac(tac1);
 }
 
 /* ----------------------------------
