@@ -68,6 +68,9 @@ void ir_evn(struct block_t *block, int block_level) {
 			} else {
 				// op1 is already in the VNT, copy the numbering value
 				IRLOG(("op1 found\n"));
+				if(e_op1->vnt_node == NULL) {
+					IRLOG(("%s: %s->vnt_node is null\n",block->label,e_op1->id));
+				}
 				v_op1 = e_op1->vnt_node->val;
 			}
 			
@@ -128,10 +131,13 @@ void ir_evn(struct block_t *block, int block_level) {
 			
 			// Pretty print the value numbered TAC
 			if(tac->op == OP_NO_OP) {
-				sprintf(ir_vnt_out_buffer, "%s\t%s := %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s)\n", ir_vnt_out_buffer, tac->lhs_id, e_lhs->vnt_node->pretty_name, tac->op1, e_op1->vnt_node->pretty_name);
+				IRLOG(("%s", ir_vnt_out_buffer));
+			} else if(tac->op == OP_GOTO) {
+				sprintf(ir_vnt_out_buffer, "%s\t%s(%s)(%s(%s)) %s %s(%s)\n", ir_vnt_out_buffer, tac->lhs_id, e_lhs->vnt_node->pretty_name, tac->op1, e_op1->vnt_node->pretty_name, op, tac->op2, e_op2->vnt_node->pretty_name);
 				IRLOG(("%s", ir_vnt_out_buffer));
 			} else {
-				sprintf(ir_vnt_out_buffer, "%s\t%s := %s %s %s\n", ir_vnt_out_buffer, e_lhs->vnt_node->pretty_name, e_op1->vnt_node->pretty_name, op, e_op2->vnt_node->pretty_name);
+				sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s) %s %s(%s)\n", ir_vnt_out_buffer, tac->lhs_id, e_lhs->vnt_node->pretty_name, tac->op1, e_op1->vnt_node->pretty_name, op, tac->op2, e_op2->vnt_node->pretty_name);
 				IRLOG(("%s", ir_vnt_out_buffer));
 			}
 			

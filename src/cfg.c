@@ -410,18 +410,19 @@ struct block_t *cfg_find_bottom(struct block_t *block) {
 // Connect CFG b1 to CFG b2
 void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 	if(b1 == NULL || b2 == NULL) {
-		IRLOG(("b1 or b2 was null\n"));
+		//IRLOG(("b1 or b2 was null\n"));
 		return;
 	}
-	IRLOG(("Connecting blocks\nb1: %s\tb2: %s\n",b1->label,b2->label));
+	//IRLOG(("Connecting blocks\nb1: %s\tb2: %s\n",b1->label,b2->label));
 
 	// First block is the root of a CFG. b2 will be linked to the bottom of b1
 	struct block_t *bottom = cfg_find_bottom(b1);
 	
-	IRLOG(("Bottom block: %s\n",bottom->label));
+	//IRLOG(("Bottom block: %s\n",bottom->label));
 
 	// If the bottom is a dummy, replace the dummy block with b2
 	if(bottom->entry == NULL) {
+		//IRLOG(("Bottom block is a dummy\n"));
 		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
 		// TODO:  The dummy node is the target of a jump in the case of while loop and if (false branch)
 		// Need to create and maintain a table to traverse later to fix labels that have been changed
@@ -437,7 +438,9 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 		// Drop the dummy and destroy it
 		cfg_drop_block_list(&blockList, b2);
 		cfg_free_block(b2);
-	} else { // Bottom isn't a dummy, merge the TACs making a maximal basic block
+	} else {
+		//IRLOG(("Bottom block is not a dummy\n"));
+		// Bottom isn't a dummy, merge the TACs making a maximal basic block
 		// Stick the end of b1's TACs to the beginning of b2's TACs
 		struct three_address_t *end = bottom->entry;
 		while(end->next != NULL)
@@ -476,17 +479,26 @@ void cfg_add_label_alias(char *label1, char *label2) {
 		if(set_contains(it->set,label1)) {
 			set_add(it->set,label2);
 			found = true;
+			//IRLOG(("Found an entry, added alias %s for %s\n",label2,label1));
 		}
 		it = it->next;
 	}
 	// Add a new set_list item for this alias pair
 	if(!found) {
+		//IRLOG(("Did not find an entry, trying to add it\n"));
 		it = label_aliases;
-		GOTO_END_OF_LIST(it);
-		it->next = (struct set_list_t *) malloc(sizeof(struct set_list_t));
-		CHECK_MEM_ERROR(it->next);
-		it->next->set = new_set(label1);
-		set_add(it->next->set,label2);
+		if(it == NULL) {
+			it = (struct set_list_t *) malloc(sizeof(struct set_list_t));
+			it->set = new_set(label1);
+			set_add(it->set,label2);
+		} else {
+			GOTO_END_OF_LIST(it);
+			it->next = (struct set_list_t *) malloc(sizeof(struct set_list_t));
+			CHECK_MEM_ERROR(it->next);
+			it->next->set = new_set(label1);
+			set_add(it->next->set,label2);
+		}
+		//IRLOG(("Added %s as an alias for %s\n",label2, label1));
 	}
 }
 
@@ -671,6 +683,9 @@ void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2)
 	end1->next = tac2;
 	tac2->prev = end1;
 
+	//Update the last connected tac
+	lastConnectedTac = tac2;
+
 	IRLOG(("Connected this: \n"));
 	//cfg_print_tac(tac1);
 }
@@ -813,7 +828,9 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id) {
 // Rolls back each entry of the hash table to entries with a block_level
 // less than or equal to that specified
 void cfg_vnt_hash_rollback(int block_level) {
+	IRLOG(("Rolling back to level %i\n",block_level));
 	int i;
+	// Rolls back the stacks
 	for(i = 0; i<TABLE_SIZE; i++) {
 		// Iterate through each chained element
 		struct vnt_entry_t *vnt_entry_it = vntable[i];
@@ -825,6 +842,34 @@ void cfg_vnt_hash_rollback(int block_level) {
 			vnt_entry_it = vnt_entry_it->next;
 		}
 	}
+	//IRLOG(("Done popping stacks\n"));
+	// Cleans up entries where the stack is empty
+	for(i = 0; i<TABLE_SIZE; i++) {
+		//Iterate through each chained element
+		struct vnt_entry_t *it = vntable[i];
+		if(it != NULL) {
+			// Prune the front of the list
+			while(it != NULL && it->vnt_node == NULL) {
+				//IRLOG(("Null vnt, remove first ele: %s\n",it->id));
+				struct vnt_entry_t **entry = &vntable[i];
+				//IRLOG(("Address thing worked\n"));
+				*entry = (*entry)->next;
+				//IRLOG(("Removed.\n"));
+				it = it->next;
+			}
+			if(it == NULL) continue;
+			// Check the chained elements (front of list has been pruned)
+			while(it->next != NULL) {
+				// If the vnt_node is null after rollback, the entry should be removed
+				if(it->next->vnt_node == NULL) {
+					//IRLOG(("Null vnt, removing entry: %s\n",it->id));
+					it->next = it->next->next;
+				}
+				it = it->next;
+			}
+		}
+	}
+	IRLOG(("Rolled back to level 2!\n"));
 }
 
 // Free up memory allocated for a hash entry
