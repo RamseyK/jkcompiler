@@ -353,6 +353,7 @@ struct variable_access_t {
 				a verbose description of the data type
 				that is validated */
     struct expression_data_t *expr;
+    char *tacName;
 };
 
 struct object_instantiation_t {

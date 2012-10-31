@@ -815,12 +815,22 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 	// Concatenate the strings together with #
 	char *temp_name = NULL;
 	char buffer[1024];
-
-	// Concatenate the strings to make the hash
-	int chars_written = sprintf(buffer, "%s%i%s", op1, op, op2);
+	int chars_written;
+	// If the op has the commutative property (PLUS and STAR) then
+	// hash using the lowest on the left of the op
+	if(op == OP_PLUS || op == OP_STAR) {
+		// Concatenate the strings with lowest lexicographically on left
+		if(strcmp(op1,op2) < 0) {
+			chars_written = sprintf(buffer, "%s%i%s",op1, op, op2);
+		} else {
+			chars_written = sprintf(buffer, "%s%i%s", op2, op, op1);
+		}
+	} else {
+		// Concatenate the strings to make the hash
+		chars_written = sprintf(buffer, "%s%i%s", op1, op, op2);
+	}
 	temp_name = (char *)malloc(chars_written +1);
 	strncpy(temp_name, buffer, chars_written+1);
-
 	return temp_name;
 }
 
@@ -886,14 +896,27 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 	// Get the key that corresponds to this id
 	char *tdStr = cfg_tac_data_to_str(td);
 	int key = makekey(tdStr, TABLE_SIZE);
+	IRLOG(("Looking for: %s\n",tdStr));
 	free(tdStr);
 
 	// Iterate through the elements at vntable[key] until found
-	struct vnt_entry_t *vnt_entry_it = vntable[key];
-	while(vnt_entry_it != NULL) {
-		if(vnt_entry_it->tacData == td)
-			return vnt_entry_it;
-		vnt_entry_it = vnt_entry_it->next;
+	struct vnt_entry_t *it = vntable[key];
+	while(it != NULL) {
+		IRLOG(("Looking at entry in hashtable: %s\n",cfg_tac_data_to_str(it->tacData)));
+		// Determine equality using the type and data
+		// INT
+		if(it->tacData->type == OP_TYPE_INT && td->type == OP_TYPE_INT && it->tacData->d.val == td->d.val) {
+			return it;
+		}
+		// VAR
+		if(it->tacData->type == OP_TYPE_VAR && td->type == OP_TYPE_VAR && strcmp(it->tacData->d.id,td->d.id) == 0){
+			return it;
+		}
+		// BOOL
+		if(it->tacData->type == OP_TYPE_BOOL && td->type == OP_TYPE_BOOL && it->tacData->d.b == td->d.b) {
+			return it;
+		}
+		it = it->next;
 	}
 	return NULL;
 }
