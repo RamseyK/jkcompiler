@@ -236,13 +236,12 @@ struct function_designator_t {
 struct expression_data_t {
     float val;
     char *type;
-	//char *tacName; // Name used in Intermediate Representation
+	struct tac_data_t *tacData; // Data used for tac generation
 };
 
 struct unsigned_number_t {
     int ui;
     struct expression_data_t *expr;
-    char *tacName;
 };
 
 struct variable_access_t;
@@ -269,7 +268,6 @@ struct primary_t {
         } p;
     } data;
     struct expression_data_t *expr;
-    char *tacName;
 };
 
 #define FACTOR_T_SIGNFACTOR 1
@@ -286,7 +284,6 @@ struct factor_t {
         struct primary_t *p;
     } data;
     struct expression_data_t *expr;
-    char *tacName;
 };
 
 struct term_t;
@@ -294,7 +291,6 @@ struct term_t {
     struct factor_t *f;
     int mulop;
     struct expression_data_t *expr;
-    char *tacName;
     struct term_t *next;
 };
 
@@ -303,7 +299,6 @@ struct simple_expression_t {
     struct term_t *t;
     int addop;
     struct expression_data_t *expr;
-    char *tacName;
     struct simple_expression_t *next;
 };
 
@@ -312,7 +307,6 @@ struct expression_t {
     int relop;
     struct simple_expression_t *se2;
     struct expression_data_t *expr;
-    char *tacName;
     struct block_t *block; // Temporary pointer for building CFG
 };
 
@@ -359,7 +353,6 @@ struct variable_access_t {
 				a verbose description of the data type
 				that is validated */
     struct expression_data_t *expr;
-    char *tacName;
 };
 
 struct object_instantiation_t {

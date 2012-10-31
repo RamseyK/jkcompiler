@@ -144,10 +144,10 @@ int main(int argc, char **argv) {
     
     /* Free memory */
     ir_destroy();
-	cfg_destroy();
+	//cfg_destroy();
 	symtab_destroy();
 	usrdef_destroy();
-    free_program(program);
+    //free_program(program);
 
     return 0;
 }

@@ -20,6 +20,20 @@ void cfg_init() {
 	block_counter = 0;
 	name_counter = 0;
 	varList = NULL;
+
+	// Initialize the constant true and false tac data nodes
+	TAC_DATA_BOOL_TRUE = cfg_new_tac_data();
+	TAC_DATA_BOOL_TRUE->type = OP_TYPE_BOOL;
+	TAC_DATA_BOOL_TRUE->d.b = true;
+
+	TAC_DATA_BOOL_FALSE = cfg_new_tac_data();
+	TAC_DATA_BOOL_FALSE->type = OP_TYPE_BOOL;
+	TAC_DATA_BOOL_FALSE->d.b = false;
+
+	// constant tac data for "if"
+	TAC_DATA_KEYWORD_IF = cfg_new_tac_data();
+	TAC_DATA_KEYWORD_IF->type = OP_TYPE_VAR;
+	TAC_DATA_KEYWORD_IF->d.id = "if";
 }
 
 // Return the root of the CFG
@@ -237,7 +251,7 @@ struct block_t *cfg_create_simple_block() {
 
 	//Debug
 	IRLOG(("Simple block created\n"));
-	//cfg_print_block(temp_block);
+	cfg_print_block(temp_block);
 
 	return temp_block;
 }
@@ -315,19 +329,19 @@ struct block_t *cfg_create_if_block(struct block_t *condition, struct block_t *t
 	cfg_append_block_list(&falseBranch->children, dummy);
 	
 	// Add the branch/goto statement for the condition block and the true/false branches
-	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs_id,trueBranch->label);
-	struct three_address_t *condFals = cfg_generate_goto_tac("true",falseBranch->label);
+	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs,trueBranch->label);
+	struct three_address_t *condFals = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,falseBranch->label);
 	cfg_connect_tac(condition->entry,condTrue);
 	cfg_connect_tac(condition->entry,condFals);
 
-	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",dummy->label);
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
 	cfg_connect_tac(trueBranch->entry,checkCond1);
-	struct three_address_t *checkCond2 = cfg_generate_goto_tac("true",dummy->label);
+	struct three_address_t *checkCond2 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
 	cfg_connect_tac(falseBranch->entry,checkCond2);
 
 	//Debug
 	IRLOG(("If block created\n"));
-	//cfg_print_block(condition);
+	cfg_print_block(condition);
 
 	return condition;
 }
@@ -356,18 +370,18 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 	cfg_append_block_list(&condition->children, dummy);
 	
 	// Add the branch/goto statement for the condition block and the true/false branches
-	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs_id,bodyBlock->label);
+	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs,bodyBlock->label);
 	cfg_connect_tac(condition->entry,condTrue);
 	// The next tac node should be to jump to the dummy unconditionally
-	struct three_address_t *condFals = cfg_generate_goto_tac("true",dummy->label);
+	struct three_address_t *condFals = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
 	cfg_connect_tac(condition->entry,condFals);
 
-	struct three_address_t *checkCond1 = cfg_generate_goto_tac("true",condition->label);
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,condition->label);
 	cfg_connect_tac(bodyBlock->entry,checkCond1);
 
 	//Debug
 	IRLOG(("While block created\n"));
-	//cfg_print_block(condition);
+	cfg_print_block(condition);
 
 	return condition;
 }
@@ -466,7 +480,7 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 	
 	//Debug
 	IRLOG(("Blocks connected\n\n"));
-	//cfg_print_blocks();
+	cfg_print_blocks();
 
 }
 
@@ -513,15 +527,27 @@ void cfg_print_tac(struct three_address_t *tac) {
 	
 	char *op = op_str(tac->op);
 
+	// Get string representations of lhs, op1 and op2
+	//IRLOG(("Going to convert lhs tac data to str\n"));
+	char *lhs_str = cfg_tac_data_to_str(tac->lhs);
+	//IRLOG(("Going to convert op1 tac data to str\n"));
+	char *op1_str = cfg_tac_data_to_str(tac->op1);
+	//IRLOG(("Going to convert op2 tac data to str\n"));
+	char *op2_str = cfg_tac_data_to_str(tac->op2);
+	//IRLOG(("All tac data to str\n"));
+
 	if(tac->op == OP_NO_OP)
-		printf("\t%s := %s\n", tac->lhs_id, tac->op1);
+		printf("\t%s := %s\n", lhs_str, op1_str);
 	else if(tac->op == OP_GOTO)
-		printf("\t%s %s %s %s\n", tac->lhs_id, tac->op1, "goto", tac->op2);
+		printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);
 	else
-		printf("\t%s := %s %s %s\n", tac->lhs_id, tac->op1, op, tac->op2);
+		printf("\t%s := %s %s %s\n", lhs_str, op1_str, op, op2_str);
 		
 
 	free(op);
+	free(lhs_str);
+	free(op1_str);
+	free(op2_str);
 	
 	cfg_print_tac(tac->next);
 }
@@ -542,17 +568,22 @@ char *cfg_new_temp_name() {
 
 // Generate a TAC node and add it to the master list. Returns the name of the tac
 // If lhs_id is NULL, a temporary name is generated
-char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2) {
+struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2) {
 	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
 	CHECK_MEM_ERROR(temp_tac);
 	
-	if(lhs_id == NULL)
-		temp_tac->lhs_id = cfg_new_temp_name();
-	else
-		temp_tac->lhs_id = new_identifier(lhs_id);
+	if(lhs_id == NULL) {
+		temp_tac->lhs = cfg_new_tac_data();
+		temp_tac->lhs->type = OP_TYPE_VAR;
+		temp_tac->lhs->d.id = cfg_new_temp_name();
+	} else {
+		temp_tac->lhs = cfg_new_tac_data();
+		temp_tac->lhs->type = OP_TYPE_VAR;
+		temp_tac->lhs->d.id = new_identifier(lhs_id);
+	}
 	temp_tac->op = op;
-	temp_tac->op1 = new_identifier(op1);
-	temp_tac->op2 = new_identifier(op2);
+	temp_tac->op1 = op1;
+	temp_tac->op2 = op2;
 	temp_tac->next = NULL;
 	temp_tac->prev = NULL;
 	
@@ -581,18 +612,20 @@ char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *
 	//cfg_print_tac(temp_tac);
 
 	// Add to the varlist
-	cfg_add_to_varlist(temp_tac->lhs_id);
+	cfg_add_to_varlist(temp_tac->lhs->d.id);
 
-	return temp_tac->lhs_id;
+	return temp_tac->lhs;
 }
 
-struct three_address_t *cfg_generate_goto_tac(const char *cond, const char *label) {
+struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const char *label) {
 	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
 	CHECK_MEM_ERROR(temp_tac);
-	temp_tac->lhs_id = new_identifier("if");
+	temp_tac->lhs = TAC_DATA_KEYWORD_IF;
 	temp_tac->op = OP_GOTO;
-	temp_tac->op1 = new_identifier(cond);
-	temp_tac->op2 = new_identifier(label);
+	temp_tac->op1 = cond;
+	temp_tac->op2 = cfg_new_tac_data();
+	temp_tac->op2->type = OP_TYPE_VAR;
+	temp_tac->op2->d.id = new_identifier(label);
 	temp_tac->next = NULL;
 	temp_tac->prev = NULL;
 
@@ -616,6 +649,41 @@ struct three_address_t *cfg_generate_goto_tac(const char *cond, const char *labe
 	}
 
 	return temp_tac;
+}
+
+// Converts the tac data to a string representation
+char *cfg_tac_data_to_str(struct tac_data_t *td) {
+	if(td == NULL) return NULL;
+	if(td->type == OP_TYPE_VAR) {
+		//IRLOG(("Returning VAR %s\n",td->d.id));
+		return new_identifier(td->d.id);
+	}
+	if(td->type == OP_TYPE_INT) {
+		char buffer[32];
+		int chars_written = sprintf(buffer, "%d", td->d.val);
+		char *retVal = (char *) malloc(chars_written + 1);
+		strncpy(retVal, buffer, chars_written + 1);
+		//IRLOG(("Returning INT %d as %s\n",td->d.val,retVal));
+		return retVal;
+	}
+	if(td->type == OP_TYPE_BOOL) {
+		//IRLOG(("Returning BOOL %d\n",td->d.b));
+		if(td->d.b)
+			return new_identifier("true");
+		else
+			return new_identifier("false");
+	}
+	//IRLOG(("Returning NULL.  The type was %d\n",td->type));
+	return NULL;
+}
+
+// Allocates memory for a new tac_data_t
+struct tac_data_t *cfg_new_tac_data() {
+	struct tac_data_t *temp_td = (struct tac_data_t *) malloc(sizeof(struct tac_data_t));
+	CHECK_MEM_ERROR(temp_td);
+	temp_td->type = 0;
+	temp_td->d.id = NULL;
+	return temp_td;
 }
 
 // Adds an element to the varList for tac nodes
@@ -645,7 +713,8 @@ void cfg_free_tac_list() {
 // Frees a TAC node and it's components
 void cfg_free_tac(struct three_address_t *tac) {
 	// Free any non null names / operand names
-	free(tac->lhs_id);
+	if(tac->lhs != NULL)
+		free(tac->lhs);
 	
 	if(tac->op1 != NULL)
 		free(tac->op1);
@@ -662,7 +731,7 @@ void cfg_free_tac(struct three_address_t *tac) {
 struct three_address_t *cfg_lookup_tac(const char *id) {
 	struct three_address_list_t *it = tacList;
 	while(it != NULL) {
-		if(strcmp(it->tac->lhs_id, id) == 0)
+		if(strcmp(it->tac->lhs->d.id, id) == 0)
 			return it->tac;
 		it = it->next;
 	}
@@ -757,9 +826,9 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 
 /* Hash Table manipulation */
 // Does an update/insert on an entry for hash table and returns the newly created entry
-struct vnt_entry_t *cfg_vnt_hash_insert(char *key, char *val, int block_level) {
+struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *tacData, char *val, int block_level) {
 	// See if there is already an entry for this node by id
-	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_id(key);
+	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_td(tacData);
 	if(found_entry != NULL) {
 		// See if the value is different from what is already on the stack
 		if(strcmp(found_entry->vnt_node->val,val) != 0) {
@@ -771,14 +840,16 @@ struct vnt_entry_t *cfg_vnt_hash_insert(char *key, char *val, int block_level) {
 		// Create the vnt_entry node
 		struct vnt_entry_t *temp_entry = (struct vnt_entry_t *)malloc(sizeof(struct vnt_entry_t));
 		CHECK_MEM_ERROR(temp_entry);
-		temp_entry->id = new_identifier(key);
+		temp_entry->tacData = tacData;
 		temp_entry->vnt_node = NULL;
 		
 		// Push the vnt_node onto the empty stack
 		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, block_level);
 
 		// Determine the hash key for this node
-		int hkey = makekey(key, TABLE_SIZE);
+		char *tdStr = cfg_tac_data_to_str(tacData);
+		int hkey = makekey(tdStr, TABLE_SIZE);
+		free(tdStr);
 
 		// Check the spot in the table
 		if(vntable[hkey] == NULL) {
@@ -811,14 +882,16 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val) {
 }
 
 // Looks up a vnt_entry_t by its key
-struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id) {
+struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 	// Get the key that corresponds to this id
-	int key = makekey(id, TABLE_SIZE);
+	char *tdStr = cfg_tac_data_to_str(td);
+	int key = makekey(tdStr, TABLE_SIZE);
+	free(tdStr);
 
 	// Iterate through the elements at vntable[key] until found
 	struct vnt_entry_t *vnt_entry_it = vntable[key];
 	while(vnt_entry_it != NULL) {
-		if(strcmp(vnt_entry_it->id,id) == 0)
+		if(vnt_entry_it->tacData == td)
 			return vnt_entry_it;
 		vnt_entry_it = vnt_entry_it->next;
 	}
@@ -869,14 +942,14 @@ void cfg_vnt_hash_rollback(int block_level) {
 			}
 		}
 	}
-	IRLOG(("Rolled back to level 2!\n"));
+	IRLOG(("Rolled back to level %i!\n",block_level));
 }
 
 // Free up memory allocated for a hash entry
 void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 	// Free the id
-	if(entry->id != NULL)
-		free(entry->id);
+	if(entry->tacData != NULL)
+		free(entry->tacData);
 
 	// Free each node in the node stack
 	struct vnt_node_t *it = entry->vnt_node;

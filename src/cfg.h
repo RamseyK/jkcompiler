@@ -17,11 +17,16 @@
 #include "Set.h"
 
 // Block Types
-#define BLOCK_IF 0
-#define BLOCK_WHILE 1
-#define BLOCK_SIMPLE 2
-#define BLOCK_TRUE 3
-#define BLOCK_FALSE 4
+#define BLOCK_IF 1
+#define BLOCK_WHILE 2
+#define BLOCK_SIMPLE 3
+#define BLOCK_TRUE 4
+#define BLOCK_FALSE 5
+
+// TAC Operand types
+#define OP_TYPE_VAR 1
+#define OP_TYPE_INT 2
+#define OP_TYPE_BOOL 3
 
 #define TABLE_SIZE 29
 
@@ -30,12 +35,22 @@
  * ----------------------------------
  */
 
+// Three address data (for ops)
+struct tac_data_t {
+	union {
+		char *id;
+		int val;
+		bool b;
+	} d;
+	int type;
+};
+
 // Generated three address code
 struct three_address_t {
-	char *lhs_id; // Result identifier
+	struct tac_data_t *lhs; // Result identifier
 	int op; // Operator
-	char *op1; // Operand 1
-	char *op2; // Operand 2
+	struct tac_data_t *op1; // Operand 1
+	struct tac_data_t *op2; // Operand 2
 	struct three_address_t *next; // Next TAC code
 	struct three_address_t *prev; // Previous TAC code
 };
@@ -73,7 +88,7 @@ struct vnt_node_t {
 
 // An entry in the hash table with the variable id and stack of hash values
 struct vnt_entry_t {
-	char *id;  	// The id of the variable
+	struct tac_data_t *tacData;  	// The tacData of the variable
 	struct vnt_node_t *vnt_node; // The stack of nodes containing the hash information for an entry
 	struct vnt_entry_t *next; // The next entry (for hashtable chaining)
 };
@@ -96,6 +111,10 @@ struct three_address_list_t *tacList; // Master list of all the tac
 struct three_address_t *lastConnectedTac; // Pointer to the last tac list that was added to a block
 int name_counter; // Temporary name counter used for TAC names
 struct set_t *varList; // Holds all of the declared and used variables and constants
+
+struct tac_data_t *TAC_DATA_BOOL_TRUE; // tac data for constant value "true"
+struct tac_data_t *TAC_DATA_BOOL_FALSE; // tac data for constant value "false"
+struct tac_data_t *TAC_DATA_KEYWORD_IF; // tac data for the keyword "if"
 
 int vnt_counter; // Name counter used for value numbering
 int vnt_pretty_counter; // Pretty name counter used for outputting and debug
@@ -137,20 +156,22 @@ char *cfg_new_temp_name();
 void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
 void cfg_print_tac(struct three_address_t *tac);
-char *cfg_generate_tac(const char *lhs_id, const char *op1, int op, const char *op2);
+struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2);
 void cfg_add_to_varlist(const char *id);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
-struct three_address_t *cfg_generate_goto_tac(const char *cond, const char *label); // Creates tac for branching
+struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching
+char *cfg_tac_data_to_str(struct tac_data_t *td);
+struct tac_data_t *cfg_new_tac_data();
 
 // Value Number Table Functions
 void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
-struct vnt_entry_t *cfg_vnt_hash_insert(char *key, char *val, int block_level); // Creates an inserts a node
+struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *tacData, char *val, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
-struct vnt_entry_t *cfg_vnt_hash_lookup_id(char *id); // Lookup by the vn_entry_t id
+struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td); // Lookup by the vn_entry_t tacData
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level
 void cfg_vnt_free_entry(struct vnt_entry_t *entry);
 

@@ -15,6 +15,7 @@
 #include "rulefuncs.h"
 #include "symtab.h"
 #include "usrdef.h"
+#include "stdlib.h"
 
   int yylex(void);
   void yyerror(const char *error);
@@ -622,15 +623,7 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->e = $3;
 		$$->oe = NULL;
 		
-		// CFG
-		if($1->tacName == NULL) {
-			printf("variable_access tacName is null\n");
-		}
-		if($3->tacName == NULL) {
-			printf("expression tacName null\n");
-		}
-		
-		cfg_generate_tac($1->tacName, $3->tacName, OP_NO_OP, NULL);
+		cfg_generate_tac($1->expr->tacData->d.id, $3->expr->tacData, OP_NO_OP, NULL);
 		IRLOG(("About to create block\n"));
 		$$->block = cfg_create_simple_block();
 		IRLOG(("Created block\n"));
@@ -675,7 +668,8 @@ variable_access : identifier
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		
 		// CFG
-		$$->tacName = $1;
+		$$->expr->tacData->type = OP_TYPE_VAR;
+		$$->expr->tacData->d.id = $1;
 	}
  | indexed_variable
 	{
@@ -798,10 +792,6 @@ expression : simple_expression
 		$$ = new_expression();
 		$$->se1 = $1;
 		$$->expr = $1->expr;
-		
-		// CFG
-		$$->tacName = $1->tacName;
-		//$$->block = cfg_create_simple_block($1->tac);
 	}
  | simple_expression relop simple_expression
 	{
@@ -840,8 +830,7 @@ expression : simple_expression
 		}
 		
 		// CFG
-		//$$->tac = 
-		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
+		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
 
 	}
  ;
@@ -852,9 +841,6 @@ simple_expression : term
 		$$ = new_simple_expression();
 		$$->t = $1;
 		$$->expr = $1->expr;
-		
-		// CFG
-		$$->tacName = $1->tacName;
 	}
  | simple_expression addop term
 	{
@@ -862,7 +848,7 @@ simple_expression : term
 		add_to_simple_expression(&$1, $2, $3);
 		//Do some kind of type checking ??
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER;
 			if($2 == OP_PLUS) 
 				$$->expr->val = $1->expr->val + $3->expr->val;
@@ -872,7 +858,7 @@ simple_expression : term
 				// Invalid operation with integers
 				}
 		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
 			if($2 == OP_OR)
 				$$->expr->val = (int)$1->expr->val || (int)$3->expr->val;
@@ -881,13 +867,12 @@ simple_expression : term
 				}
 		} else {
 			//Type mismatch
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 		
 		// CFG
-		//$$->tac = 
-		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
+		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
 	}
  ;
 
@@ -899,7 +884,6 @@ term : factor
 		$$->expr = $1->expr;	
 		
 		// CFG
-		$$->tacName = $1->tacName;
 		//IRLOG(("Term:Factor -> %s : %s\n",$$->tac->lhs_id, $1->tac->lhs_id));
 	}
  | term mulop factor
@@ -908,7 +892,7 @@ term : factor
 		add_to_term(&$1, $2, $3);	
 		//Do some kind of type checking ??
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER;
 			if($2 == OP_STAR) 
 				$$->expr->val = $1->expr->val * $3->expr->val;
@@ -920,7 +904,7 @@ term : factor
 				// Invalid operation with integers
 				}
 		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
 			if($2 == OP_AND)
 				$$->expr->val = (int)$1->expr->val && (int)$3->expr->val;
@@ -929,7 +913,7 @@ term : factor
 				}
 		} else {
 			//Type mismatch
-			$$->expr = new_expression_data();
+			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		}
 		
@@ -939,8 +923,7 @@ term : factor
 		//	$3->tacName = cfg_generate_tac(NULL, "0", OP_MINUS, $3->tacName);
 			//$3->tacName = facTac->lhs_id;		
 		//}
-		//$$->tac = cfg_generate_tac(NULL, $1->tac->lhs_id, $2, $3->tacName);
-		$$->tacName = cfg_generate_tac(NULL, $1->tacName, $2, $3->tacName);
+		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
 	}
  ;
 
@@ -959,10 +942,7 @@ sign : PLUS
 factor : sign factor
 	{
 		GLOG(("factor : sign factor\n"));
-		// Check if the factor $2 already has a sign
-		if($2->type == FACTOR_T_SIGNFACTOR) {
-			//error_too_many_signs(line_number);
-		}
+
 		$$ = new_factor();
 		$$->type = FACTOR_T_SIGNFACTOR;
 		$$->data.f.sign = $1;
@@ -970,8 +950,11 @@ factor : sign factor
 		$$->expr = $2->expr;
 		
 		// CFG
-		$$->tacName = cfg_generate_tac(NULL, "0", *$1, $2->tacName);
-		//$$->tacName = $2->tacName;
+		// Create tacData for the constant 0
+		struct tac_data_t *zero = cfg_new_tac_data();
+		zero->type = OP_TYPE_INT;
+		zero->d.val = 0;
+		$$->expr->tacData = cfg_generate_tac(NULL, zero, *$1, $2->expr->tacData);
 	}
  | primary 
 	{
@@ -983,8 +966,7 @@ factor : sign factor
 		
 		// CFG
 		//$$->tac = cfg_generate_tac($1->tacName, $1->tacName, OP_NO_OP, NULL);
-		cfg_add_to_varlist($1->tacName);
-		$$->tacName = $1->tacName;
+		//cfg_add_to_varlist_tacData($1->expr->tacData);
 	}
  ;
 
@@ -995,8 +977,8 @@ primary : variable_access
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
 		$$->data.va = $1;
 		$$->expr = $1->expr;
-		$$->tacName = $1->tacName;
-		cfg_add_to_varlist($1->tacName);
+		//$$->tacName = $1->tacName;
+		cfg_add_to_varlist($1->expr->tacData->d.id);
 	}
  | unsigned_constant
 	{
@@ -1005,8 +987,9 @@ primary : variable_access
 		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
 		$$->data.un = $1;
 		$$->expr = $1->expr;
-		$$->tacName = $1->tacName;
-		cfg_add_to_varlist($1->tacName);
+		
+		// Get a string representation of the value for the varlist
+		//cfg_add_to_varlist(itoa($1->expr->tacData->d.val));
 	}
  | function_designator
 	{
@@ -1052,7 +1035,10 @@ unsigned_integer : DIGSEQ
         
         // CFG
         // Set the tacName equal to the constant value
-        $$->tacName = new_identifier(yytext);
+        //$$->tacName = new_identifier(yytext);
+        $$->expr->tacData->type = OP_TYPE_INT;
+        $$->expr->tacData->d.val = $$->ui;
+        IRLOG(("Just made tacData for uint: %d\n",$$->expr->tacData->d.val));
 	}
  ;
 
