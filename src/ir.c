@@ -64,12 +64,12 @@ void ir_evn(struct block_t *block, int block_level) {
 				// op1 doesn't exist, insert it with a numbering value
 				IRLOG(("op1 insert\n"));
 				v_op1 = cfg_vnt_new_name();
-				e_op1 = cfg_vnt_hash_insert(tac->op1, v_op1, block_level);
+				e_op1 = cfg_vnt_hash_insert(tac->op1, v_op1, tac->op1, block_level);
 			} else {
 				// op1 is already in the VNT, copy the numbering value
 				IRLOG(("op1 found\n"));
 				if(e_op1->vnt_node == NULL) {
-					IRLOG(("%s: %s->vnt_node is null\n",block->label,cfg_tac_data_to_str(e_op1->tacData)));
+					IRLOG(("%s: %s->vnt_node is null\n",block->label,cfg_tac_data_to_str(e_op1->var_td)));
 				}
 				v_op1 = e_op1->vnt_node->val;
 			}
@@ -79,7 +79,7 @@ void ir_evn(struct block_t *block, int block_level) {
 				// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
 				IRLOG(("lhs insert (nop)\n"));
 				v_lhs = v_op1;
-				e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, block_level);
+				e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, tac->op1, block_level);
 			} else { // Case: a = b + c (op2 exists)
 				// Lookup op2 in the VNT
 				IRLOG(("tac op2: %s\n", cfg_tac_data_to_str(tac->op2)));
@@ -88,7 +88,7 @@ void ir_evn(struct block_t *block, int block_level) {
 					// op2 doesn't exist, insert it with a numbering value
 					IRLOG(("op2 insert\n"));
 					v_op2 = cfg_vnt_new_name();
-					e_op2 = cfg_vnt_hash_insert(tac->op2, v_op2, block_level);
+					e_op2 = cfg_vnt_hash_insert(tac->op2, v_op2, tac->op2, block_level);
 				} else {
 					// op2 is already in the VNT, copy the numbering value
 					IRLOG(("op2 found\n"));
@@ -109,18 +109,17 @@ void ir_evn(struct block_t *block, int block_level) {
 					// Previous computation existed, perform optimization
 					if(e_lhs_exist != NULL) {
 						// Optimize the TAC node
-						tac->op1 = e_lhs_exist->tacData;
+						tac->op1 = e_lhs_exist->var_td;
 						tac->op = OP_NO_OP;
-						free(tac->op2);
 						tac->op2 = NULL;
 						
 						// Lookup the new op1
 						e_op1 = cfg_vnt_hash_lookup_td(tac->op1);
 						
 						// Insert the optimized left hand side
-						e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, block_level);
+						e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, tac->lhs, block_level);
 					} else {
-						e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, block_level);
+						e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, tac->lhs, block_level);
 					}
 				} else {
 					// lhs_id is already in the VNT, copy the numbering value
@@ -131,13 +130,25 @@ void ir_evn(struct block_t *block, int block_level) {
 			
 			// Pretty print the value numbered TAC
 			if(tac->op == OP_NO_OP) {
+				// Uses the hash value
+				//sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->val, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->val);
+				// Uses the pretty name
 				sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->pretty_name, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->pretty_name);
+
 				IRLOG(("%s", ir_vnt_out_buffer));
 			} else if(tac->op == OP_GOTO) {
+				// Uses the hash value
+				//sprintf(ir_vnt_out_buffer, "%s\t%s(%s)(%s(%s)) %s %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->val, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->val, op, cfg_tac_data_to_str(tac->op2), e_op2->vnt_node->val);
+				// Uses the pretty name
 				sprintf(ir_vnt_out_buffer, "%s\t%s(%s)(%s(%s)) %s %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->pretty_name, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->pretty_name, op, cfg_tac_data_to_str(tac->op2), e_op2->vnt_node->pretty_name);
+
 				IRLOG(("%s", ir_vnt_out_buffer));
 			} else {
+				// Uses the hash value
+				//sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s) %s %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->val, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->val, op, cfg_tac_data_to_str(tac->op2), e_op2->vnt_node->val);
+				// Uses the pretty name
 				sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s) %s %s(%s)\n", ir_vnt_out_buffer, cfg_tac_data_to_str(tac->lhs), e_lhs->vnt_node->pretty_name, cfg_tac_data_to_str(tac->op1), e_op1->vnt_node->pretty_name, op, cfg_tac_data_to_str(tac->op2), e_op2->vnt_node->pretty_name);
+
 				IRLOG(("%s", ir_vnt_out_buffer));
 			}
 			
@@ -204,8 +215,6 @@ void ir_resolve_label_aliases() {
 			while(al_it != NULL) {
 				// If the label is in the set
 				if(set_contains(al_it->set,tac_it->tac->op2->d.id)) {
-					// Free the old op2
-					free(tac_it->tac->op2);
 					// Set to the first element in the alias set
 					tac_it->tac->op2->d.id = new_identifier(al_it->set->value);
 					break;

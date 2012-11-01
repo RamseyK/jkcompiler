@@ -24,9 +24,12 @@
 #define BLOCK_FALSE 5
 
 // TAC Operand types
-#define OP_TYPE_VAR 1
-#define OP_TYPE_INT 2
-#define OP_TYPE_BOOL 3
+#define TAC_DATA_TYPE_VAR 1
+#define TAC_DATA_TYPE_INT 2
+#define TAC_DATA_TYPE_BOOL 3
+//TODO:  Add types for label and keyword (if)
+#define TAC_DATA_TYPE_LABEL 4
+#define TAC_DATA_TYPE_KEYWORD 5
 
 #define TABLE_SIZE 29
 
@@ -43,6 +46,12 @@ struct tac_data_t {
 		bool b;
 	} d;
 	int type;
+};
+
+// List structure for tac data
+struct tac_data_list_t {
+	struct tac_data_t *td;
+	struct tac_data_list_t *next;
 };
 
 // Generated three address code
@@ -82,13 +91,14 @@ struct block_list_t {
 struct vnt_node_t {
 	char *val;  // The hash value of the node
 	int block_level; // Associate a block level with the node
-	char *pretty_name; // Human readable numbering for debug
+	char *pretty_name; // Human readable numbering for debug and output
+	struct tac_data_t *val_td; // Associates tac data with the value on the stack
 	struct vnt_node_t *next; // Point to the next node down the stack
 };
 
 // An entry in the hash table with the variable id and stack of hash values
 struct vnt_entry_t {
-	struct tac_data_t *tacData;  	// The tacData of the variable
+	struct tac_data_t *var_td;  	// The tacData of the variable
 	struct vnt_node_t *vnt_node; // The stack of nodes containing the hash information for an entry
 	struct vnt_entry_t *next; // The next entry (for hashtable chaining)
 };
@@ -112,6 +122,7 @@ struct three_address_t *lastConnectedTac; // Pointer to the last tac list that w
 int name_counter; // Temporary name counter used for TAC names
 struct set_t *varList; // Holds all of the declared and used variables and constants
 
+struct tac_data_list_t *tacDataList; // Master list of all tac data
 struct tac_data_t *TAC_DATA_BOOL_TRUE; // tac data for constant value "true"
 struct tac_data_t *TAC_DATA_BOOL_FALSE; // tac data for constant value "false"
 struct tac_data_t *TAC_DATA_KEYWORD_IF; // tac data for the keyword "if"
@@ -155,6 +166,7 @@ void cfg_add_label_alias(char *label1, char *label2);
 char *cfg_new_temp_name();
 void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
+void cfg_free_tac_data_list();
 void cfg_print_tac(struct three_address_t *tac);
 struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2);
 void cfg_add_to_varlist(const char *id);
@@ -169,7 +181,7 @@ void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
-struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *tacData, char *val, int block_level); // Creates an inserts a node
+struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, struct tac_data_t *val_td, int block_level); // Creates an inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
 struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td); // Lookup by the vn_entry_t tacData
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level
@@ -177,7 +189,7 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry);
 
 // Stack functions
 struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack);
-void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level);
+void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, struct tac_data_t *val_td, int block_level);
 void cfg_vnt_free_node(struct vnt_node_t *node);
 
 #endif

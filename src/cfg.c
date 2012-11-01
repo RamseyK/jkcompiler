@@ -20,20 +20,23 @@ void cfg_init() {
 	block_counter = 0;
 	name_counter = 0;
 	varList = NULL;
+	tacDataList = NULL;
 
 	// Initialize the constant true and false tac data nodes
+	// And insert into the vnt
 	TAC_DATA_BOOL_TRUE = cfg_new_tac_data();
-	TAC_DATA_BOOL_TRUE->type = OP_TYPE_BOOL;
+	TAC_DATA_BOOL_TRUE->type = TAC_DATA_TYPE_BOOL;
 	TAC_DATA_BOOL_TRUE->d.b = true;
 
 	TAC_DATA_BOOL_FALSE = cfg_new_tac_data();
-	TAC_DATA_BOOL_FALSE->type = OP_TYPE_BOOL;
+	TAC_DATA_BOOL_FALSE->type = TAC_DATA_TYPE_BOOL;
 	TAC_DATA_BOOL_FALSE->d.b = false;
 
 	// constant tac data for "if"
 	TAC_DATA_KEYWORD_IF = cfg_new_tac_data();
-	TAC_DATA_KEYWORD_IF->type = OP_TYPE_VAR;
+	TAC_DATA_KEYWORD_IF->type = TAC_DATA_TYPE_KEYWORD;
 	TAC_DATA_KEYWORD_IF->d.id = "if";
+
 }
 
 // Return the root of the CFG
@@ -48,6 +51,8 @@ void cfg_destroy() {
 		
 	// Free the master list of TAC nodes
 	cfg_free_tac_list();
+	// Free the master list of tac data
+	cfg_free_tac_data_list();
 
 	rootBlock = NULL;
 	blockList = NULL;
@@ -574,11 +579,11 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 	
 	if(lhs_id == NULL) {
 		temp_tac->lhs = cfg_new_tac_data();
-		temp_tac->lhs->type = OP_TYPE_VAR;
+		temp_tac->lhs->type = TAC_DATA_TYPE_VAR;
 		temp_tac->lhs->d.id = cfg_new_temp_name();
 	} else {
 		temp_tac->lhs = cfg_new_tac_data();
-		temp_tac->lhs->type = OP_TYPE_VAR;
+		temp_tac->lhs->type = TAC_DATA_TYPE_VAR;
 		temp_tac->lhs->d.id = new_identifier(lhs_id);
 	}
 	temp_tac->op = op;
@@ -624,7 +629,7 @@ struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const cha
 	temp_tac->op = OP_GOTO;
 	temp_tac->op1 = cond;
 	temp_tac->op2 = cfg_new_tac_data();
-	temp_tac->op2->type = OP_TYPE_VAR;
+	temp_tac->op2->type = TAC_DATA_TYPE_LABEL;
 	temp_tac->op2->d.id = new_identifier(label);
 	temp_tac->next = NULL;
 	temp_tac->prev = NULL;
@@ -654,11 +659,11 @@ struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const cha
 // Converts the tac data to a string representation
 char *cfg_tac_data_to_str(struct tac_data_t *td) {
 	if(td == NULL) return NULL;
-	if(td->type == OP_TYPE_VAR) {
+	if(td->type == TAC_DATA_TYPE_VAR) {
 		//IRLOG(("Returning VAR %s\n",td->d.id));
 		return new_identifier(td->d.id);
 	}
-	if(td->type == OP_TYPE_INT) {
+	if(td->type == TAC_DATA_TYPE_INT) {
 		char buffer[32];
 		int chars_written = sprintf(buffer, "%d", td->d.val);
 		char *retVal = (char *) malloc(chars_written + 1);
@@ -666,12 +671,18 @@ char *cfg_tac_data_to_str(struct tac_data_t *td) {
 		//IRLOG(("Returning INT %d as %s\n",td->d.val,retVal));
 		return retVal;
 	}
-	if(td->type == OP_TYPE_BOOL) {
+	if(td->type == TAC_DATA_TYPE_BOOL) {
 		//IRLOG(("Returning BOOL %d\n",td->d.b));
 		if(td->d.b)
 			return new_identifier("true");
 		else
 			return new_identifier("false");
+	}
+	if(td->type == TAC_DATA_TYPE_LABEL) {
+		return new_identifier(td->d.id);
+	}
+	if(td->type == TAC_DATA_TYPE_KEYWORD) {
+		return new_identifier(td->d.id);
 	}
 	//IRLOG(("Returning NULL.  The type was %d\n",td->type));
 	return NULL;
@@ -683,6 +694,20 @@ struct tac_data_t *cfg_new_tac_data() {
 	CHECK_MEM_ERROR(temp_td);
 	temp_td->type = 0;
 	temp_td->d.id = NULL;
+
+	// Add the tac data to the master listso we can destroy it all later
+	if(tacDataList == NULL) {
+		tacDataList = (struct tac_data_list_t *) malloc(sizeof(struct tac_data_list_t));
+		tacDataList->td = temp_td;
+		tacDataList->next = NULL;
+	} else {
+		struct tac_data_list_t *end = tacDataList;
+		GOTO_END_OF_LIST(end);
+		end->next = (struct tac_data_list_t *) malloc(sizeof(struct tac_data_list_t));
+		end->next->td = temp_td;
+		end->next->next = NULL;
+	}
+
 	return temp_td;
 }
 
@@ -708,22 +733,44 @@ void cfg_free_tac_list() {
 	}
 	
 	tacList = NULL;
+	free(tacList);
 }
 
 // Frees a TAC node and it's components
 void cfg_free_tac(struct three_address_t *tac) {
 	// Free any non null names / operand names
-	if(tac->lhs != NULL)
+	/* This will be done at the end for all tac_data_t in the master list
+	 * if(tac->lhs != NULL)
 		free(tac->lhs);
 	
 	if(tac->op1 != NULL)
 		free(tac->op1);
 
 	if(tac->op2 != NULL)
-		free(tac->op2);
+		free(tac->op2);*/
 
 	// Free the TAC node
 	free(tac);
+}
+
+// Frees all of the tac data that has been allocated
+void cfg_free_tac_data_list() {
+	struct tac_data_list_t *it = tacDataList;
+	struct tac_data_list_t *cur = tacDataList;
+	while(it != NULL) {
+		cur = it;
+		it = it->next;
+
+		// Free the tac data
+		if(cur->td->d.id != NULL)
+			free(cur->td->d.id);
+
+		// Free the list entry
+		free(cur);
+	}
+
+	tacDataList = NULL;
+	free(tacDataList);
 }
 
 // Given a temporary TAC name, lookup the TAC node in the master list
@@ -775,6 +822,9 @@ void cfg_vnt_init() {
 	for(i = 0; i< TABLE_SIZE; i++) {
 		vntable[i] = NULL;
 	}
+	//cfg_vnt_hash_insert(TAC_DATA_BOOL_TRUE,cfg_vnt_new_name(),-1);
+	//cfg_vnt_hash_insert(TAC_DATA_BOOL_FALSE,cfg_vnt_new_name(),-1);
+	//cfg_vnt_hash_insert(TAC_DATA_KEYWORD_IF,cfg_vnt_new_name(),-1);
 }
 
 // Frees up memory allocated for the value number table
@@ -836,28 +886,28 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 
 /* Hash Table manipulation */
 // Does an update/insert on an entry for hash table and returns the newly created entry
-struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *tacData, char *val, int block_level) {
+struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, struct tac_data_t *val_td, int block_level) {
 	// See if there is already an entry for this node by id
-	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_td(tacData);
+	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_td(var_td);
 	if(found_entry != NULL) {
 		// See if the value is different from what is already on the stack
 		if(strcmp(found_entry->vnt_node->val,val) != 0) {
 			// Push onto the stack
-			cfg_vnt_stack_push(&(found_entry->vnt_node), val, block_level);
+			cfg_vnt_stack_push(&(found_entry->vnt_node), val, val_td, block_level);
 		}
 		return found_entry;
 	} else {
 		// Create the vnt_entry node
 		struct vnt_entry_t *temp_entry = (struct vnt_entry_t *)malloc(sizeof(struct vnt_entry_t));
 		CHECK_MEM_ERROR(temp_entry);
-		temp_entry->tacData = tacData;
+		temp_entry->var_td = var_td;
 		temp_entry->vnt_node = NULL;
 		
 		// Push the vnt_node onto the empty stack
-		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, block_level);
+		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, val_td, block_level);
 
 		// Determine the hash key for this node
-		char *tdStr = cfg_tac_data_to_str(tacData);
+		char *tdStr = cfg_tac_data_to_str(var_td);
 		int hkey = makekey(tdStr, TABLE_SIZE);
 		free(tdStr);
 
@@ -902,18 +952,18 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 	// Iterate through the elements at vntable[key] until found
 	struct vnt_entry_t *it = vntable[key];
 	while(it != NULL) {
-		IRLOG(("Looking at entry in hashtable: %s\n",cfg_tac_data_to_str(it->tacData)));
+		IRLOG(("Looking at entry in hashtable: %s\n",cfg_tac_data_to_str(it->var_td)));
 		// Determine equality using the type and data
 		// INT
-		if(it->tacData->type == OP_TYPE_INT && td->type == OP_TYPE_INT && it->tacData->d.val == td->d.val) {
+		if(it->var_td->type == TAC_DATA_TYPE_INT && td->type == TAC_DATA_TYPE_INT && it->var_td->d.val == td->d.val) {
 			return it;
 		}
 		// VAR
-		if(it->tacData->type == OP_TYPE_VAR && td->type == OP_TYPE_VAR && strcmp(it->tacData->d.id,td->d.id) == 0){
+		if(it->var_td->type == TAC_DATA_TYPE_VAR && td->type == TAC_DATA_TYPE_VAR && strcmp(it->var_td->d.id,td->d.id) == 0){
 			return it;
 		}
 		// BOOL
-		if(it->tacData->type == OP_TYPE_BOOL && td->type == OP_TYPE_BOOL && it->tacData->d.b == td->d.b) {
+		if(it->var_td->type == TAC_DATA_TYPE_BOOL && td->type == TAC_DATA_TYPE_BOOL && it->var_td->d.b == td->d.b) {
 			return it;
 		}
 		it = it->next;
@@ -931,9 +981,12 @@ void cfg_vnt_hash_rollback(int block_level) {
 		// Iterate through each chained element
 		struct vnt_entry_t *vnt_entry_it = vntable[i];
 		while(vnt_entry_it != NULL) {
-			// Pop from the stack until the block level is right
-			while((vnt_entry_it->vnt_node != NULL) && (vnt_entry_it->vnt_node->block_level > block_level)) {
-				cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+			// Only do this for entries that are not constant values (int, bool) or keywords (if)
+			if(vnt_entry_it->var_td->type != TAC_DATA_TYPE_INT && vnt_entry_it->var_td->type != TAC_DATA_TYPE_BOOL && vnt_entry_it->var_td->type != TAC_DATA_TYPE_KEYWORD) {
+				// Pop from the stack until the block level is right
+				while((vnt_entry_it->vnt_node != NULL) && (vnt_entry_it->vnt_node->block_level > block_level)) {
+					cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+				}
 			}
 			vnt_entry_it = vnt_entry_it->next;
 		}
@@ -970,10 +1023,6 @@ void cfg_vnt_hash_rollback(int block_level) {
 
 // Free up memory allocated for a hash entry
 void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
-	// Free the id
-	if(entry->tacData != NULL)
-		free(entry->tacData);
-
 	// Free each node in the node stack
 	struct vnt_node_t *it = entry->vnt_node;
 	struct vnt_node_t *cur = entry->vnt_node;
@@ -998,11 +1047,12 @@ struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack) {
 }
 
 // Pushes a new element to the top of the stack
-void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, int block_level) {
+void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, struct tac_data_t *val_td, int block_level) {
 	// Make the node
 	struct vnt_node_t *temp_node = (struct vnt_node_t *) malloc(sizeof(struct vnt_node_t));
 	CHECK_MEM_ERROR(temp_node);
 	temp_node->val = new_identifier(val);
+	temp_node->val_td = val_td;
 	temp_node->block_level = block_level;
 	
 	// Create a pretty name for the stack node and set it (for debug)
@@ -1026,6 +1076,7 @@ void cfg_vnt_free_node(struct vnt_node_t *node) {
 		free(node->val);
 	if (node->pretty_name != NULL)
 		free(node->pretty_name);
+
 
 	// Free the pointer
 	free(node);

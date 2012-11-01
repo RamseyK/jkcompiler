@@ -668,7 +668,7 @@ variable_access : identifier
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
 		
 		// CFG
-		$$->expr->tacData->type = OP_TYPE_VAR;
+		$$->expr->tacData->type = TAC_DATA_TYPE_VAR;
 		$$->expr->tacData->d.id = $1;
 	}
  | indexed_variable
@@ -952,7 +952,7 @@ factor : sign factor
 		// CFG
 		// Create tacData for the constant 0
 		struct tac_data_t *zero = cfg_new_tac_data();
-		zero->type = OP_TYPE_INT;
+		zero->type = TAC_DATA_TYPE_INT;
 		zero->d.val = 0;
 		$$->expr->tacData = cfg_generate_tac(NULL, zero, *$1, $2->expr->tacData);
 	}
@@ -1036,7 +1036,7 @@ unsigned_integer : DIGSEQ
         // CFG
         // Set the tacName equal to the constant value
         //$$->tacName = new_identifier(yytext);
-        $$->expr->tacData->type = OP_TYPE_INT;
+        $$->expr->tacData->type = TAC_DATA_TYPE_INT;
         $$->expr->tacData->d.val = $$->ui;
         IRLOG(("Just made tacData for uint: %d\n",$$->expr->tacData->d.val));
 	}
