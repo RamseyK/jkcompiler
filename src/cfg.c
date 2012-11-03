@@ -674,9 +674,9 @@ char *cfg_tac_data_to_str(struct tac_data_t *td) {
 	if(td->type == TAC_DATA_TYPE_BOOL) {
 		//IRLOG(("Returning BOOL %d\n",td->d.b));
 		if(td->d.b)
-			return new_identifier("true");
+			return new_identifier(BOOLEAN_VALUE_TRUE);
 		else
-			return new_identifier("false");
+			return new_identifier(BOOLEAN_VALUE_FALSE);
 	}
 	if(td->type == TAC_DATA_TYPE_LABEL) {
 		return new_identifier(td->d.id);

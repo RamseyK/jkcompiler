@@ -11,6 +11,10 @@
 void ir_init() {
 	workList = NULL;
 	cfg_vnt_init(); // Initialize value numbering table
+	
+	// Clear the output buffers
+	memset(ir_vnt_out_buffer, 0, sizeof(ir_vnt_out_buffer));
+	memset(ir_opt_const_out_buffer, 0, sizeof(ir_opt_const_out_buffer));
 }
 
 void ir_destroy() {
@@ -20,6 +24,7 @@ void ir_destroy() {
 // Substitues values of known constants in expressions at compile time
 void ir_opt_const_propagation(struct three_address_t *tac) {
 	struct vnt_entry_t *entry = NULL;
+	char *op = op_str(tac->op);
 
 	// Lookup each tac data element in the VNT to determine if theres a value for it
 	if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
@@ -27,16 +32,19 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 		
 		// If the tac data for op1 is already in the table, replace this tac's op1 with the corresponding constant value
 		if(entry != NULL) {
-			//IRLOG(("Found tac->op1 constant value in the table %s\n", cfg_tac_data_to_str(tac->op1)));
+			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
 			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) {
 				tac->op1->d.val = entry->vnt_node->val_td->d.val;
 				tac->op1->type = TAC_DATA_TYPE_INT;
 			} else if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_BOOL) {
+				//IRLOG(("Replacing %s value with %s\n", cfg_tac_data_to_str(tac->lhs), (entry->vnt_node->val_td->d.b ? BOOLEAN_VALUE_TRUE : BOOLEAN_VALUE_FALSE)));
 				tac->op1->d.b = entry->vnt_node->val_td->d.b;
 				tac->op1->type = TAC_DATA_TYPE_BOOL;
 			} else {
 				// Case where the value isn't known at compile time. Nothing to propagate
+				IRLOG(("Cant prop %s with %s of type %i\n", cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(entry->vnt_node->val_td), entry->vnt_node->val_td->type));
 			}
+			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
 		}
 	}
 	
@@ -45,7 +53,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 	
 		// If the tac data for op2 is already in the table, replace this tac's op2 with the corresponding constant value
 		if(entry != NULL) {
-			//IRLOG(("Found tac->op2 constant value in the table %s\n", cfg_tac_data_to_str(tac->op2)));
+			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, cfg_tac_data_to_str(tac->op2));
 			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) {
 				tac->op2->d.val = entry->vnt_node->val_td->d.val;
 				tac->op2->type = TAC_DATA_TYPE_INT;
@@ -55,8 +63,11 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 			} else {
 				// Case where the value isn't known at compile time. Nothing to propagate
 			}
+			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, cfg_tac_data_to_str(tac->op2));
 		}
 	}
+	
+	free(op);
 }
 
 // Simplifies constant expressions into a single assignment
@@ -67,6 +78,10 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 		return;
 	if(tac->op1->type == TAC_DATA_TYPE_LABEL || tac->op2->type == TAC_DATA_TYPE_LABEL || tac->op1->type == TAC_DATA_TYPE_KEYWORD || tac->op2->type == TAC_DATA_TYPE_KEYWORD)
 		return;
+	
+	char *op = op_str(tac->op);
+	
+	sprintf(ir_opt_const_out_buffer, "%s\tFold: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, cfg_tac_data_to_str(tac->op2));
 
 	// Tac datas of the same type
 	if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_INT) {
@@ -225,6 +240,9 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 	} else {
 	
 	}
+	
+	sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), (tac->op != OP_NO_OP ? op : ""), (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
+	free(op);
 }
 
 // Dead code eliminitation should remove any unused temporary tac vars and unreachable code
@@ -234,9 +252,6 @@ void ir_opt_dead_code_elim() {
 
 // Start value numbering on the CFG
 void ir_value_numbering() {
-	// Clear the output buffer
-	memset(ir_vnt_out_buffer, 0, sizeof(ir_vnt_out_buffer));
-
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_evn
 	workList = cfg_new_block_list(cfg_get_root());
 	
@@ -313,7 +328,7 @@ void ir_evn(struct block_t *block, int block_level) {
 					IRLOG(("op2 found\n"));
 					v_op2 = e_op2->vnt_node->val;
 				}
-				
+
 				// Lookup the lhs_id in the VNT
 				IRLOG(("tac lhs: %s\n", cfg_tac_data_to_str(tac->lhs)));
 				e_lhs = cfg_vnt_hash_lookup_td(tac->lhs);
@@ -321,20 +336,20 @@ void ir_evn(struct block_t *block, int block_level) {
 					// lhs_id doesn't exist, insert it with a numbering value
 					IRLOG(("lhs insert\n"));
 					v_lhs = cfg_vnt_hash(v_op1, tac->op, v_op2);
-					
+
 					// Lookup the v_lhs to check for previous computations of the TAC right hand side
 					struct vnt_entry_t *e_lhs_exist = cfg_vnt_hash_lookup_val(v_lhs);
-					
+
 					// Previous computation existed, perform local common subexpression elimination (optimization)
 					if(e_lhs_exist != NULL) {
 						// Optimize the TAC node
 						tac->op1 = e_lhs_exist->var_td;
 						tac->op = OP_NO_OP;
 						tac->op2 = NULL;
-						
+
 						// Lookup the new op1
 						e_op1 = cfg_vnt_hash_lookup_td(tac->op1);
-						
+
 						// Insert the optimized left hand side
 						e_lhs = cfg_vnt_hash_insert(tac->lhs, v_lhs, tac->lhs, block_level);
 					} else {
@@ -401,10 +416,6 @@ void ir_evn(struct block_t *block, int block_level) {
 	}
 }
 
-void ir_print_vnt() {
-	printf("%s", ir_vnt_out_buffer);
-}
-
 void ir_optimize() {
 
 	ir_resolve_label_aliases();
@@ -420,7 +431,11 @@ void ir_optimize() {
 	ir_value_numbering();
 
 	printf("\nPrint value numbering:\n");
-	ir_print_vnt();
+	printf("%s", ir_vnt_out_buffer);
+	printf("\n");
+	
+	printf("\nPrint constant expression optimizations:\n");
+	printf("%s", ir_opt_const_out_buffer);
 	printf("\n");
 }
 

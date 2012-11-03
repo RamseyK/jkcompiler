@@ -804,25 +804,30 @@ expression : simple_expression
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
 			$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
-			if($2 == OP_EQUAL)
+			if($2 == OP_EQUAL) {
 				$$->expr->val = ($1->expr->val == $3->expr->val);
-			if($2 == OP_NOTEQUAL)
+			} else if($2 == OP_NOTEQUAL) {
 				$$->expr->val = ($1->expr->val != $3->expr->val);
-			if($2 == OP_GT)
+			} else if($2 == OP_GT) {
 				$$->expr->val = ($1->expr->val > $3->expr->val);
-			if($2 == OP_LT)
+			} else if($2 == OP_LT) {
 				$$->expr->val = ($1->expr->val < $3->expr->val);
-			if($2 == OP_GE)
+			} else if($2 == OP_GE) {
 				$$->expr->val = ($1->expr->val >= $3->expr->val);
-			if($2 == OP_LE)
+			} else if($2 == OP_LE) {
 				$$->expr->val = ($1->expr->val <= $3->expr->val);
+			} else {
+			}
 		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
-				$$->expr = new_expression_data();
-				$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
-			if($2 == OP_EQUAL)
+			$$->expr = new_expression_data();
+			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
+			if($2 == OP_EQUAL) {
 				$$->expr->val = ($1->expr->val == $3->expr->val);
-			if($2 == OP_NOTEQUAL)
+			} else if($2 == OP_NOTEQUAL) {
 				$$->expr->val = ($1->expr->val != $3->expr->val);
+			} else {
+			
+			}
 		} else {
 			//Type mismatch
 			$$->expr = new_expression_data();
@@ -831,7 +836,6 @@ expression : simple_expression
 		
 		// CFG
 		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
-
 	}
  ;
 
