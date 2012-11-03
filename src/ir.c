@@ -198,11 +198,7 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 			tac->op = OP_NO_OP;
 			tac->op2 = NULL;
 		}
-	} else {
-	}
-	
-	// Tac datas of differing types
-	if(tac->op1->type == TAC_DATA_TYPE_INT || tac->op2->type == TAC_DATA_TYPE_INT) {
+	} else if(tac->op1->type == TAC_DATA_TYPE_INT || tac->op2->type == TAC_DATA_TYPE_INT) {
 		// One var is an integer
 		// Test Program: test_tac_consts_var.p
 		
