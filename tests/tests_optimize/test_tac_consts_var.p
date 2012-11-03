@@ -1,16 +1,19 @@
-program testConsts;
+program testConstsVar;
 
-class testConsts
+class testConstsVar
 
 BEGIN
-   VAR aa, bb, xx, yy, zz: integer;
+   VAR aa, bb, cc, xx, yy, zz: integer;
 
-FUNCTION testConsts;
+FUNCTION testConstsVar;
 BEGIN
    xx := 0*aa;
    yy := aa+aa;
    zz := aa/aa;
-   bb := aa-aa
+   bb := aa-aa;
+   cc := 3;
+   xx := 1*cc;
+   xx := cc*1
 END
 
 END

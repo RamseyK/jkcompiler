@@ -694,6 +694,8 @@ struct tac_data_t *cfg_new_tac_data() {
 	CHECK_MEM_ERROR(temp_td);
 	temp_td->type = 0;
 	temp_td->d.id = NULL;
+	temp_td->d.b = false;
+	temp_td->d.val = 0;
 
 	// Add the tac data to the master listso we can destroy it all later
 	if(tacDataList == NULL) {
@@ -991,7 +993,7 @@ void cfg_vnt_hash_rollback(int block_level) {
 			vnt_entry_it = vnt_entry_it->next;
 		}
 	}
-	IRLOG(("Done popping stacks\n"));
+	//IRLOG(("Done popping stacks\n"));
 	// Cleans up entries where the stack is empty
 	for(i = 0; i<TABLE_SIZE; i++) {
 		//Iterate through each chained element
@@ -1011,8 +1013,6 @@ void cfg_vnt_hash_rollback(int block_level) {
 			while(it->next != NULL) {
 				// If the vnt_node is null after rollback, the entry should be removed
 				if(it->next->vnt_node == NULL) {
-					/*IRLOG(("Null vnt, removing entry\n"));
-					it->next = it->next->next;*/
 					struct vnt_entry_t **entry = &vntable[i];
 					//IRLOG(("Address thing worked\n"));
 					*entry = (*entry)->next;

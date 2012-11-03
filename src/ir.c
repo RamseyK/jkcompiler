@@ -35,7 +35,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 				tac->op1->d.b = entry->vnt_node->val_td->d.b;
 				tac->op1->type = TAC_DATA_TYPE_BOOL;
 			} else {
-				// Case where the value isn't known at compile time
+				// Case where the value isn't known at compile time. Common subexpression eliminitation will be used here
 				//IRLOG(("Have a tac op1 that can't be propogated\n"));
 			}
 		}
@@ -54,7 +54,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 				tac->op2->d.b = entry->vnt_node->val_td->d.b;
 				tac->op2->type = TAC_DATA_TYPE_BOOL;
 			} else {
-				// Case where the value isn't known at compile time
+				// Case where the value isn't known at compile time. Common subexpression eliminitation will be used here
 				//IRLOG(("Have a tac op2 that can't be propogated\n"));
 			}
 		}
@@ -62,7 +62,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 }
 
 // Simplifies constant expressions into a single assignment
-// Should generally be performed after const_propogation
+// Should be performed after const_propogation
 void ir_opt_const_folding(struct three_address_t *tac) {
 	// No optimization to perform
 	if(tac->op1 == NULL || tac->op2 == NULL)
@@ -202,11 +202,24 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 		// One var is an integer
 		// Test Program: test_tac_consts_var.p
 		
-		// Case: Multiply by 0
 		if(tac->op == OP_STAR) {
+			// Multiply by 0
 			if((tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 0) || (tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0)) {
 				tac->op1->type = TAC_DATA_TYPE_INT;
 				tac->op1->d.val = 0;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+			}
+			
+			// Multiply by 1
+			if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 1) { // op1 is 1. 1*a = a
+				// Could be an int or var. Copy everything
+				tac->op1->type = tac->op2->type;
+				tac->op1->d.val = tac->op2->d.val;
+				tac->op1->d.id = tac->op2->d.id;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+			} else { // op2 is 1. a*1 = a
 				tac->op = OP_NO_OP;
 				tac->op2 = NULL;
 			}
@@ -214,6 +227,11 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 	} else {
 	
 	}
+}
+
+// Dead code eliminitation should remove any unused temporary tac vars and unreachable code
+void ir_opt_dead_code_elim() {
+	// note: this will get rid of a lot of the unecessary temp variables that have been simplified to constants
 }
 
 // Start value numbering on the CFG
@@ -309,7 +327,7 @@ void ir_evn(struct block_t *block, int block_level) {
 					// Lookup the v_lhs to check for previous computations of the TAC right hand side
 					struct vnt_entry_t *e_lhs_exist = cfg_vnt_hash_lookup_val(v_lhs);
 					
-					// Previous computation existed, perform optimization
+					// Previous computation existed, perform local common subexpression elimination (optimization)
 					if(e_lhs_exist != NULL) {
 						// Optimize the TAC node
 						tac->op1 = e_lhs_exist->var_td;
@@ -361,6 +379,9 @@ void ir_evn(struct block_t *block, int block_level) {
 		}
 		sprintf(ir_vnt_out_buffer, "%s\n", ir_vnt_out_buffer);
 	}
+	
+	// Perform dead code elimintation after value numbering
+	ir_opt_dead_code_elim();
 	
 	// Go through the children of this block and perform numbering
 	struct block_list_t *child = block->children;

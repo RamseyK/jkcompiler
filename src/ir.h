@@ -27,6 +27,7 @@ struct block_list_t *workList; // Used in value numbering
  */
 
 char ir_vnt_out_buffer[2048];
+char ir_opt_const_out_buffer[2048];
  
 /* ----------------------------------------------------------------
  * Intermediate Representation functions
@@ -43,6 +44,7 @@ void ir_print_vnt();
 
 // Optimization
 void ir_optimize();
+void ir_opt_dead_code_elim();
 // Constant Folding & Propogation
 void ir_opt_const_propagation(struct three_address_t *tac);
 void ir_opt_const_folding(struct three_address_t *tac);
