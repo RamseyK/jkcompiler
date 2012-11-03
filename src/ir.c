@@ -35,8 +35,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 				tac->op1->d.b = entry->vnt_node->val_td->d.b;
 				tac->op1->type = TAC_DATA_TYPE_BOOL;
 			} else {
-				// Case where the value isn't known at compile time. Common subexpression eliminitation will be used here
-				//IRLOG(("Have a tac op1 that can't be propogated\n"));
+				// Case where the value isn't known at compile time. Nothing to propagate
 			}
 		}
 	}
@@ -54,8 +53,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 				tac->op2->d.b = entry->vnt_node->val_td->d.b;
 				tac->op2->type = TAC_DATA_TYPE_BOOL;
 			} else {
-				// Case where the value isn't known at compile time. Common subexpression eliminitation will be used here
-				//IRLOG(("Have a tac op2 that can't be propogated\n"));
+				// Case where the value isn't known at compile time. Nothing to propagate
 			}
 		}
 	}

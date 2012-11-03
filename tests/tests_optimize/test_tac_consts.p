@@ -14,7 +14,7 @@ BEGIN
    dd := aa + cc;
    ee := 1;
    ff := ee;
-   gg := ff;
+   gg := ff
 END
 
 END
