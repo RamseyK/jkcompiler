@@ -14,7 +14,7 @@
 
 #include "shared.h"
 #include "rulefuncs.h"
-#include "Set.h"
+#include "set.h"
 
 // Block Types
 #define BLOCK_IF 1
@@ -181,7 +181,7 @@ void cfg_vnt_init();
 void cfg_vnt_destroy();
 char *cfg_vnt_new_name(); // Creates name using counter
 char *cfg_vnt_hash(const char *op1, int op, const char *op2); // Creates name by hashing operator and operands
-struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, struct tac_data_t *val_td, int block_level); // Creates an inserts a node
+struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, struct tac_data_t *val_td, int block_level); // Creates and inserts a node
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val); // Lookup by the vn_node_t val
 struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td); // Lookup by the vn_entry_t tacData
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level

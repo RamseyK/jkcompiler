@@ -17,6 +17,209 @@ void ir_destroy() {
 	cfg_vnt_destroy();
 }
 
+// Substitues values of known constants in expressions at compile time
+void ir_opt_const_propagation(struct three_address_t *tac) {
+	struct vnt_entry_t *entry = NULL;
+
+	// Lookup each tac data element in the VNT to determine if theres a value for it
+	if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
+		entry = cfg_vnt_hash_lookup_td(tac->op1);
+		
+		// If the tac data for op1 is already in the table, replace this tac's op1 with the corresponding constant value
+		if(entry != NULL) {
+			//IRLOG(("Found tac->op1 constant value in the table %s\n", cfg_tac_data_to_str(tac->op1)));
+			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) {
+				tac->op1->d.val = entry->vnt_node->val_td->d.val;
+				tac->op1->type = TAC_DATA_TYPE_INT;
+			} else if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_BOOL) {
+				tac->op1->d.b = entry->vnt_node->val_td->d.b;
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+			} else {
+				// Case where the value isn't known at compile time
+				//IRLOG(("Have a tac op1 that can't be propogated\n"));
+			}
+		}
+	}
+	
+	if(tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR) {
+		entry = cfg_vnt_hash_lookup_td(tac->op2);
+	
+		// If the tac data for op2 is already in the table, replace this tac's op2 with the corresponding constant value
+		if(entry != NULL) {
+			//IRLOG(("Found tac->op2 constant value in the table %s\n", cfg_tac_data_to_str(tac->op2)));
+			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) {
+				tac->op2->d.val = entry->vnt_node->val_td->d.val;
+				tac->op2->type = TAC_DATA_TYPE_INT;
+			} else if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_BOOL) {
+				tac->op2->d.b = entry->vnt_node->val_td->d.b;
+				tac->op2->type = TAC_DATA_TYPE_BOOL;
+			} else {
+				// Case where the value isn't known at compile time
+				//IRLOG(("Have a tac op2 that can't be propogated\n"));
+			}
+		}
+	}
+}
+
+// Simplifies constant expressions into a single assignment
+// Should generally be performed after const_propogation
+void ir_opt_const_folding(struct three_address_t *tac) {
+	// No optimization to perform
+	if(tac->op1 == NULL || tac->op2 == NULL)
+		return;
+	if(tac->op1->type == TAC_DATA_TYPE_LABEL || tac->op2->type == TAC_DATA_TYPE_LABEL || tac->op1->type == TAC_DATA_TYPE_KEYWORD || tac->op2->type == TAC_DATA_TYPE_KEYWORD)
+		return;
+
+	// Tac datas of the same type
+	if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_INT) {
+		// Simplify the operation between two int constants
+		// Test Program: test_tac_consts.p
+		
+		switch(tac->op) {
+			case OP_PLUS:
+				tac->op1->d.val = tac->op1->d.val + tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_MINUS:
+				tac->op1->d.val = tac->op1->d.val - tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_STAR:
+				tac->op1->d.val = tac->op1->d.val * tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_SLASH:
+				if(tac->op2->d.val != 0) { // Check for divide by 0
+					tac->op1->d.val = tac->op1->d.val / tac->op2->d.val;
+					tac->op = OP_NO_OP;
+					tac->op2 = NULL;
+				}
+				break;
+			case OP_MOD:
+				if(tac->op2->d.val != 0) { // Check for divide by 0
+					tac->op1->d.val = tac->op1->d.val % tac->op2->d.val;
+					tac->op = OP_NO_OP;
+					tac->op2 = NULL;
+				}
+				break;
+			case OP_EQUAL:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val == tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_NOTEQUAL:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val != tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_LT:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val < tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_GT:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val > tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_LE:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val <= tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_GE:
+				tac->op1->type = TAC_DATA_TYPE_BOOL;
+				tac->op1->d.b = tac->op1->d.val >= tac->op2->d.val;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			default:
+				break;
+		}
+	} else if(tac->op1->type == TAC_DATA_TYPE_BOOL && tac->op2->type == TAC_DATA_TYPE_BOOL) {
+		// Simplify the operation between two boolean constants
+		// Test Program: test_tac_consts_bool.p
+		
+		switch(tac->op) {
+			case OP_OR:
+				tac->op1->d.b = tac->op1->d.b || tac->op2->d.b;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_AND:
+				tac->op1->d.b = tac->op1->d.b && tac->op2->d.b;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_EQUAL:
+				tac->op1->d.b = tac->op1->d.b == tac->op2->d.b;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			case OP_NOTEQUAL:
+				tac->op1->d.b = tac->op1->d.b != tac->op2->d.b;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+				break;
+			default:
+				break;
+		}
+	} else if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
+		// Two vars of unknown value will be optimized at a higher arithmetic level
+		// Test Program: test_tac_consts_var.p
+		
+		// Add to itself. a+a => 2*a
+		if(tac->op == OP_PLUS && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
+			tac->op1->type = TAC_DATA_TYPE_INT;
+			tac->op1->d.val = 2;
+			tac->op = OP_STAR;
+		}
+		
+		// Subtract from itself. a-a => 0
+		if(tac->op == OP_MINUS && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
+			tac->op1->type = TAC_DATA_TYPE_INT;
+			tac->op1->d.val = 0;
+			tac->op = OP_NO_OP;
+			tac->op2 = NULL;
+		}
+		
+		// Divide by itself. a/a => 1
+		if(tac->op == OP_SLASH && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
+			tac->op1->type = TAC_DATA_TYPE_INT;
+			tac->op1->d.val = 1;
+			tac->op = OP_NO_OP;
+			tac->op2 = NULL;
+		}
+	} else {
+	}
+	
+	// Tac datas of differing types
+	if(tac->op1->type == TAC_DATA_TYPE_INT || tac->op2->type == TAC_DATA_TYPE_INT) {
+		// One var is an integer
+		// Test Program: test_tac_consts_var.p
+		
+		// Case: Multiply by 0
+		if(tac->op == OP_STAR) {
+			if((tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 0) || (tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0)) {
+				tac->op1->type = TAC_DATA_TYPE_INT;
+				tac->op1->d.val = 0;
+				tac->op = OP_NO_OP;
+				tac->op2 = NULL;
+			}
+		}
+	} else {
+	
+	}
+}
+
 // Start value numbering on the CFG
 void ir_value_numbering() {
 	// Clear the output buffer
@@ -52,6 +255,10 @@ void ir_evn(struct block_t *block, int block_level) {
 		// Number each TAC and insert it into the VNT
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
+			// Perform possible constant optimizations before value numbering the tac
+			ir_opt_const_propagation(tac);
+			ir_opt_const_folding(tac);
+		
 			char *op = op_str(tac->op);
 			
 			struct vnt_entry_t *e_op1 = NULL, *e_op2 = NULL, *e_lhs = NULL;

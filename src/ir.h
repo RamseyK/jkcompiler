@@ -41,8 +41,13 @@ void ir_value_numbering();
 void ir_evn(struct block_t *block, int block_level);
 void ir_print_vnt();
 
+// Optimization
 void ir_optimize();
+// Constant Folding & Propogation
+void ir_opt_const_propagation(struct three_address_t *tac);
+void ir_opt_const_folding(struct three_address_t *tac);
 
+// Fixups
 void ir_resolve_label_aliases();
 
 #endif
