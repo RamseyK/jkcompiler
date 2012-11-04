@@ -40,7 +40,7 @@ char *op_str(int i_op) {
 		cw = sprintf(op, "&");
 		break;
 	case OP_EQUAL:
-		cw = sprintf(op, "=");
+		cw = sprintf(op, "==");
 		break;
 	case OP_NOTEQUAL:
 		cw = sprintf(op, "!=");
