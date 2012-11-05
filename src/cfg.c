@@ -1036,10 +1036,10 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 
 /* Stack Manipulation */
 // Pops the top element from the stack and returns it;
-struct vnt_node_t **cfg_vnt_stack_pop(struct vnt_node_t **stack) {
+struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack) {
 	if(*stack == NULL)
 		return NULL;
-	struct vnt_node_t **stack_top = stack;
+	struct vnt_node_t *stack_top = *stack;
 	*stack = (*stack)->next;
 	return stack_top;
 }
