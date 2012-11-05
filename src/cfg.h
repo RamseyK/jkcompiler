@@ -46,6 +46,7 @@ struct tac_data_t {
 		bool b;
 	} d;
 	int type;
+	bool temporary; // Temporary variable flag set to TRUE if this TAC data represents a temp var
 };
 
 // List structure for tac data

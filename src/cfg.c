@@ -21,6 +21,7 @@ void cfg_init() {
 	name_counter = 0;
 	varList = NULL;
 	tacDataList = NULL;
+	lastConnectedTac = NULL;
 
 	// Initialize the constant true and false tac data nodes
 	// And insert into the vnt
@@ -236,6 +237,7 @@ struct block_t *cfg_create_simple_block() {
 	// the lastConnectedTac was the end of the list, so skip
 	if(tl_it != NULL) {
 		temp_block->entry = tl_it->tac;
+		temp_block->entry->prev = NULL;
 
 		IRLOG(("Connecting the tacs\n"));
 		while(tl_it->next != NULL) {
@@ -255,8 +257,8 @@ struct block_t *cfg_create_simple_block() {
 	cfg_append_block_list(&blockList, temp_block);
 
 	//Debug
-	IRLOG(("Simple block created\n"));
-	cfg_print_block(temp_block);
+	//IRLOG(("Simple block created\n"));
+	//cfg_print_block(temp_block);
 
 	return temp_block;
 }
@@ -357,9 +359,6 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 
 	if(condition == NULL)
 		return NULL;
-	
-	// Create a simple block first with the tac nodes of the condition block
-	//struct block_t *wh_block = cfg_create_simple_block(condition->entry);
 	
 	// Set WHILE, TRUE, block properties and children
 	bodyBlock->type = BLOCK_TRUE;
@@ -465,7 +464,7 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 		while(end->next != NULL)
 			end = end->next;
 		end->next = b2->entry;
-		
+		end->next->prev = end;
 
 		// If the second block is a simple block, drop it
 		if(b2->type == BLOCK_SIMPLE) {
@@ -518,6 +517,41 @@ void cfg_add_label_alias(char *label1, char *label2) {
 			set_add(it->next->set,label2);
 		}
 		//IRLOG(("Added %s as an alias for %s\n",label2, label1));
+	}
+}
+
+void cfg_print_tac_rev(struct three_address_t *t) {
+	struct three_address_t *tac = t;
+	while(tac->next != NULL) {
+		tac = tac->next;
+	}
+	
+	printf("tac in reverse:\n");
+	while(tac != NULL) {
+		char *op = op_str(tac->op);
+
+		// Get string representations of lhs, op1 and op2
+		//IRLOG(("Going to convert lhs tac data to str\n"));
+		char *lhs_str = cfg_tac_data_to_str(tac->lhs);
+		//IRLOG(("Going to convert op1 tac data to str\n"));
+		char *op1_str = cfg_tac_data_to_str(tac->op1);
+		//IRLOG(("Going to convert op2 tac data to str\n"));
+		char *op2_str = cfg_tac_data_to_str(tac->op2);
+		//IRLOG(("All tac data to str\n"));
+
+		if(tac->op == OP_NO_OP)
+			printf("\t%s := %s\n", lhs_str, op1_str);
+		else if(tac->op == OP_GOTO)
+			printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);
+		else
+			printf("\t%s := %s %s %s\n", lhs_str, op1_str, op, op2_str);
+		
+
+		free(op);
+		free(lhs_str);
+		free(op1_str);
+		free(op2_str);
+		tac = tac->prev;
 	}
 }
 
@@ -581,6 +615,7 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 		temp_tac->lhs = cfg_new_tac_data();
 		temp_tac->lhs->type = TAC_DATA_TYPE_VAR;
 		temp_tac->lhs->d.id = cfg_new_temp_name();
+		temp_tac->lhs->temporary = true;
 	} else {
 		temp_tac->lhs = cfg_new_tac_data();
 		temp_tac->lhs->type = TAC_DATA_TYPE_VAR;
@@ -962,6 +997,7 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 		}
 		// VAR
 		if(it->var_td->type == TAC_DATA_TYPE_VAR && td->type == TAC_DATA_TYPE_VAR && strcmp(it->var_td->d.id,td->d.id) == 0){
+			IRLOG(("returning %s var of value %s\n", it->var_td->d.id, cfg_tac_data_to_str(it->vnt_node->val_td)));
 			return it;
 		}
 		// BOOL
