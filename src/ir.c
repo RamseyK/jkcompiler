@@ -24,18 +24,25 @@ void ir_destroy() {
 // Substitues values of known constants in expressions at compile time before value numbering on a TAC
 void ir_opt_const_propagation(struct three_address_t *tac) {
 	struct vnt_entry_t *entry = NULL, *repEntry = NULL;
+	
 	char *op = op_str(tac->op);
 
 	// Lookup each tac data element in the VNT to determine if theres a value for it
 	if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
 		entry = cfg_vnt_hash_lookup_td(tac->op1);
 		
-		// If the tac data for op1 is already in the table, replace this tac's op1 with the corresponding constant value
+		// If the tac data for op1 (TAC_VAR) is already in the table, replace this tac's op1 with the corresponding constant value (TAC_INT)
 		if(entry != NULL) {
-			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
+			// Output the expression being propagated to ir_opt_const_out_buffer
+			char *lhs_str = cfg_tac_data_to_str(tac->lhs), *op1_str = cfg_tac_data_to_str(tac->op1), *op2_str = cfg_tac_data_to_str(tac->op2);
+			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, lhs_str, op1_str, op, (tac->op2 != NULL ? op2_str : ""));
+			free(op1_str);
+			if(op2_str != NULL)
+				free(op2_str);
+			
 			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) { // Stack node is an INT
-				repEntry = cfg_vnt_hash_lookup_td(entry->vnt_node->val_td);
-				tac->op1 = repEntry->vnt_node->val_td;
+				repEntry = cfg_vnt_hash_lookup_td(entry->vnt_node->val_td); // Lookup the entry for the actual value
+				tac->op1 = repEntry->vnt_node->val_td; // Replace op1 with the tac data of the looked up entry
 			} else if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_BOOL) {
 				repEntry = cfg_vnt_hash_lookup_td(entry->vnt_node->val_td);
 				tac->op1 = repEntry->vnt_node->val_td;
@@ -43,7 +50,14 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 				// Case where the value isn't known at compile time. Nothing to propagate
 				//IRLOG(("Cant prop %s with value of %s of type %i\n", cfg_tac_data_to_str(tac->op1), cfg_tac_data_to_str(entry->vnt_node->val_td), entry->vnt_node->val_td->type));
 			}
+			
+			// Output the expression after propagation to the ir_opt_const_out_buffer
+			op1_str = cfg_tac_data_to_str(tac->op1);
+			op2_str = cfg_tac_data_to_str(tac->op2);
 			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
+			free(lhs_str);
+			free(op1_str);
+			free(op2_str);
 		}
 	}
 	
@@ -78,10 +92,13 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 	if(tac->op1->type == TAC_DATA_TYPE_LABEL || tac->op2->type == TAC_DATA_TYPE_LABEL || tac->op1->type == TAC_DATA_TYPE_KEYWORD || tac->op2->type == TAC_DATA_TYPE_KEYWORD)
 		return;
 	
+	// Output the expression being folded to ir_opt_const_out_buffer
 	char *pre_op = op_str(tac->op);
-	
-	sprintf(ir_opt_const_out_buffer, "%s\tFold: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), pre_op, cfg_tac_data_to_str(tac->op2));
+	char *lhs_str = cfg_tac_data_to_str(tac->lhs), *op1_str = cfg_tac_data_to_str(tac->op1), *op2_str = cfg_tac_data_to_str(tac->op2);
+	sprintf(ir_opt_const_out_buffer, "%s\tFold: %s := %s %s %s => ", ir_opt_const_out_buffer, lhs_str, op1_str, pre_op, op2_str);
 	free(pre_op);
+	free(op1_str);
+	free(op2_str);
 	
 	struct tac_data_t *new_td = cfg_new_tac_data();
 
@@ -242,37 +259,41 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 		// Test Program: test_tac_consts_var.p
 		
 		if(tac->op == OP_STAR) {
-			// Multiply by 0
 			if((tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 0) || (tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0)) {
+				// Multiply by 0
 				new_td->type = TAC_DATA_TYPE_INT;
 				new_td->d.val = 0;
 				tac->op1 = new_td;
 				tac->op = OP_NO_OP;
 				tac->op2 = NULL;
-			}
-			
-			// Multiply by 1
-			if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 1) { // op1 is 1. 1*a = a
-				// Could be an int or var. Copy everything
-				new_td->type = tac->op2->type;
-				new_td->d.val = tac->op2->d.val;
-				if(tac->op2->d.id != NULL)
-					new_td->d.id = new_identifier(tac->op2->d.id); // TODO: Make sure we actually need to make a new identifier here. If so, ensure it's cleaned up properly
+			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR && tac->op1->d.val == 1) {
+				// op1 is 1, op2 is a VAR. 1*a = a
+				new_td->type = TAC_DATA_TYPE_VAR;
+				new_td->d.id = new_identifier(tac->op2->d.id);
 				tac->op1 = new_td;
 				tac->op = OP_NO_OP;
 				tac->op2 = NULL;
-			} else { // op2 is 1. a*1 = a
+			} else if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 1) {
+				// op2 is 1. a*1 = a
 				tac->op = OP_NO_OP;
 				tac->op2 = NULL;
+			} else {
 			}
 		}
 	} else {
 	
 	}
 	
+	// Output the expression after the fold to ir_opt_const_out_buffer
 	char *post_op = op_str(tac->op);
-	sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), (tac->op != OP_NO_OP ? post_op : ""), (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
+	op1_str = cfg_tac_data_to_str(tac->op1);
+	op2_str = cfg_tac_data_to_str(tac->op2); // May be null b/c op2 might have been removed
+	sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, lhs_str, op1_str, (tac->op != OP_NO_OP ? post_op : ""), (tac->op2 != NULL ? op2_str : ""));
 	free(post_op);
+	free(lhs_str);
+	free(op1_str);
+	if(op2_str != NULL)
+		free(op2_str);
 }
 
 // Dead code eliminitation should remove any unused temporary tac vars and unreachable code
@@ -295,6 +316,8 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 		}
 		tac = tac->next;
 	}
+	
+	// TODO: Remove impossible IF/WHILE branches
 }
 
 // Start value numbering on the CFG
@@ -432,10 +455,10 @@ void ir_evn(struct block_t *block, int block_level) {
 			tac = tac->next;
 		}
 		sprintf(ir_vnt_out_buffer, "%s\n", ir_vnt_out_buffer);
-	}
-	
-	// Perform dead code elimintation after value numbering
-	ir_opt_dead_code_elim(block);
+		
+		// Perform dead code elimintation after value numbering
+		ir_opt_dead_code_elim(block);
+	} // End of IF checking for IF/WHILE blocks
 	
 	// Go through the children of this block and perform numbering
 	struct block_list_t *child = block->children;

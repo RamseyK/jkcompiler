@@ -616,7 +616,7 @@ void free_expression(struct expression_t* e) {
 	free_simple_expression(e->se1);
 	if(e->se2 != NULL) {
 		free_simple_expression(e->se2);
-		free_expression_data(e->expr); // expr is only instantiated if theres a second term
+		free_expression_data(e->expr); // expr is only instantiated if theres a second term and propagated all the way from factor
 	}
 	free(e);
 }
@@ -1025,8 +1025,6 @@ void free_simple_expression(struct simple_expression_t *se) {
 	while(it != NULL) {
 		current = it;
 		free_term(current->t);
-		if(current->next != NULL)
-			free_expression_data(current->expr);
 		it = it->next;
 		free(current);
 	}
@@ -1086,8 +1084,6 @@ void free_term(struct term_t *t) {
 	while(it != NULL) {
 		current = it;
 		free_factor(current->f);
-		if(current->next != NULL)
-			free_expression_data(current->expr);
 		it = it->next;
 		free(current);
 	}

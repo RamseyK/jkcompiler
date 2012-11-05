@@ -36,7 +36,7 @@ void cfg_init() {
 	// constant tac data for "if"
 	TAC_DATA_KEYWORD_IF = cfg_new_tac_data();
 	TAC_DATA_KEYWORD_IF->type = TAC_DATA_TYPE_KEYWORD;
-	TAC_DATA_KEYWORD_IF->d.id = "if";
+	TAC_DATA_KEYWORD_IF->d.id = new_identifier("if");
 
 }
 
@@ -54,11 +54,16 @@ void cfg_destroy() {
 	cfg_free_tac_list();
 	// Free the master list of tac data
 	cfg_free_tac_data_list();
+	
+	// Free variable list set
+	free_set(varList);
+	varList = NULL;
 
 	rootBlock = NULL;
 	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
+	lastConnectedTac = NULL;
 }
 
 // Prints A list of all variables including all temporary variables produced
@@ -690,9 +695,7 @@ struct tac_data_t *cfg_new_tac_data() {
 	struct tac_data_t *temp_td = (struct tac_data_t *) malloc(sizeof(struct tac_data_t));
 	CHECK_MEM_ERROR(temp_td);
 	temp_td->type = 0;
-	temp_td->d.id = NULL;
-	temp_td->d.b = false;
-	temp_td->d.val = 0;
+	temp_td->d.id = NULL; // Only set this element in the union to NULL
 
 	// Add the tac data to the master listso we can destroy it all later
 	if(tacDataList == NULL) {
@@ -712,7 +715,11 @@ struct tac_data_t *cfg_new_tac_data() {
 
 // Adds an element to the varList for tac nodes
 void cfg_add_to_varlist(const char *id) {
-	varList = set_union(varList,new_set(id));
+	struct set_t *old_set = varList;
+	struct set_t *id_set = new_set(id);
+	varList = set_union(old_set, id_set);
+	free_set(old_set);
+	free_set(id_set);
 }
 
 // Frees the master TAC list and TAC nodes
@@ -730,24 +737,11 @@ void cfg_free_tac_list() {
 		// Free the list entry
 		free(cur);
 	}
-	
 	tacList = NULL;
-	free(tacList);
 }
 
 // Frees a TAC node and it's components
 void cfg_free_tac(struct three_address_t *tac) {
-	// Free any non null names / operand names
-	/* This will be done at the end for all tac_data_t in the master list
-	 * if(tac->lhs != NULL)
-		free(tac->lhs);
-	
-	if(tac->op1 != NULL)
-		free(tac->op1);
-
-	if(tac->op2 != NULL)
-		free(tac->op2);*/
-
 	// Free the TAC node
 	free(tac);
 }
@@ -760,16 +754,16 @@ void cfg_free_tac_data_list() {
 		cur = it;
 		it = it->next;
 
-		// Free the tac data
-		if(cur->td->d.id != NULL)
+		// Free the tac identifier (if it exists)
+		if((cur->td->type != TAC_DATA_TYPE_INT && cur->td->type != TAC_DATA_TYPE_BOOL) && cur->td->d.id != NULL) {
 			free(cur->td->d.id);
+			cur->td->d.id = NULL;
+		}
 
 		// Free the list entry
 		free(cur);
 	}
-
 	tacDataList = NULL;
-	free(tacDataList);
 }
 
 // Given a temporary TAC name, lookup the TAC node in the master list
@@ -984,6 +978,9 @@ void cfg_vnt_hash_rollback(int block_level) {
 			if(vnt_entry_it->var_td->type != TAC_DATA_TYPE_INT && vnt_entry_it->var_td->type != TAC_DATA_TYPE_BOOL && vnt_entry_it->var_td->type != TAC_DATA_TYPE_KEYWORD) {
 				// Pop from the stack until the block level is right
 				while((vnt_entry_it->vnt_node != NULL) && (vnt_entry_it->vnt_node->block_level > block_level)) {
+					//struct vnt_node_t **snode = cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+					//cfg_vnt_free_node(*snode); // Free from memory, no longer needed
+					//*snode = NULL;
 					cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
 				}
 			}
@@ -1039,10 +1036,10 @@ void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
 
 /* Stack Manipulation */
 // Pops the top element from the stack and returns it;
-struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack) {
+struct vnt_node_t **cfg_vnt_stack_pop(struct vnt_node_t **stack) {
 	if(*stack == NULL)
 		return NULL;
-	struct vnt_node_t *stack_top = *stack;
+	struct vnt_node_t **stack_top = stack;
 	*stack = (*stack)->next;
 	return stack_top;
 }

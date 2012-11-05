@@ -188,8 +188,8 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td); // Lookup by 
 void cfg_vnt_hash_rollback(int block_level); // Rolls back the vn_node stacks to the specified level
 void cfg_vnt_free_entry(struct vnt_entry_t *entry);
 
-// Stack functions
-struct vnt_node_t *cfg_vnt_stack_pop(struct vnt_node_t **stack);
+// VNT Stack functions
+struct vnt_node_t **cfg_vnt_stack_pop(struct vnt_node_t **stack);
 void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, struct tac_data_t *val_td, int block_level);
 void cfg_vnt_free_node(struct vnt_node_t *node);
 
