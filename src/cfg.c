@@ -369,8 +369,11 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 	condition->type = BLOCK_WHILE;
 
 	// Link bodyBlock
+	// bodyBlock and condition are parents and children of each other
 	cfg_append_block_list(&condition->children, bodyBlock);
-	cfg_append_block_list(&bodyBlock->parents,condition);
+	cfg_append_block_list(&condition->parents, bodyBlock);
+	cfg_append_block_list(&bodyBlock->parents, condition);
+	cfg_append_block_list(&bodyBlock->children, condition);
 	
 	// Link branches to a dummy node at the bottom
 	struct block_t *dummy = cfg_create_simple_block(NULL);

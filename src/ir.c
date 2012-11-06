@@ -57,7 +57,8 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
 			free(lhs_str);
 			free(op1_str);
-			free(op2_str);
+			if(op2_str != NULL)
+				free(op2_str);
 		}
 	}
 	
@@ -66,7 +67,13 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 	
 		// If the tac data for op2 is already in the table, replace this tac's op2 with the corresponding constant value
 		if(entry != NULL) {
-			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, cfg_tac_data_to_str(tac->op2));
+			// Output the expression being propagated to ir_opt_const_out_buffer
+			char *lhs_str = cfg_tac_data_to_str(tac->lhs), *op1_str = cfg_tac_data_to_str(tac->op1), *op2_str = cfg_tac_data_to_str(tac->op2);
+			sprintf(ir_opt_const_out_buffer, "%s\tProp: %s := %s %s %s => ", ir_opt_const_out_buffer, lhs_str, op1_str, op, (tac->op2 != NULL ? op2_str : ""));
+			if(op1_str != NULL)
+				free(op1_str);
+			free(op2_str);
+			
 			if(entry->vnt_node->val_td->type == TAC_DATA_TYPE_INT) {
 				repEntry = cfg_vnt_hash_lookup_td(entry->vnt_node->val_td);
 				tac->op2 = repEntry->vnt_node->val_td;
@@ -76,7 +83,15 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 			} else {
 				// Case where the value isn't known at compile time. Nothing to propagate
 			}
-			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, cfg_tac_data_to_str(tac->op2));
+
+			// Output the expression after propagation to the ir_opt_const_out_buffer
+			op1_str = cfg_tac_data_to_str(tac->op1);
+			op2_str = cfg_tac_data_to_str(tac->op2);
+			sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, cfg_tac_data_to_str(tac->lhs), cfg_tac_data_to_str(tac->op1), op, (tac->op2 != NULL ? cfg_tac_data_to_str(tac->op2) : ""));
+			free(lhs_str);
+			if(op1_str != NULL)
+				free(op1_str);
+			free(op2_str);
 		}
 	}
 	
@@ -301,6 +316,7 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 void ir_opt_dead_code_elim(struct block_t *block) {
 	// This will get rid of a lot of the unnecessary temp variables that have been simplified to constants
 	struct three_address_t *tac = block->entry;
+
 	while(tac != NULL) {
 		// Found the tac was a temporary. If it equals a constant, unlink it it
 		if(tac->op == OP_NO_OP && tac->lhs->temporary) {
@@ -318,6 +334,9 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 	}
 	
 	// TODO: Remove impossible IF/WHILE branches
+	
+	// TODO: Remove temporary variables that aren't used more than once and make a replacement where the temporary was used
+	// Example: t = c+1; c = t; -> c = c+1;
 }
 
 // Start value numbering on the CFG
@@ -474,8 +493,10 @@ void ir_evn(struct block_t *block, int block_level) {
 		// Child has multiple parents
 		if(cfg_block_list_size(&child->block->parents) > 1) {
 			// Base case, Add to the work list for later if it doesn't already exist
-			if(!cfg_exists_in_block_list(&workList, child->block))
+			if(!cfg_exists_in_block_list(&workList, child->block)) {
 				cfg_append_block_list(&workList, child->block);
+				IRLOG(("Adding %s to the worklist\n", child->block->label));
+			}
 			
 			// Roll back the numbering before moving to the next sibling
 			cfg_vnt_hash_rollback(block_level);

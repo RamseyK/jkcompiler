@@ -84,7 +84,7 @@
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 0
+#if 1
 	#define IRLOG(x) printf x
 #else
 	#define IRLOG(x) (void)0
