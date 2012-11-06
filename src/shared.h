@@ -24,7 +24,7 @@
 #define PROGRAMNAME "opc"
 
 #define PRIMITIVE_TYPE_NAME_INTEGER "integer"
-#define PRIMITIVE_TYPE_NAME_REAL "real"
+#define PRIMITIVE_TYPE_NAME_REAL 	"real"
 #define PRIMITIVE_TYPE_NAME_BOOLEAN "boolean"
 #define PRIMITIVE_TYPE_NAME_POINTER "pointer"
 #define PRIMITIVE_TYPE_NAME_UNKNOWN "unknown"
@@ -46,7 +46,8 @@
 #define OP_LE 12
 #define OP_GE 13
 #define OP_NO_OP 14
-#define OP_GOTO 15
+#define OP_BRANCH 15
+#define OP_GOTO 16
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \

@@ -27,7 +27,6 @@
 #define TAC_DATA_TYPE_VAR 1
 #define TAC_DATA_TYPE_INT 2
 #define TAC_DATA_TYPE_BOOL 3
-//TODO:  Add types for label and keyword (if)
 #define TAC_DATA_TYPE_LABEL 4
 #define TAC_DATA_TYPE_KEYWORD 5
 
@@ -173,7 +172,8 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 void cfg_add_to_varlist(const char *id);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
-struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching
+struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching
+struct three_address_t *cfg_generate_goto_tac(const char *label); // Creates tac for goto/jump
 char *cfg_tac_data_to_str(struct tac_data_t *td);
 struct tac_data_t *cfg_new_tac_data();
 

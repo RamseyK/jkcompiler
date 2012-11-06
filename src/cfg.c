@@ -340,19 +340,19 @@ struct block_t *cfg_create_if_block(struct block_t *condition, struct block_t *t
 	cfg_append_block_list(&falseBranch->children, dummy);
 	
 	// Add the branch/goto statement for the condition block and the true/false branches
-	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs,trueBranch->label);
-	struct three_address_t *condFals = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,falseBranch->label);
+	struct three_address_t *condTrue = cfg_generate_branch_tac(condition->entry->lhs,trueBranch->label);
+	struct three_address_t *condFals = cfg_generate_goto_tac(falseBranch->label);
 	cfg_connect_tac(condition->entry,condTrue);
 	cfg_connect_tac(condition->entry,condFals);
 
-	struct three_address_t *checkCond1 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac(dummy->label);
 	cfg_connect_tac(trueBranch->entry,checkCond1);
-	struct three_address_t *checkCond2 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
+	struct three_address_t *checkCond2 = cfg_generate_goto_tac(dummy->label);
 	cfg_connect_tac(falseBranch->entry,checkCond2);
 
 	//Debug
 	IRLOG(("If block created\n"));
-	cfg_print_block(condition);
+	//cfg_print_block(condition);
 
 	return condition;
 }
@@ -378,18 +378,18 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 	cfg_append_block_list(&condition->children, dummy);
 	
 	// Add the branch/goto statement for the condition block and the true/false branches
-	struct three_address_t *condTrue = cfg_generate_goto_tac(condition->entry->lhs,bodyBlock->label);
+	struct three_address_t *condTrue = cfg_generate_branch_tac(condition->entry->lhs,bodyBlock->label);
 	cfg_connect_tac(condition->entry,condTrue);
 	// The next tac node should be to jump to the dummy unconditionally
-	struct three_address_t *condFals = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,dummy->label);
+	struct three_address_t *condFals = cfg_generate_goto_tac(dummy->label);
 	cfg_connect_tac(condition->entry,condFals);
 
-	struct three_address_t *checkCond1 = cfg_generate_goto_tac(TAC_DATA_BOOL_TRUE,condition->label);
+	struct three_address_t *checkCond1 = cfg_generate_goto_tac(condition->label);
 	cfg_connect_tac(bodyBlock->entry,checkCond1);
 
 	//Debug
 	IRLOG(("While block created\n"));
-	cfg_print_block(condition);
+	//cfg_print_block(condition);
 
 	return condition;
 }
@@ -435,7 +435,7 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 		//IRLOG(("b1 or b2 was null\n"));
 		return;
 	}
-	//IRLOG(("Connecting blocks\nb1: %s\tb2: %s\n",b1->label,b2->label));
+	IRLOG(("Connecting blocks\nb1: %s\tb2: %s\n",b1->label,b2->label));
 
 	// First block is the root of a CFG. b2 will be linked to the bottom of b1
 	struct block_t *bottom = cfg_find_bottom(b1);
@@ -445,11 +445,6 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 	// If the bottom is a dummy, replace the dummy block with b2
 	if(bottom->entry == NULL) {
 		//IRLOG(("Bottom block is a dummy\n"));
-		// I hope we aren't using the dummy's label anywhere... How would that affect jumps?
-		// TODO:  The dummy node is the target of a jump in the case of while loop and if (false branch)
-		// Need to create and maintain a table to traverse later to fix labels that have been changed
-		// So that everything is consistent and not mislabeled.  Involves traversing all of the tac nodes
-		// In every block and replacing old label with new Label.  LList of Sets.
 		// Add the two labels as aliases
 		cfg_add_label_alias(bottom->label,b2->label);
 
@@ -461,26 +456,29 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 		cfg_drop_block_list(&blockList, b2);
 		cfg_free_block(b2);
 	} else {
-		//IRLOG(("Bottom block is not a dummy\n"));
-		// Bottom isn't a dummy, merge the TACs making a maximal basic block
-		// Stick the end of b1's TACs to the beginning of b2's TACs
-		struct three_address_t *end = bottom->entry;
-		while(end->next != NULL)
-			end = end->next;
-		end->next = b2->entry;
-		end->next->prev = end;
-
 		// If the second block is a simple block, drop it
 		if(b2->type == BLOCK_SIMPLE) {
+			// Bottom isn't a dummy, and is simple, merge the TACs making a maximal basic block
+			// Stick the end of b1's TACs to the beginning of b2's TACs
+			struct three_address_t *end = bottom->entry;
+			while(end->next != NULL)
+				end = end->next;
+			end->next = b2->entry;
+			end->next->prev = end;
+
 			cfg_drop_block_list(&blockList, b2);
 			cfg_free_block(b2);
 		} else {
 			// Update parent and children pointers for the blocks
 			// Add b2 as a child to b1
-			cfg_append_block_list(&b1->children,b2);
+			cfg_append_block_list(&bottom->children,b2);
 
 			// Add b1 as a parent to b2
 			cfg_append_block_list(&b2->parents,b1);
+
+			// Add a goto tac node to jump from b1 to b2
+			struct three_address_t *gotoTac = cfg_generate_goto_tac(b2->label);
+			cfg_connect_tac(bottom->entry,gotoTac);
 		}
 
 
@@ -488,7 +486,7 @@ void cfg_connect_block(struct block_t *b1, struct block_t *b2) {
 	
 	//Debug
 	IRLOG(("Blocks connected\n\n"));
-	cfg_print_blocks();
+	//cfg_print_blocks();
 
 }
 
@@ -526,6 +524,8 @@ void cfg_add_label_alias(char *label1, char *label2) {
 
 // Prints the three address code recursively in the format:
 // LHS = OP1 op OP2
+// if COND goto LABEL
+// goto LABEL
 void cfg_print_tac(struct three_address_t *tac) {
 	if(tac == NULL) return;
 	if(tac == tac->prev) {
@@ -536,18 +536,16 @@ void cfg_print_tac(struct three_address_t *tac) {
 	char *op = op_str(tac->op);
 
 	// Get string representations of lhs, op1 and op2
-	//IRLOG(("Going to convert lhs tac data to str\n"));
 	char *lhs_str = cfg_tac_data_to_str(tac->lhs);
-	//IRLOG(("Going to convert op1 tac data to str\n"));
 	char *op1_str = cfg_tac_data_to_str(tac->op1);
-	//IRLOG(("Going to convert op2 tac data to str\n"));
 	char *op2_str = cfg_tac_data_to_str(tac->op2);
-	//IRLOG(("All tac data to str\n"));
 
 	if(tac->op == OP_NO_OP)
 		printf("\t%s := %s\n", lhs_str, op1_str);
-	else if(tac->op == OP_GOTO)
+	else if(tac->op == OP_BRANCH)
 		printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);
+	else if(tac->op == OP_GOTO)
+		printf("\t%s %s\n",op, op2_str);
 	else
 		printf("\t%s := %s %s %s\n", lhs_str, op1_str, op, op2_str);
 		
@@ -604,8 +602,6 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 		tacList->tac = temp_tac;
 		tacList->next = NULL;
 
-		// Set this as the lastConnectedTac
-		//lastConnectedTac = temp_tac;
 	} else {
 		// Find the end of the TAC list
 		struct three_address_list_t *end = tacList;
@@ -627,12 +623,46 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 	return temp_tac->lhs;
 }
 
-struct three_address_t *cfg_generate_goto_tac(struct tac_data_t *cond, const char *label) {
+struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label) {
 	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
 	CHECK_MEM_ERROR(temp_tac);
 	temp_tac->lhs = TAC_DATA_KEYWORD_IF;
-	temp_tac->op = OP_GOTO;
+	temp_tac->op = OP_BRANCH;
 	temp_tac->op1 = cond;
+	temp_tac->op2 = cfg_new_tac_data();
+	temp_tac->op2->type = TAC_DATA_TYPE_LABEL;
+	temp_tac->op2->d.id = new_identifier(label);
+	temp_tac->next = NULL;
+	temp_tac->prev = NULL;
+
+	// Insert the TAC node into the master list
+	if(tacList == NULL) {
+		tacList = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(tacList);
+		tacList->tac = temp_tac;
+		tacList->next = NULL;
+	} else {
+		// Find the end of the TAC list
+		struct three_address_list_t *end = tacList;
+		while(end->next != NULL)
+			end = end->next;
+
+		// Link to the end of the list
+		end->next = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(end->next);
+		end->next->tac = temp_tac;
+		end->next->next = NULL;
+	}
+
+	return temp_tac;
+}
+
+struct three_address_t *cfg_generate_goto_tac(const char *label) {
+	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
+	CHECK_MEM_ERROR(temp_tac);
+	temp_tac->lhs = NULL;
+	temp_tac->op = OP_GOTO;
+	temp_tac->op1 = NULL;
 	temp_tac->op2 = cfg_new_tac_data();
 	temp_tac->op2->type = TAC_DATA_TYPE_LABEL;
 	temp_tac->op2->d.id = new_identifier(label);

@@ -40,7 +40,7 @@ char *op_str(int i_op) {
 		cw = sprintf(op, "&");
 		break;
 	case OP_EQUAL:
-		cw = sprintf(op, "==");
+		cw = sprintf(op, "=");
 		break;
 	case OP_NOTEQUAL:
 		cw = sprintf(op, "!=");
@@ -62,6 +62,9 @@ char *op_str(int i_op) {
 		op[0] = '\0';
 		break;
 	case OP_GOTO:
+		cw = sprintf(op, "goto");
+		break;
+	case OP_BRANCH:
 		cw = sprintf(op, "goto");
 		break;
 	default:
