@@ -24,7 +24,7 @@
 #define PROGRAMNAME "opc"
 
 #define PRIMITIVE_TYPE_NAME_INTEGER "integer"
-#define PRIMITIVE_TYPE_NAME_REAL 	"real"
+#define PRIMITIVE_TYPE_NAME_REAL "real"
 #define PRIMITIVE_TYPE_NAME_BOOLEAN "boolean"
 #define PRIMITIVE_TYPE_NAME_POINTER "pointer"
 #define PRIMITIVE_TYPE_NAME_UNKNOWN "unknown"
@@ -69,7 +69,7 @@
 #if 0
 	#define GLOG(x) printf x
 #else
-	#define GLOG(x) (void)0
+	#define GLOG(x) dummy_func x
 #endif
 
 /*
@@ -78,16 +78,16 @@
 #if 0
 	#define SLOG(x) printf x
 #else
-	#define SLOG(x) (void)0
+	#define SLOG(x) dummy_func x
 #endif
 
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 1
+#if 0
 	#define IRLOG(x) printf x
 #else
-	#define IRLOG(x) (void)0
+	#define IRLOG(x) dummy_func x
 #endif
 
 /* ================================================================
@@ -465,6 +465,7 @@ struct program_t {
  * Function declarations
  * ----------------------------------------------------------------
  */
+void dummy_func(void *p, ...);
 char *op_str(int i_op);
 int makekey(char* lexeme, int max_hashkeys);
 void print_tabs(int numOfTabs);
