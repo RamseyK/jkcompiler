@@ -13,6 +13,7 @@
 #include "semantic.h"
 #include "rulefuncs.h"
 #include "usrdef.h"
+#include "set.h"
 #include "symtab.h"
 
 struct semantic_state_t {

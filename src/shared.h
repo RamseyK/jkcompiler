@@ -90,8 +90,9 @@
 	#define IRLOG(x) dummy_func x
 #endif
 
+
 /* ================================================================
- * Datatype declarations
+ * Global structures
  * ================================================================
  */
 
@@ -115,6 +116,12 @@ struct args_t {
     /** Apply global redundancy elimination */
     int optimize_gre;
 };
+
+
+/* ================================================================
+ * Datatype declarations
+ * ================================================================
+ */
 
 
 struct identifier_list_t;
@@ -466,11 +473,10 @@ struct program_t {
  * ----------------------------------------------------------------
  */
 void dummy_func(void *p, ...);
+
 char *op_str(int i_op);
 int makekey(char* lexeme, int max_hashkeys);
 void print_tabs(int numOfTabs);
-char *inttostring(int value);
-char *longtostring(long value);
 char *stringtolower(char *str);
 #endif
 

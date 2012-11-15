@@ -291,10 +291,10 @@ type_denoter : array_type
 	}
  | identifier
 	{
-		$$ = new_type_denoter();
+		/*$$ = new_type_denoter();
 		$$->type = TYPE_DENOTER_T_IDENTIFIER;
 		$$->name = $1;
-		$$->data.id = $1;
+		$$->data.id = $1;*/
 
 		struct type_denoter_t *new_type = new_type_denoter();
 		new_type->type = TYPE_DENOTER_T_IDENTIFIER;
@@ -669,7 +669,7 @@ variable_access : identifier
 		
 		// CFG
 		$$->expr->tacData->type = TAC_DATA_TYPE_VAR;
-		$$->expr->tacData->d.id = $1;
+		$$->expr->tacData->d.id = new_identifier($1);
 	}
  | indexed_variable
 	{

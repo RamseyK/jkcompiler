@@ -746,6 +746,17 @@ struct tac_data_t *cfg_new_tac_data() {
 	return temp_td;
 }
 
+// Free tac_data_t
+void cfg_free_tac_data(struct tac_data_t *td) {
+	// Free the tac identifier (if it exists)
+	if((td->type != TAC_DATA_TYPE_INT && td->type != TAC_DATA_TYPE_BOOL) && td->d.id != NULL) {
+		free(td->d.id);
+		td->d.id = NULL;
+	}
+	
+	free(td);
+}
+
 // Adds an element to the varList for tac nodes
 void cfg_add_to_varlist(const char *id) {
 	struct set_t *old_set = varList;
@@ -786,12 +797,9 @@ void cfg_free_tac_data_list() {
 	while(it != NULL) {
 		cur = it;
 		it = it->next;
-
-		// Free the tac identifier (if it exists)
-		if((cur->td->type != TAC_DATA_TYPE_INT && cur->td->type != TAC_DATA_TYPE_BOOL) && cur->td->d.id != NULL) {
-			free(cur->td->d.id);
-			cur->td->d.id = NULL;
-		}
+		
+		// Free the actual tac data object
+		cfg_free_tac_data(cur->td);
 
 		// Free the list entry
 		free(cur);
@@ -978,7 +986,7 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 	// Iterate through the elements at vntable[key] until found
 	struct vnt_entry_t *it = vntable[key];
 	while(it != NULL) {
-		IRLOG(("Looking at entry in hashtable: %s\n",cfg_tac_data_to_str(it->var_td)));
+		//IRLOG(("Looking at entry in hashtable: %s\n",cfg_tac_data_to_str(it->var_td)));
 		// Determine equality using the type and data
 		// INT
 		if(it->var_td->type == TAC_DATA_TYPE_INT && td->type == TAC_DATA_TYPE_INT && it->var_td->d.val == td->d.val) {
@@ -1009,12 +1017,9 @@ void cfg_vnt_hash_rollback(int block_level) {
 		while(vnt_entry_it != NULL) {
 			// Only do this for entries that are not constant values (int, bool) or keywords (if)
 			if(vnt_entry_it->var_td->type != TAC_DATA_TYPE_INT && vnt_entry_it->var_td->type != TAC_DATA_TYPE_BOOL && vnt_entry_it->var_td->type != TAC_DATA_TYPE_KEYWORD) {
-				// Pop from the stack until the block level is right
+				// Pop and free stack nodes that have a greater block level than the desired rollback block level
 				while((vnt_entry_it->vnt_node != NULL) && (vnt_entry_it->vnt_node->block_level > block_level)) {
-					//struct vnt_node_t **snode = cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
-					//cfg_vnt_free_node(*snode); // Free from memory, no longer needed
-					//*snode = NULL;
-					cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node));
+					cfg_vnt_free_node(cfg_vnt_stack_pop(&(vnt_entry_it->vnt_node)));
 				}
 			}
 			vnt_entry_it = vnt_entry_it->next;
@@ -1028,11 +1033,8 @@ void cfg_vnt_hash_rollback(int block_level) {
 		if(it != NULL) {
 			// Prune the front of the list
 			while(it != NULL && it->vnt_node == NULL) {
-				//IRLOG(("Null vnt, remove first ele\n"));
 				struct vnt_entry_t **entry = &vntable[i];
-				//IRLOG(("Address thing worked\n"));
 				*entry = (*entry)->next;
-				//IRLOG(("Removed.\n"));
 				it = it->next;
 			}
 			if(it == NULL) continue;
@@ -1041,7 +1043,6 @@ void cfg_vnt_hash_rollback(int block_level) {
 				// If the vnt_node is null after rollback, the entry should be removed
 				if(it->next->vnt_node == NULL) {
 					struct vnt_entry_t **entry = &vntable[i];
-					//IRLOG(("Address thing worked\n"));
 					*entry = (*entry)->next;
 					//IRLOG(("Removed.\n"));
 				}
@@ -1049,11 +1050,15 @@ void cfg_vnt_hash_rollback(int block_level) {
 			}
 		}
 	}
+	
 	IRLOG(("Rolled back to level %i!\n",block_level));
 }
 
 // Free up memory allocated for a hash entry
 void cfg_vnt_free_entry(struct vnt_entry_t *entry) {
+	if(entry == NULL)
+		return;
+
 	// Free each node in the node stack
 	struct vnt_node_t *it = entry->vnt_node;
 	struct vnt_node_t *cur = entry->vnt_node;
@@ -1102,6 +1107,9 @@ void cfg_vnt_stack_push(struct vnt_node_t **stack, char *val, struct tac_data_t 
 
 // Frees the memory allocated for a node
 void cfg_vnt_free_node(struct vnt_node_t *node) {
+	if(node == NULL)
+		return;
+
 	// Free the val
 	if (node->val != NULL)
 		free(node->val);

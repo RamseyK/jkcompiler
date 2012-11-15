@@ -119,33 +119,6 @@ void print_tabs(int numOfTabs) {
 
 
 
-/* -----------------------------------------------------------------------
- * Returns a string representation of the int value
- * -----------------------------------------------------------------------
- */
-char *inttostring(int value) {
-    char *s;
-
-    s = (char *) malloc(MAX_NEW_CHAR_SIZE);
-    sprintf(s, "%d", value);
-
-    return s;
-}
-
-
-
-/* -----------------------------------------------------------------------
- * Returns a string representation of the long value
- * -----------------------------------------------------------------------
- */
-char *longtostring(long value) {
-    char *s;
-
-    s = (char *) malloc(MAX_NEW_CHAR_SIZE);
-    sprintf(s, "%ld", value);
-
-    return s;
-}
 
 /*
  * Converts a string to all lower case characters

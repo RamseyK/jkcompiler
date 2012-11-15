@@ -281,10 +281,12 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 
 		// Check for the values "true" and "false" not case sensitive and return
 		// this as a bool if found
-		if(strcmp(stringtolower(va->data.id),BOOLEAN_VALUE_TRUE) == 0 || strcmp(stringtolower(va->data.id),BOOLEAN_VALUE_FALSE) == 0) {
+		char *bool_lower = stringtolower(va->data.id);
+		if(strcmp(bool_lower,BOOLEAN_VALUE_TRUE) == 0 || strcmp(bool_lower,BOOLEAN_VALUE_FALSE) == 0) {
+			free(bool_lower);
 			return PRIMITIVE_TYPE_NAME_BOOLEAN;
 		}
-
+		free(bool_lower);
 
 		// Check for function name to indicate return value being set
 		if(sem_state->scope->attrId == SYM_ATTR_FUNC) {
@@ -639,9 +641,11 @@ bool check_variable_valid_name(char *id) {
 		strcmp(id_lower,BOOLEAN_VALUE_TRUE) == 0 ||
 		strcmp(id_lower,BOOLEAN_VALUE_FALSE) == 0) {
 		//printf("Variable id: %s found invalid\n",id);
+		free(id_lower);
 		return false;
 	}
 	//printf("Variable id: %s foudn valid\n",id);
+	free(id_lower);
 	return true;
 }
 
@@ -653,8 +657,8 @@ void process_variable_declaration_list(struct scope_t *scope, struct variable_de
 	// Process the variable_declaration_list
 	struct variable_declaration_list_t *temp_vdl = vdl;
 
-	// Master list of identifiers to check for already declared
-	struct identifier_list_t *id_list = NULL;
+	// Master set of identifiers to check for already declared
+	struct set_t *id_set = NULL;
 
 	// for each variable_declaration_list
 	while(temp_vdl != NULL) {
@@ -686,16 +690,22 @@ void process_variable_declaration_list(struct scope_t *scope, struct variable_de
 		struct variable_declaration_t *temp_vd = temp_vdl->vd;
 		if(temp_vd != NULL) {
 			struct identifier_list_t *temp_il = temp_vd->il;
-			// Reset the id_list
-			id_list = NULL;
+			
+			// Reset the id_set
+			free_set(id_set);
+			id_set = NULL;
+			
 			while(temp_il != NULL) {
 				// Check if it is a valid variable name
 				if(!check_variable_valid_name(temp_il->id)) {
 					error_variable_name_invalid(temp_vdl->vd->line_number, temp_il->id);
 				}
 				// Checks if the variable was declared in the same line, adds it to master list if not
-				if(find_identifier_list(id_list,temp_il->id) == NULL) {
-					add_to_identifier_list(&id_list,temp_il->id);
+				if(!set_contains(id_set,temp_il->id)) {
+					if(id_set == NULL)
+						id_set = new_set(temp_il->id);
+					else
+						set_add(id_set, temp_il->id);
 				} else {
 					error_variable_already_declared(temp_vd->line_number,temp_il->id,temp_vd->line_number);
 				}
@@ -736,6 +746,10 @@ void process_variable_declaration_list(struct scope_t *scope, struct variable_de
 				temp_il = temp_il->next;
 			}
 		}
+		
+		free_set(id_set);
+		id_set = NULL;
+		
 		temp_vdl = temp_vdl->next;
 		//printf("loop iter\n");
 	}

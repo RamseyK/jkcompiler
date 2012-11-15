@@ -84,7 +84,7 @@ bool set_equals(struct set_t *set1, struct set_t *set2) {
 
 // Checks if a value is a member of a set
 bool set_contains(struct set_t *set, const char *val) {
-	if(val == NULL)
+	if(set == NULL || val == NULL)
 		return false;
 
 	struct set_t *set_it = set;

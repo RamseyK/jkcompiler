@@ -94,10 +94,8 @@ void parse_command_line_arguments(int argc, char **argv, struct args_t *args) {
 int main(int argc, char **argv) {
     parse_command_line_arguments(argc, argv, &cmdArgs);
 
-	/* initialize the program */
+	// Initialize global data structures: managed strs, program, user defined types, symbol table, control flow graph
 	program = new_program();
-
-	// Initialize global data structures: user defined types hashtable, symbol table, control flow graph
     usrdef_init();
     symtab_init(program);
 	cfg_init();
@@ -111,8 +109,7 @@ int main(int argc, char **argv) {
     }
 
     // Perform semantic analysis
-    // Disabled for proj2
-    //semantic_analysis(program);
+    semantic_analysis(program);
     if (error_flag == 1) {
 		// Errors during semantic analysis
         printf("Errors detected. Exiting.\n");
@@ -128,21 +125,18 @@ int main(int argc, char **argv) {
     ir_init();
     ir_optimize();
 
-
     if (cmdArgs.verbose == 1) {
-        /* print the user defined data types */
         printf("USER DEFINED DATA TYPES:\n");
         printf("------------------------\n");
         usrdef_print();
 
-        /* print the symbol table*/
         printf("\n\n");
         printf("SYMBOL TABLE:\n");
         printf("-------------\n");
         symtab_print(0);
     }
     
-    /* Free memory */
+    // Free memory
     ir_destroy();
 	cfg_destroy();
 	symtab_destroy();

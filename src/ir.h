@@ -37,9 +37,12 @@ char ir_opt_const_out_buffer[2048];
 void ir_init();
 void ir_destroy();
 
+// IR Processing
+void ir_process_cfg();
+void ir_block_pass(struct block_t *block, int block_level);
+
 // Value Numbering
-void ir_value_numbering();
-void ir_evn(struct block_t *block, int block_level);
+void ir_value_number_tac(struct three_address_t *tac, int block_level);
 
 // Optimization
 void ir_optimize();
