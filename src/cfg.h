@@ -108,13 +108,21 @@ struct set_list_t {
 	struct set_list_t *next;
 };
 
+// Structure for a list of CFGs, which are really just the root block for the CFG
+struct cfg_list_t {
+	struct block_t *entryBlock; // Reference to the root block of the CFG
+	struct scope_t *scope; // Reference to the scope containing this CFG
+	struct cfg_list_t *next; // The next CFG in the list
+};
+
 /* ----------------------------------
  * CFG State Variables
  * ----------------------------------
  */
 
-struct block_t *rootBlock; // root of the cfg
+struct block_t *currRootBlock; // Keeps track of the root of the cfg currently being built
 struct block_list_t *blockList; // Master list of basic blocks
+struct cfg_list_t *cfgList; // Master list of the CFGs
 int block_counter; // Used for labeling new blocks
 
 struct three_address_list_t *tacList; // Master list of all the tac
@@ -143,6 +151,9 @@ struct block_t *cfg_get_root();
 void cfg_destroy();
 void cfg_print_vars_tac();
 void cfg_print_blocks();
+
+// CFG functions
+struct cfg_list_t *cfg_create_func_cfg(struct scope_t *funcScope);
 
 // CFG Block List Functions
 struct block_list_t *cfg_new_block_list(struct block_t *firstBlock);

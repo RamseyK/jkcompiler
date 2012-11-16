@@ -15,7 +15,7 @@
 
 // Initialize the control flow graph and any state variables
 void cfg_init() {
-	rootBlock = NULL;
+	currRootBlock = NULL;
 	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
@@ -40,11 +40,6 @@ void cfg_init() {
 
 }
 
-// Return the root of the CFG
-struct block_t *cfg_get_root() {
-	return rootBlock;
-}
-
 // Destroy any objects used for intermediate representation
 void cfg_destroy() {
 	// Free master list of blocks and all block objects
@@ -59,7 +54,7 @@ void cfg_destroy() {
 	free_set(varList);
 	varList = NULL;
 
-	rootBlock = NULL;
+	currRootBlock = NULL;
 	blockList = NULL;
 	block_counter = 0;
 	name_counter = 0;
@@ -99,6 +94,32 @@ void cfg_print_blocks() {
 		printf("\n");
 		it = it->next;
 	}
+}
+
+// Creates a cfg_list_t to represent the functions CFG
+struct cfg_list_t *cfg_create_func_cfg(struct scope_t *funcScope) {
+	struct cfg_list_t *temp_cfg = (struct cfg_list_t *) malloc(sizeof(struct cfg_list_t));
+	CHECK_MEM_ERROR(temp_cfg);
+	temp_cfg->scope = funcScope;
+
+	// Assign the root block for the last created section of blocks to this
+	temp_cfg->entryBlock = currRootBlock;
+	temp_cfg->next = NULL;
+
+	// Set the currRootBlock to null so that the next block created is the root
+	// for the next function cfg
+	currRootBlock = NULL;
+
+	// Add this cfg to the master list
+	if(cfgList == NULL) {
+		cfgList = temp_cfg;
+	} else {
+		struct cfg_list_t *cfg_it = cfgList;
+		GOTO_END_OF_LIST(cfg_it);
+		cfg_it->next = temp_cfg;
+	}
+
+	return temp_cfg;
 }
 
 // Create a new CFG block list
@@ -255,7 +276,11 @@ struct block_t *cfg_create_simple_block() {
 		temp_block->entry = NULL;
 	}
 
-
+	// Check if the rootBlock is null, which means a function was just
+	// finished and the new block here is the root of the next
+	if(currRootBlock == NULL) {
+		currRootBlock = temp_block;
+	}
 
 	// Add to the master list
 	cfg_append_block_list(&blockList, temp_block);
