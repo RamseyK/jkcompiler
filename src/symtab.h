@@ -65,8 +65,8 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
 struct formal_parameter_section_t *symtab_lookup_function_param(struct scope_t *funcScope, char *name);
 
 struct scope_t *new_scope();
-void symtab_create_function_scope(struct function_declaration_t *fd);
-void symtab_create_class_scope(struct class_list_t *cl);
+struct scope_t *symtab_create_function_scope(struct function_declaration_t *fd);
+struct scope_t *symtab_create_class_scope(struct class_list_t *cl);
 struct scope_t *symtab_lookup_function_scope(struct function_declaration_t *fd);
 
 #endif

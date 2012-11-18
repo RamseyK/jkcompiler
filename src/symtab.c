@@ -71,12 +71,14 @@ void symtab_destroy() {
 /*
  * Creates a function scope using the function_declaration_t
  */
-void symtab_create_function_scope(struct function_declaration_t *fd) {
+struct scope_t *symtab_create_function_scope(struct function_declaration_t *fd) {
 	struct scope_t *temp_scope = new_scope();
 	
 	// Sets its function properties
 	temp_scope->attrId = SYM_ATTR_FUNC;
 	temp_scope->fd = fd;
+
+	return temp_scope;
 }
 
 /*
@@ -85,7 +87,7 @@ void symtab_create_function_scope(struct function_declaration_t *fd) {
  * and links them to the scope.  Also adds the class to the root(program)
  * scope's class_scopes list.
  */
-void symtab_create_class_scope(struct class_list_t *cl) {
+struct scope_t *symtab_create_class_scope(struct class_list_t *cl) {
 	struct scope_t *classScope = new_scope();
 	
 	// Sets its class properties
@@ -132,6 +134,7 @@ void symtab_create_class_scope(struct class_list_t *cl) {
 		temp_scope->nextSibling = classScope;
 	}
 	
+	return classScope;
 }
 
 /*

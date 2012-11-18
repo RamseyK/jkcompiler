@@ -375,7 +375,11 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 
 		add_to_func_declaration_list(&$1, $3);
 
-		symtab_create_function_scope($3);
+		// Create the scope in the symtab for this function
+		struct scope_t *funcScope = symtab_create_function_scope($3);
+		
+		// Create the CFG and attach the scope to it for the function
+		cfg_create_func_cfg(funcScope);
 	}
  | function_declaration
 	{
@@ -498,7 +502,7 @@ statement_part : compound_statement
 		
 		// Set the rootBlock for the cfg here
 		// This is the best place to do it for project 2, right before the beginning of a function
-		rootBlock = $1->block;
+		//rootBlock = $1->block;
 	}
  ;
 
@@ -780,8 +784,6 @@ boolean_expression : expression
 		$$ = $1;
 		
 		// CFG
-		//$$->tac = $1->tac;
-		//$$->block = cfg_create_simple_block($1->tac);
 		$$->block = cfg_create_simple_block();
 	}
 ;
@@ -896,7 +898,6 @@ term : factor
 		add_to_term(&$1, $2, $3);	
 		//Do some kind of type checking ??
 		if(strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_INTEGER, $3->expr->type)) {
-			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_INTEGER;
 			if($2 == OP_STAR) 
 				$$->expr->val = $1->expr->val * $3->expr->val;
@@ -908,7 +909,6 @@ term : factor
 				// Invalid operation with integers
 				}
 		} else if(strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $1->expr->type) && strcmp(PRIMITIVE_TYPE_NAME_BOOLEAN, $3->expr->type)) {
-			//$$->expr = new_expression_data();
 			$$->expr->type = PRIMITIVE_TYPE_NAME_BOOLEAN;
 			if($2 == OP_AND)
 				$$->expr->val = (int)$1->expr->val && (int)$3->expr->val;
@@ -922,11 +922,6 @@ term : factor
 		}
 		
 		// CFG
-		// If the factor has a negative sign in front, make a tac node for that
-		//if($3->type == FACTOR_T_SIGNFACTOR && *($3->data.f.sign) == OP_MINUS) {
-		//	$3->tacName = cfg_generate_tac(NULL, "0", OP_MINUS, $3->tacName);
-			//$3->tacName = facTac->lhs_id;		
-		//}
 		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
 	}
  ;
@@ -967,10 +962,6 @@ factor : sign factor
 		$$->type = FACTOR_T_PRIMARY;
 		$$->data.p = $1;
 		$$->expr = $1->expr;
-		
-		// CFG
-		//$$->tac = cfg_generate_tac($1->tacName, $1->tacName, OP_NO_OP, NULL);
-		//cfg_add_to_varlist_tacData($1->expr->tacData);
 	}
  ;
 
@@ -981,7 +972,6 @@ primary : variable_access
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
 		$$->data.va = $1;
 		$$->expr = $1->expr;
-		//$$->tacName = $1->tacName;
 		cfg_add_to_varlist($1->expr->tacData->d.id);
 	}
  | unsigned_constant
@@ -991,9 +981,6 @@ primary : variable_access
 		$$->type = PRIMARY_T_UNSIGNED_CONSTANT;
 		$$->data.un = $1;
 		$$->expr = $1->expr;
-		
-		// Get a string representation of the value for the varlist
-		//cfg_add_to_varlist(itoa($1->expr->tacData->d.val));
 	}
  | function_designator
 	{

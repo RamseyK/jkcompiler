@@ -340,9 +340,9 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 }
 
 // Start processing of IR and optimization on the entire cfg
-void ir_process_cfg() {
+void ir_process_cfg(struct cfg_list_t *cfg) {
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_process_block
-	workList = cfg_new_block_list(cfg_get_root());
+	workList = cfg_new_block_list(cfg->entryBlock);
 	
 	// Recursively process all nodes in the workList
 	// workList will expand on the first pass through the root node
@@ -537,7 +537,12 @@ void ir_optimize() {
 	cfg_print_blocks();
 	printf("\n");
 	
-	ir_process_cfg();
+	// Iterate through all of the CFGs and process them
+	struct cfg_list_t *cfg_it = cfgList;
+	while(cfg_it != NULL) {
+		ir_process_cfg(cfg_it);
+		cfg_it = cfg_it->next;
+	}
 
 	/*printf("\nPrint value numbering:\n");
 	printf("%s", ir_vnt_out_buffer);
