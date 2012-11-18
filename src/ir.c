@@ -339,7 +339,7 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 	// Example: t = c+1; c = t; -> c = c+1;
 }
 
-// Start processing on a cfg
+// Start processing of IR and optimization on the entire cfg
 void ir_process_cfg() {
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_process_block
 	workList = cfg_new_block_list(cfg_get_root());

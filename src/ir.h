@@ -19,10 +19,10 @@
  * ----------------------------------------------------------------
  */
 
-struct block_list_t *workList; // Used in value numbering
+struct block_list_t *workList; // Used in CFG processing
 
 /* ----------------------------------------------------------------
- * State variables
+ * Output Buffers for debugging
  * ----------------------------------------------------------------
  */
 

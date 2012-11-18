@@ -5,8 +5,16 @@ https://github.com/RamseyK/jkcompiler
 
 A Mini Object Pascal Compiler written in C
 
-Prerequisites: gcc, autotools, bison, flex, dejaGNU
 
+Features:
+-Grammar Parsing (bison)
+-Semantic Checking
+-Symbol Table
+-Intermediate Representation as Three Address Code
+-Control Flow Graph
+-Optimizations: Value Numbering, Constant Folding, Constant Propagation, Constant Evaluation, Dead Code Elimination
+
+Prerequisites: gcc, autotools, bison, flex, dejaGNU
 
 License:
 See LICENSE.TXT
