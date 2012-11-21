@@ -64,7 +64,7 @@ char *op_str(int i_op) {
 	case OP_GE:
 		cw = sprintf(op, ">=");
 		break;
-	case OP_NO_OP:
+	case OP_ASSIGN:
 		cw = 0;
 		op[0] = '\0';
 		break;

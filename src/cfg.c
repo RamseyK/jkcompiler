@@ -568,7 +568,7 @@ void cfg_print_tac(struct three_address_t *tac) {
 	char *op1_str = cfg_tac_data_to_str(tac->op1);
 	char *op2_str = cfg_tac_data_to_str(tac->op2);
 
-	if(tac->op == OP_NO_OP)
+	if(tac->op == OP_ASSIGN)
 		printf("\t%s := %s\n", lhs_str, op1_str);
 	else if(tac->op == OP_BRANCH)
 		printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);

@@ -127,21 +127,21 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				new_td->type = TAC_DATA_TYPE_INT;
 				new_td->d.val = tac->op1->d.val + tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_MINUS:
 				new_td->type = TAC_DATA_TYPE_INT;
 				new_td->d.val = tac->op1->d.val - tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_STAR:
 				new_td->type = TAC_DATA_TYPE_INT;
 				new_td->d.val = tac->op1->d.val * tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_SLASH:
@@ -149,7 +149,7 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 					new_td->type = TAC_DATA_TYPE_INT;
 					new_td->d.val = tac->op1->d.val / tac->op2->d.val;
 					tac->op1 = new_td;
-					tac->op = OP_NO_OP;
+					tac->op = OP_ASSIGN;
 					tac->op2 = NULL;
 				}
 				break;
@@ -158,7 +158,7 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 					new_td->type = TAC_DATA_TYPE_INT;
 					new_td->d.val = tac->op1->d.val % tac->op2->d.val;
 					tac->op1 = new_td;
-					tac->op = OP_NO_OP;
+					tac->op = OP_ASSIGN;
 					tac->op2 = NULL;
 				}
 				break;
@@ -166,42 +166,42 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val == tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_NOTEQUAL:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val != tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_LT:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val < tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_GT:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val > tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_LE:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val <= tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_GE:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.val >= tac->op2->d.val;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			default:
@@ -216,28 +216,28 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.b || tac->op2->d.b;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_AND:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.b && tac->op2->d.b;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_EQUAL:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.b == tac->op2->d.b;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			case OP_NOTEQUAL:
 				new_td->type = TAC_DATA_TYPE_BOOL;
 				new_td->d.b = tac->op1->d.b != tac->op2->d.b;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 				break;
 			default:
@@ -258,14 +258,14 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 			new_td->type = TAC_DATA_TYPE_INT;
 			new_td->d.val = 0;
 			tac->op1 = new_td;
-			tac->op = OP_NO_OP;
+			tac->op = OP_ASSIGN;
 			tac->op2 = NULL;
 		} else if(tac->op == OP_SLASH && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
 			// Divide by itself. a/a => 1
 			new_td->type = TAC_DATA_TYPE_INT;
 			new_td->d.val = 1;
 			tac->op1 = new_td;
-			tac->op = OP_NO_OP;
+			tac->op = OP_ASSIGN;
 			tac->op2 = NULL;
 		} else {
 		}
@@ -279,18 +279,18 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				new_td->type = TAC_DATA_TYPE_INT;
 				new_td->d.val = 0;
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR && tac->op1->d.val == 1) {
 				// op1 is 1, op2 is a VAR. 1*a = a
 				new_td->type = TAC_DATA_TYPE_VAR;
 				new_td->d.id = new_identifier(tac->op2->d.id);
 				tac->op1 = new_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 			} else if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 1) {
 				// op2 is 1. a*1 = a
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 			} else {
 			}
@@ -303,7 +303,7 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 	char *post_op = op_str(tac->op);
 	op1_str = cfg_tac_data_to_str(tac->op1);
 	op2_str = cfg_tac_data_to_str(tac->op2); // May be null b/c op2 might have been removed
-	sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, lhs_str, op1_str, (tac->op != OP_NO_OP ? post_op : ""), (tac->op2 != NULL ? op2_str : ""));
+	sprintf(ir_opt_const_out_buffer, "%s%s := %s %s %s\n", ir_opt_const_out_buffer, lhs_str, op1_str, (tac->op != OP_ASSIGN ? post_op : ""), (tac->op2 != NULL ? op2_str : ""));
 	free(post_op);
 	free(lhs_str);
 	free(op1_str);
@@ -319,7 +319,7 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 
 	while(tac != NULL) {
 		// Found the tac was a temporary. If it equals a constant, unlink it it
-		if(tac->op == OP_NO_OP && tac->lhs->temporary) {
+		if(tac->op == OP_ASSIGN && tac->lhs->temporary) {
 			//IRLOG(("Unused temp var, Removing %s\n", cfg_tac_data_to_str(tac->lhs)));
 			if(tac->next != NULL)
 				tac->next->prev = tac->prev;
@@ -433,7 +433,7 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	}
 
 	// Case: a = b (no op2)
-	if(tac->op == OP_NO_OP) {
+	if(tac->op == OP_ASSIGN) {
 		// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
 		IRLOG(("lhs insert (nop)\n"));
 		v_lhs = new_identifier(v_op1);
@@ -467,7 +467,7 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 			if(e_lhs_exist != NULL) {
 				// Optimize the TAC node
 				tac->op1 = e_lhs_exist->var_td;
-				tac->op = OP_NO_OP;
+				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
 
 				// Lookup the new op1
@@ -495,7 +495,7 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 
 	// Pretty print the value numbered TAC
 	char *print_lhs = cfg_tac_data_to_str(tac->lhs), *print_op1 = cfg_tac_data_to_str(tac->op1), *print_op2 = cfg_tac_data_to_str(tac->op2);
-	if(tac->op == OP_NO_OP) {
+	if(tac->op == OP_ASSIGN) {
 		// Uses the hash value
 		//sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s)\n", ir_vnt_out_buffer, print_lhs, e_lhs->vnt_node->val, print_op1, e_op1->vnt_node->val);
 		// Uses the pretty name

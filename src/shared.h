@@ -45,7 +45,7 @@
 #define OP_GT 11
 #define OP_LE 12
 #define OP_GE 13
-#define OP_NO_OP 14
+#define OP_ASSIGN 14
 #define OP_BRANCH 15
 #define OP_GOTO 16
 
