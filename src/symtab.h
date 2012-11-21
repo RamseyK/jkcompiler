@@ -35,8 +35,16 @@ struct scope_t {
 	struct class_list_t *cl; // Class in this scope
 	struct scope_t *func_scopes; // Head node of function scopes in this scope
 	struct function_declaration_t *fd; // Function declaration in this scope
+	struct offset_list_t *offset_list; // Offset list of variables for the current scope
 	struct scope_t *next; // Next scope in the horizontal master list
 	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
+};
+
+// List of variable identifiers matched with their offsets
+struct offset_list_t {
+	char *id;
+	int offset;
+	struct offset_list_t *next;
 };
 
 /* ----------------------------------------------------------------

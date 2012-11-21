@@ -627,7 +627,7 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->e = $3;
 		$$->oe = NULL;
 		
-		cfg_generate_tac($1->expr->tacData->d.id, $3->expr->tacData, OP_NO_OP, NULL);
+		cfg_generate_tac($1->expr->tacData->d.id, $3->expr->tacData, OP_ASSIGN, NULL);
 		IRLOG(("About to create block\n"));
 		$$->block = cfg_create_simple_block();
 		IRLOG(("Created block\n"));
