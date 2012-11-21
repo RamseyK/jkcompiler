@@ -18,10 +18,13 @@ void cfg_init() {
 	currRootBlock = NULL;
 	blockList = NULL;
 	block_counter = 0;
+	
 	name_counter = 0;
 	varList = NULL;
+	
 	tacDataList = NULL;
 	lastConnectedTac = NULL;
+	label_aliases = NULL;
 
 	// Initialize the constant true and false tac data nodes
 	// And insert into the vnt
@@ -53,6 +56,9 @@ void cfg_destroy() {
 	// Free variable list set
 	free_set(varList);
 	varList = NULL;
+	
+	// Free the list of all label alias sets
+	cfg_free_label_aliases();
 
 	currRootBlock = NULL;
 	blockList = NULL;
@@ -547,6 +553,17 @@ void cfg_add_label_alias(char *label1, char *label2) {
 			set_add(it->next->set,label2);
 		}
 		//IRLOG(("Added %s as an alias for %s\n",label2, label1));
+	}
+}
+
+// Free the list of all label alias sets
+void cfg_free_label_aliases() {
+	struct set_list_t *it = label_aliases, *cur = NULL;
+	while(it != NULL) {
+		cur = it;
+		it = it->next;
+		free_set(cur->set);
+		free(cur);
 	}
 }
 

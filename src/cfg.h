@@ -172,6 +172,7 @@ struct block_t *cfg_create_while_block(struct block_t *condition, struct block_t
 struct block_t *cfg_find_bottom(struct block_t *block);
 void cfg_connect_block(struct block_t *b1, struct block_t *b2);
 void cfg_add_label_alias(char *label1, char *label2);
+void cfg_free_label_aliases();
 
 // Three Address Code Functions
 char *cfg_new_temp_name();
