@@ -29,3 +29,13 @@ Semantic analysis:
 - Support attribute designators
 - Support method designators
 
+
+Optimize:
+------------------
+
+- Three Address Code generation
+- Value numbering
+- Integer and Boolean constant evaluation
+- Constant Folding
+- Constant propagation
+
