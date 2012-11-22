@@ -38,7 +38,7 @@ void ir_init();
 void ir_destroy();
 
 // IR Processing
-void ir_process_cfg();
+void ir_process_cfg(struct block_t *entryBlock);
 void ir_block_pass(struct block_t *block, int block_level);
 
 // Value Numbering

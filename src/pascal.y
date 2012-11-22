@@ -386,8 +386,12 @@ func_declaration_list : func_declaration_list semicolon function_declaration
 		$$ = new_func_declaration_list();
 		$$->fd = $1;
 		$$->next = NULL;
-
-		symtab_create_function_scope($1);
+		
+		// Create the scope in the symtab for this function
+		struct scope_t *funcScope = symtab_create_function_scope($1);
+		
+		// Create the CFG and attach the scope to it for the function
+		cfg_create_func_cfg(funcScope);
 	}
  |
 	{
@@ -448,9 +452,8 @@ variable_parameter_specification : VAR identifier_list COLON identifier
 function_declaration : function_identification semicolon function_block
 	{
 		$$ = new_function_declaration();
-		struct function_heading_t *fh = new_function_heading();
-		fh->id = $1;
-		$$->fh = fh;
+		$$->fh = new_function_heading();
+		$$->fh->id = $1;
 		$$->fb = $3;
 		$$->line_number = line_number;
 	}
@@ -468,7 +471,6 @@ function_heading : FUNCTION identifier COLON result_type
 		$$ = new_function_heading();
 		$$->id = $2;
 		$$->res = $4;
-		$$->fpsl = NULL;
 	}
  | FUNCTION identifier formal_parameter_list COLON result_type
 	{

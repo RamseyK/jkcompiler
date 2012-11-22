@@ -99,9 +99,7 @@ char *new_identifier(const char *text) {
 	if(text == NULL)
 		return NULL;
 	
-    char *id;
-
-    id = (char *) malloc(strlen(text) + 1); /* +1 for '\0' */
+    char *id = (char *) malloc(strlen(text) + 1); /* +1 for '\0' */
     CHECK_MEM_ERROR(id)
     strcpy(id, text);
     
@@ -113,8 +111,9 @@ char *new_identifier(const char *text) {
  * -----------------------------------------------------------------------
  */
 void free_identifier(char *id) {
+	if(id == NULL)
+		return;
 	free(id);
-	id = NULL;
 }
 
 
@@ -1329,7 +1328,9 @@ void free_func_declaration_list(struct func_declaration_list_t *fdl) {
 	struct func_declaration_list_t *it = fdl, *current;
 	while(it != NULL) {
 		current = it;
+		//printf("free fd: %s\n", it->fd->fh->id);
 		free_function_declaration(fdl->fd);
+		//printf("freed\n");
 		it = it->next;
 		free(current);
 	}

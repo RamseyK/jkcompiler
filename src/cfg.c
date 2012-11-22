@@ -17,6 +17,7 @@
 void cfg_init() {
 	currRootBlock = NULL;
 	blockList = NULL;
+	cfgList = NULL;
 	block_counter = 0;
 	
 	name_counter = 0;
@@ -978,6 +979,7 @@ struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, st
 		CHECK_MEM_ERROR(temp_entry);
 		temp_entry->var_td = var_td;
 		temp_entry->vnt_node = NULL;
+		temp_entry->next = NULL;
 		
 		// Push the vnt_node onto the empty stack
 		cfg_vnt_stack_push(&(temp_entry->vnt_node), val, val_td, block_level);

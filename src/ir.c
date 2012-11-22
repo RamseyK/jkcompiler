@@ -30,7 +30,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 	// Lookup each tac data element in the VNT to determine if theres a value for it
 	if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
 		entry = cfg_vnt_hash_lookup_td(tac->op1);
-		
+
 		// If the tac data for op1 (TAC_VAR) is already in the table, replace this tac's op1 with the corresponding constant value (TAC_INT)
 		if(entry != NULL) {
 			// Output the expression being propagated to ir_opt_const_out_buffer
@@ -98,7 +98,7 @@ void ir_opt_const_propagation(struct three_address_t *tac) {
 	free(op);
 }
 
-// Simplifies constant expressions into a single assignment before value numbering is performed on a TAC
+// Simplifies constant expressions into a single assignment, along with algebraic identities before value numbering is performed on a TAC
 // Should be performed after const_propogation
 void ir_opt_const_folding(struct three_address_t *tac) {
 	// No optimization to perform
@@ -244,36 +244,71 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				break;
 		}
 	} else if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
-		// Two vars of unknown value will be optimized at a higher arithmetic level
-		// Test Program: test_tac_consts_var.p
-		
-		if(tac->op == OP_PLUS && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
-			// Add to itself. a+a => 2*a
-			new_td->type = TAC_DATA_TYPE_INT;
-			new_td->d.val = 2;
-			tac->op1 = new_td;
-			tac->op = OP_STAR;
-		} else if(tac->op == OP_MINUS && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
-			// Subtract from itself. a-a => 0
-			new_td->type = TAC_DATA_TYPE_INT;
-			new_td->d.val = 0;
-			tac->op1 = new_td;
-			tac->op = OP_ASSIGN;
-			tac->op2 = NULL;
-		} else if(tac->op == OP_SLASH && strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
-			// Divide by itself. a/a => 1
-			new_td->type = TAC_DATA_TYPE_INT;
-			new_td->d.val = 1;
-			tac->op1 = new_td;
-			tac->op = OP_ASSIGN;
-			tac->op2 = NULL;
-		} else {
+		// Check for optimizations between two same vars of unknown value (ex. op1 = aa, op2 = aa)
+		// Test Program: test_tac_consts_var.p, test_tac_consts_var2.p
+		if(strcmp(tac->op1->d.id, tac->op2->d.id) == 0) {
+			switch(tac->op) {
+			case OP_PLUS:
+				// Add to itself. a+a => 2*a
+				new_td->type = TAC_DATA_TYPE_INT;
+				new_td->d.val = 2;
+				tac->op1 = new_td;
+				tac->op = OP_STAR;
+				break;
+			case OP_MINUS:
+				// Subtract from itself. a-a => 0
+				new_td->type = TAC_DATA_TYPE_INT;
+				new_td->d.val = 0;
+				tac->op1 = new_td;
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+				break;
+			case OP_SLASH:
+				// Divide by itself. a/a => 1
+				new_td->type = TAC_DATA_TYPE_INT;
+				new_td->d.val = 1;
+				tac->op1 = new_td;
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+				break;
+			case OP_AND:
+				// AND itself. aa AND aa = aa
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+				break;
+			case OP_OR:
+				// OR itself. aa OR aa = aa
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+				break;
+			default:
+				break;
+			}
 		}
 	} else if(tac->op1->type == TAC_DATA_TYPE_INT || tac->op2->type == TAC_DATA_TYPE_INT) {
-		// One var is an integer
+		// One var is an integer, perform simplification when possible
 		// Test Program: test_tac_consts_var.p
 		
-		if(tac->op == OP_STAR) {
+		if(tac->op == OP_PLUS) { // Addition
+			if(tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0) {
+				// Add zero: a+0 = a
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 0) {
+				// Add to zero. 0+a = a
+				new_td->type = TAC_DATA_TYPE_VAR;
+				new_td->d.id = new_identifier(tac->op2->d.id);
+				tac->op1 = new_td;
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+			}
+		} else if(tac->op == OP_MINUS) { // Subtraction
+			if(tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0) {
+				// Subtract zero: a-0 = a
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
+			}
+		} else if(tac->op == OP_STAR) { // Multiplication
 			if((tac->op1->type == TAC_DATA_TYPE_INT && tac->op1->d.val == 0) || (tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 0)) {
 				// Multiply by 0
 				new_td->type = TAC_DATA_TYPE_INT;
@@ -292,7 +327,12 @@ void ir_opt_const_folding(struct three_address_t *tac) {
 				// op2 is 1. a*1 = a
 				tac->op = OP_ASSIGN;
 				tac->op2 = NULL;
-			} else {
+			}
+		} else if(tac->op == OP_SLASH) { // Division
+			if(tac->op2->type == TAC_DATA_TYPE_INT && tac->op2->d.val == 1) {
+				// Divide by 1. aa/1 = aa
+				tac->op = OP_ASSIGN;
+				tac->op2 = NULL;
 			}
 		}
 	} else {
@@ -319,7 +359,7 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 
 	while(tac != NULL) {
 		// Found the tac was a temporary. If it equals a constant, unlink it it
-		if(tac->op == OP_ASSIGN && tac->lhs->temporary) {
+		if(tac->op == OP_ASSIGN && (tac->op1->type == TAC_DATA_TYPE_INT || tac->op1->type == TAC_DATA_TYPE_BOOL) && tac->lhs->temporary) {
 			//IRLOG(("Unused temp var, Removing %s\n", cfg_tac_data_to_str(tac->lhs)));
 			if(tac->next != NULL)
 				tac->next->prev = tac->prev;
@@ -340,9 +380,9 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 }
 
 // Start processing of IR and optimization on the entire cfg
-void ir_process_cfg(struct cfg_list_t *cfg) {
+void ir_process_cfg(struct block_t *entryBlock) {
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_process_block
-	workList = cfg_new_block_list(cfg->entryBlock);
+	workList = cfg_new_block_list(entryBlock);
 	
 	// Recursively process all nodes in the workList
 	// workList will expand on the first pass through the root node
@@ -363,6 +403,7 @@ void ir_process_cfg(struct cfg_list_t *cfg) {
 
 // Recursive worker function to perform a single processing / optimization pass of a basic block in the CFG
 void ir_block_pass(struct block_t *block, int block_level) {
+	IRLOG(("Block pass: %s\n", block->label));
 	// Don't look at IF and WHILE blocks because their TAC nodes have already been value numbered and processed in the parent blocks
 	if(block->type != BLOCK_IF && block->type != BLOCK_WHILE) {
 		// Mark the block in the output
@@ -540,19 +581,19 @@ void ir_optimize() {
 	// Iterate through all of the CFGs and process them
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
-		ir_process_cfg(cfg_it);
+		ir_process_cfg(cfg_it->entryBlock);
 		cfg_it = cfg_it->next;
 	}
 
 	/*printf("\nPrint value numbering:\n");
 	printf("%s", ir_vnt_out_buffer);
-	printf("\n");
+	printf("\n");*/
 	
-	printf("\nPrint constant expression optimizations:\n");
+	/*printf("\nPrint constant expression optimizations:\n");
 	printf("%s", ir_opt_const_out_buffer);
-	printf("\n");
+	printf("\n");*/
 	
-	printf("\nPrint Blocks (after dead code elim):\n");
+	/*printf("\nPrint Blocks (after dead code elim):\n");
 	cfg_print_blocks();
 	printf("\n");*/
 
