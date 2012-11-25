@@ -14,7 +14,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include "cfg.h"
 
 #define K 1024
 #define MAX_ERROR_SIZE 1 * K
@@ -69,7 +68,7 @@
 #if 0
 	#define GLOG(x) printf x
 #else
-	#define GLOG(x) dummy_func x
+	#define GLOG(x) (void)0
 #endif
 
 /*
@@ -78,16 +77,16 @@
 #if 0
 	#define SLOG(x) printf x
 #else
-	#define SLOG(x) dummy_func x
+	#define SLOG(x) (void)0
 #endif
 
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 0
+#if 1
 	#define IRLOG(x) printf x
 #else
-	#define IRLOG(x) dummy_func x
+	#define IRLOG(x) (void)0
 #endif
 
 
@@ -472,8 +471,6 @@ struct program_t {
  * Function declarations
  * ----------------------------------------------------------------
  */
-void dummy_func(void *p, ...);
-
 char *op_str(int i_op);
 int makekey(char* lexeme, int max_hashkeys);
 void print_tabs(int numOfTabs);

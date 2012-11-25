@@ -79,6 +79,10 @@ struct block_t {
 	struct block_list_t *children;
 
 	struct three_address_t *entry; // Head of TAC list for this block
+	
+	struct set_t *ueVar; // Upward exposed
+	struct set_t *killVar; // Defined & Redefined 
+	struct set_t *liveOut; // "live" variables on exit of the block
 };
 
 // A linked list of basic blocks
@@ -128,7 +132,6 @@ int block_counter; // Used for labeling new blocks
 struct three_address_list_t *tacList; // Master list of all the tac
 struct three_address_t *lastConnectedTac; // Pointer to the last tac list that was added to a block
 int name_counter; // Temporary name counter used for TAC names
-struct set_t *varList; // Holds all of the declared and used variables and constants
 
 struct tac_data_list_t *tacDataList; // Master list of all tac data
 struct tac_data_t *TAC_DATA_BOOL_TRUE; // tac data for constant value "true"
@@ -149,7 +152,7 @@ struct set_list_t *label_aliases; // Represents labels that are aliases to fixup
 void cfg_init();
 struct block_t *cfg_get_root();
 void cfg_destroy();
-void cfg_print_vars_tac();
+void cfg_print_tacs();
 void cfg_print_blocks();
 
 // CFG functions
@@ -173,6 +176,7 @@ struct block_t *cfg_find_bottom(struct block_t *block);
 void cfg_connect_block(struct block_t *b1, struct block_t *b2);
 void cfg_add_label_alias(char *label1, char *label2);
 void cfg_free_label_aliases();
+void cfg_find_vars(struct block_t *block, struct set_t **cur_vars);
 
 // Three Address Code Functions
 char *cfg_new_temp_name();
@@ -181,7 +185,6 @@ void cfg_free_tac(struct three_address_t *tac);
 void cfg_free_tac_data_list();
 void cfg_print_tac(struct three_address_t *tac);
 struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2);
-void cfg_add_to_varlist(const char *id);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
 struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching

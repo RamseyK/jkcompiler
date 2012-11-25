@@ -12,6 +12,7 @@
 #include "shared.h"
 #include "usrdef.h"
 #include "symtab.h"
+#include "cfg.h"
 #include "y.tab.h"
 #include "error.h"
 

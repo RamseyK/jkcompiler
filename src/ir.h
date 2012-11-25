@@ -39,7 +39,8 @@ void ir_destroy();
 
 // IR Processing
 void ir_process_cfg(struct block_t *entryBlock);
-void ir_block_pass(struct block_t *block, int block_level);
+void ir_block_pass(struct block_t *block, int block_level, struct set_t **cfg_vars);
+void ir_calc_flow_vars(struct block_t *block);
 
 // Value Numbering
 void ir_value_number_tac(struct three_address_t *tac, int block_level);

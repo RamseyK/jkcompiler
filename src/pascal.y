@@ -974,7 +974,6 @@ primary : variable_access
 		$$->type = PRIMARY_T_VARIABLE_ACCESS;
 		$$->data.va = $1;
 		$$->expr = $1->expr;
-		cfg_add_to_varlist($1->expr->tacData->d.id);
 	}
  | unsigned_constant
 	{

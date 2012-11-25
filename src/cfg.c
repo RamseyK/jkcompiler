@@ -21,7 +21,6 @@ void cfg_init() {
 	block_counter = 0;
 	
 	name_counter = 0;
-	varList = NULL;
 	
 	tacDataList = NULL;
 	lastConnectedTac = NULL;
@@ -54,10 +53,6 @@ void cfg_destroy() {
 	// Free the master list of tac data
 	cfg_free_tac_data_list();
 	
-	// Free variable list set
-	free_set(varList);
-	varList = NULL;
-	
 	// Free the list of all label alias sets
 	cfg_free_label_aliases();
 
@@ -68,17 +63,8 @@ void cfg_destroy() {
 	lastConnectedTac = NULL;
 }
 
-// Prints A list of all variables including all temporary variables produced
-// followed by the body of the method in 3-address code.
-void cfg_print_vars_tac() {
-	// Print all variables?
-	// Supposed to print all of the variables along with temp variables
-	// Sounds like we just print a list of all the lhs, op1, and op2 of the tacs
-	// In a giant list but without repeating
-
-	printf("All of the vars:\n");
-	set_print(varList);
-
+// Prints all tac nodes within the all blocks in the block list
+void cfg_print_tacs() {
 	// Print tac for every block
 	// How to traverse the cfg and print things sensibly?
 	// Possibly use pre order traversal and the "marking" of blocks
@@ -252,6 +238,10 @@ struct block_t *cfg_create_simple_block() {
 	temp_block->type = BLOCK_SIMPLE;
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
+
+	temp_block->ueVar = NULL;
+	temp_block->killVar = NULL;
+	temp_block->liveOut = NULL;
 
 	// Connect all the tac
 	// Go to the last connected tac
@@ -568,6 +558,37 @@ void cfg_free_label_aliases() {
 	}
 }
 
+// Return a set of all variables referenced or assigned for this block
+// Variables include compiler generated temps
+void cfg_find_vars(struct block_t *block, struct set_t **cur_vars) {
+	if(block == NULL)
+		return;
+
+	struct three_address_t *tac = block->entry;
+	while(tac != NULL) {
+		if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
+			if(*cur_vars == NULL)
+				*cur_vars = new_set(tac->op1->d.id);
+			else
+				set_add(*cur_vars, tac->op1->d.id);
+		}
+		if(tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR) {
+			if(*cur_vars == NULL)
+				*cur_vars = new_set(tac->op2->d.id);
+			else
+				set_add(*cur_vars, tac->op2->d.id);
+		}
+		if(tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_VAR) {
+			if(*cur_vars == NULL)
+				*cur_vars = new_set(tac->lhs->d.id);
+			else
+				set_add(*cur_vars, tac->lhs->d.id);
+		}
+		
+		tac = tac->next;
+	}
+}
+
 // Prints the three address code recursively in the format:
 // LHS = OP1 op OP2
 // if COND goto LABEL
@@ -662,9 +683,6 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 	}
 	IRLOG(("Tac node just created: "));
 	//cfg_print_tac(temp_tac);
-
-	// Add to the varlist
-	cfg_add_to_varlist(temp_tac->lhs->d.id);
 
 	return temp_tac->lhs;
 }
@@ -798,15 +816,6 @@ void cfg_free_tac_data(struct tac_data_t *td) {
 	}
 	
 	free(td);
-}
-
-// Adds an element to the varList for tac nodes
-void cfg_add_to_varlist(const char *id) {
-	struct set_t *old_set = varList;
-	struct set_t *id_set = new_set(id);
-	varList = set_union(old_set, id_set);
-	free_set(old_set);
-	free_set(id_set);
 }
 
 // Frees the master TAC list and TAC nodes
@@ -964,6 +973,7 @@ char *cfg_vnt_hash(const char *op1, int op, const char *op2) {
 /* Hash Table manipulation */
 // Does an update/insert on an entry for hash table and returns the newly created entry
 struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, struct tac_data_t *val_td, int block_level) {
+	IRLOG(("inserting %s\n", val));
 	// See if there is already an entry for this node by id
 	struct vnt_entry_t *found_entry = cfg_vnt_hash_lookup_td(var_td);
 	if(found_entry != NULL) {
@@ -1004,14 +1014,16 @@ struct vnt_entry_t *cfg_vnt_hash_insert(struct tac_data_t *var_td, char *val, st
 
 // Looks up a vnt_entry_t by its current value using top of the vnt_node stack
 struct vnt_entry_t *cfg_vnt_hash_lookup_val(char *val) {
-	int i;
-	for(i = 0; i<TABLE_SIZE; i++) {
+	struct vnt_entry_t *vnt_entry_it = NULL;
+	for(int i = 0; i<TABLE_SIZE; i++) {
 		// Go through each entry that is chained at this table entry
-		struct vnt_entry_t *vnt_entry_it = vntable[i];
+		vnt_entry_it = vntable[i];
 		while(vnt_entry_it != NULL) {
 			if(vnt_entry_it->vnt_node != NULL) {
-				if(strcmp(vnt_entry_it->vnt_node->val,val) == 0)
-					return vntable[i];
+				if(strcmp(vnt_entry_it->vnt_node->val,val) == 0) {
+					//return vntable[i];
+					return vnt_entry_it;
+				}
 			}
 			vnt_entry_it = vnt_entry_it->next;
 		}
@@ -1024,7 +1036,7 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 	// Get the key that corresponds to this id
 	char *tdStr = cfg_tac_data_to_str(td);
 	int key = makekey(tdStr, TABLE_SIZE);
-	IRLOG(("Looking for: %s\n",tdStr));
+	//IRLOG(("Looking for: %s\n",tdStr));
 	free(tdStr);
 
 	// Iterate through the elements at vntable[key] until found
