@@ -121,6 +121,9 @@ int main(int argc, char **argv) {
         exit(0);
     }
 
+    // Calculate usrdef sizes
+    symtab_calc_sizes();
+
     // Perform Intermediate Representation
     ir_init();
     ir_optimize();

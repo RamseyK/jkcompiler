@@ -281,6 +281,7 @@ struct type_denoter_t *new_type_denoter() {
     CHECK_MEM_ERROR(td)
     td->type = -1;
     td->name = NULL;
+    td->size = 0;
 
     return td;
 }

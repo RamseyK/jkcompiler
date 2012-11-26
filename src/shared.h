@@ -52,6 +52,11 @@
 #define OP_FUNC_CALL 18
 #define OP_MEM_ACCESS 19
 
+// Sizes for code generation
+#define SIZE_BYTE 1
+#define SIZE_HALFWORD 2
+#define SIZE_WORD 4
+
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \
@@ -88,7 +93,7 @@
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 1
+#if 0
 	#define IRLOG(x) printf x
 #else
 	#define IRLOG(x) (void)0
@@ -160,6 +165,7 @@ struct type_denoter_t {
         struct class_list_t *cl;
         char *id;
     } data;
+    int size; // Size of the type in bytes
 };
 
 /* ---------------------------------------------------------------- */

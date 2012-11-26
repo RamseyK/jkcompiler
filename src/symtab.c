@@ -377,4 +377,93 @@ struct formal_parameter_section_t *symtab_lookup_function_param(struct scope_t *
 	return NULL;
 }
 
+/*
+ * Calculates the size (in bytes) of each type denoter for a class in the symtab
+ */
+void symtab_calc_sizes() {
 
+	// Iterate through each usrdef entry
+	struct type_denoter_list_t *td_it = usrdef_types;
+	while(td_it != NULL) {
+
+		// Only calculate the size if it has not been set
+		if(td_it->tden->size == 0) {
+
+			symtab_calc_td_size(td_it->tden);
+
+		}
+
+		td_it = td_it->next;
+	}
+
+}
+
+/*
+ * Returns the size of the class in bytes.  Includes the size of any inherited types.
+ */
+int symtab_calc_class_size(struct scope_t *scope) {
+	int size = 0;
+
+	if(scope->attrId == SYM_ATTR_CLASS) {
+
+		// Increment size by the size of each variable declared
+		struct variable_declaration_list_t * vd_it = scope->cl->cb->vdl;
+		while(vd_it != NULL) {
+
+			// Get the size for the type being declared
+			int vd_size = symtab_calc_td_size(vd_it->vd->tden);
+
+			// Add the size one time each for every identifier in the list
+			struct identifier_list_t *id_it = vd_it->vd->il;
+			while(id_it != NULL) {
+				size += vd_size;
+				id_it = id_it->next;
+			}
+
+			vd_it = vd_it->next;
+		}
+
+		// Increment the size by the size of the parent class, if any
+		if(scope->cl->ci->extend != NULL) {
+
+			// Get the scope for the parent
+			struct scope_t *parent = symtab_lookup_class(scope->cl->ci->extend);
+			size += symtab_calc_class_size(parent);
+		}
+	}
+
+	return size;
+}
+
+/*
+ * Returns the size of a td or calculates and sets if if not set
+ */
+int symtab_calc_td_size(struct type_denoter_t *td) {
+	// Size already set, also covers primitives
+	if(td->size != 0) return td->size;
+
+	// Array type
+	if(td->type == TYPE_DENOTER_T_ARRAY_TYPE) {
+		int element_count = td->data.at->r->max - td->data.at->r->min;
+		int element_size = symtab_calc_td_size(td->data.at->td);
+		td->size = element_count * element_size;
+		return td->size;
+	}
+
+	// Class type
+	if(td->type == TYPE_DENOTER_T_CLASS_TYPE) {
+		// Lookup the scope for the class and then calculate
+		// Look up the scope for the class using the id
+		struct scope_t *foundScope = symtab_lookup_class(td->data.cl->ci->id);
+
+		if(foundScope != NULL) {
+			td->size = symtab_calc_class_size(foundScope);
+		} else {
+			IRLOG(("A usrdef entry does not have a scope_t: %s", td->data.cl->ci->id));
+		}
+
+		return td->size;
+	}
+
+	return 0;
+}
