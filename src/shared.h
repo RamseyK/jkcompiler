@@ -45,9 +45,14 @@
 #define OP_GT 11
 #define OP_LE 12
 #define OP_GE 13
+// Ops used for code generation
 #define OP_ASSIGN 14
 #define OP_BRANCH 15
 #define OP_GOTO 16
+#define OP_PARAM_ASSIGN 17
+#define OP_FUNC_CALL 18
+#define OP_MEM_ACCESS 19
+
 
 /* Macro that checks for a malloc error */
 #define CHECK_MEM_ERROR(name) {if (name == NULL) { \
