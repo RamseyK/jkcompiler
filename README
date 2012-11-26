@@ -12,7 +12,7 @@ Features:
 -Symbol Table
 -Intermediate Representation as Three Address Code
 -Control Flow Graph
--Optimizations: Value Numbering, Constant Folding, Constant Propagation, Constant Evaluation, Dead Code Elimination
+-Optimizations: Value Numbering (Identities, Folding, Propagation), Constant Evaluation, Dead Code Elimination
 
 Prerequisites: gcc, autotools, bison, flex, dejaGNU
 
