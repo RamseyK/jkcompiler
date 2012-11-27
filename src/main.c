@@ -123,6 +123,8 @@ int main(int argc, char **argv) {
 
     // Calculate usrdef sizes
     symtab_calc_sizes();
+    // Calc var offsets
+    symtab_calc_offsets();
 
     // Perform Intermediate Representation
     ir_init();

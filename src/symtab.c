@@ -191,7 +191,7 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 			printf("%p: %s(FUNC)\n", node, name);
 			
 			// Show method variables
-			struct variable_declaration_list_t *vdl = fd->fb->vdl;
+			/*struct variable_declaration_list_t *vdl = fd->fb->vdl;
 			while(vdl != NULL) {
 				if(vdl->vd != NULL) {
 					struct identifier_list_t *il = vdl->vd->il;
@@ -202,7 +202,12 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 					}
 				}
 				vdl = vdl->next;
-			}
+			}*/
+
+			// Print vars with offsets
+			print_tabs(numTabs+1);
+			printf("VARS (offset)\n");
+			symtab_print_var_offsets(node->offset_list, numTabs+1);
 		} else if(node->attrId == SYM_ATTR_CLASS) {
 			//printf("attrId = CLASS");
 			struct class_list_t* cl = node->cl;
@@ -217,7 +222,7 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 				printf("%p: %s(CLASS)\n", node, name);
 			
 			// Show class variables
-			struct variable_declaration_list_t *vdl = cl->cb->vdl;
+			/*struct variable_declaration_list_t *vdl = cl->cb->vdl;
 			while(vdl != NULL) {
 				if(vdl->vd != NULL) {
 					struct identifier_list_t *il = vdl->vd->il;
@@ -228,8 +233,13 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 					}
 				}
 				vdl = vdl->next;
-			}
+			}*/
 			
+			// Print vars with offsets
+			print_tabs(numTabs+1);
+			printf("VARS (offset)\n");
+			symtab_print_var_offsets(node->offset_list, numTabs+1);
+
 			// Descend into function nodes to print their parse trees
 			symtab_print_recursive(node->func_scopes, numTabs+1);
 		} else if(node->attrId == SYM_ATTR_PROGRAM) {
@@ -253,6 +263,22 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 
 	print_tabs(numTabs);	
 	printf("<End Scope>\n");
+}
+
+/*
+ * Prints an offset list by printing the variable name and its offset, and the specified number of tabs
+ */
+void symtab_print_var_offsets(struct offset_list_t *offsets, int numTabs) {
+
+	struct offset_list_t *it = offsets;
+	while(it != NULL) {
+		print_tabs(numTabs);
+
+		printf("%s (%i)\n", it->id, it->offset);
+
+		it = it->next;
+	}
+
 }
 
 /*
@@ -444,9 +470,10 @@ int symtab_calc_td_size(struct type_denoter_t *td) {
 
 	// Array type
 	if(td->type == TYPE_DENOTER_T_ARRAY_TYPE) {
-		int element_count = td->data.at->r->max - td->data.at->r->min;
+		int element_count = td->data.at->r->max->ui - td->data.at->r->min->ui;
 		int element_size = symtab_calc_td_size(td->data.at->td);
 		td->size = element_count * element_size;
+		printf("Array size is %i x %i = %i\n", element_count, element_size, td->size);
 		return td->size;
 	}
 
@@ -466,4 +493,123 @@ int symtab_calc_td_size(struct type_denoter_t *td) {
 	}
 
 	return 0;
+}
+
+/*
+ * Calculates variable offsets for variables declared in classes or functions
+ */
+void symtab_calc_offsets() {
+
+	struct scope_t *scope_it = allScopes;
+
+	// Iterate through the scopes
+	while(scope_it != NULL) {
+
+		// Only calculate offsets for scopes that have not been done yet.
+		if(scope_it->offset_list == NULL) {
+			symtab_calc_scope_offsets(scope_it);
+		}
+
+		scope_it = scope_it->next;
+	}
+
+}
+
+/*
+ * Calculates the offsets for vars in a single scope.  Returns the offset
+ * of the last declared var + the sizeof that vars type (the next available offset)
+ */
+int symtab_calc_scope_offsets(struct scope_t *scope) {
+
+	// If the offsets have already been done, just return the last value
+	if(scope->offset_list != NULL) {
+		struct offset_list_t *end = scope->offset_list;
+		GOTO_END_OF_LIST(end);
+
+		// Figure out the size of this variable
+		struct variable_declaration_t *varDecl = symtab_lookup_variable(scope, end->id);
+		int size = symtab_calc_td_size(varDecl->tden);
+
+		// Return the sum, which would be the next available offset
+		return end->offset + size;
+	}
+
+	// For classes, have to check for inheritence and continue offsets where we left off in parent
+	if(scope->attrId == SYM_ATTR_CLASS || scope->attrId == SYM_ATTR_FUNC) {
+		int off = 0;
+		struct variable_declaration_list_t *vdl_it = NULL;
+		if(scope->attrId == SYM_ATTR_CLASS) {
+			// Determine the start by checking for parent classes
+			if(scope->cl->ci->extend != NULL) {
+				off = symtab_calc_scope_offsets(scope->parent);
+			}
+
+			// Iterate through every variable declared
+			vdl_it = scope->cl->cb->vdl;
+		} else if(scope->attrId == SYM_ATTR_FUNC) {
+			vdl_it = scope->fd->fb->vdl;
+		}
+
+
+		while(vdl_it != NULL) {
+			// Size of the data structure for the var
+			int size = symtab_calc_td_size(vdl_it->vd->tden);
+			printf("Size is %i\n", size);
+
+			// Iterate through every identifier in the list
+			struct identifier_list_t *il_it = vdl_it->vd->il;
+			while(il_it != NULL) {
+				// Add to the offset list
+				add_to_offset_list(&scope->offset_list, il_it->id, off);
+				off += size; // Update the start by the size
+
+				il_it = il_it->next;
+			}
+
+			vdl_it = vdl_it->next;
+		}
+
+		return off;
+
+	}
+	return 0;
+}
+
+/*
+ * Adds a new offset list entry with the id and offset to an offsetList
+ */
+struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, char *id, int offset) {
+
+	// List was empty so initialize
+	if(*offsetList == NULL) {
+		*offsetList = new_offset_list();
+		(*offsetList)->id = new_identifier(id);
+		(*offsetList)->offset = offset;
+
+		return *offsetList;
+	} else {
+		struct offset_list_t *end = *offsetList;
+		GOTO_END_OF_LIST(end);
+		end->next = new_offset_list();
+		end->next->id = new_identifier(id);
+		end->next->offset = offset;
+
+		return end->next;
+	}
+
+}
+
+/*
+ * Allocates memory for a new offset list
+ */
+struct offset_list_t *new_offset_list() {
+
+	struct offset_list_t *temp_offset = (struct offset_list_t *) malloc(sizeof(struct offset_list_t));
+	CHECK_MEM_ERROR(temp_offset);
+	temp_offset->id = NULL;
+	temp_offset->next = NULL;
+	temp_offset->offset = 0;
+
+	return temp_offset;
+
 }

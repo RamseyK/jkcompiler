@@ -67,6 +67,7 @@ void symtab_init(struct program_t* program);
 void symtab_destroy();
 void symtab_print(int numOfTabs);
 void symtab_print_recursive(struct scope_t* start, int numTabs);
+void symtab_print_var_offsets(struct offset_list_t *offsets, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search
@@ -82,5 +83,8 @@ struct scope_t *symtab_lookup_function_scope(struct function_declaration_t *fd);
 void symtab_calc_sizes(); // Calculates the size of type denoters corresponding to classes in the symtab
 int symtab_calc_class_size(struct scope_t *scope); // Calculates the size of a single scope entry recursively to include inheritance
 int symtab_calc_td_size(struct type_denoter_t *td); // Returns the size of a type denoter or calculates it if it is unknown
-void symtab_calc_offsets(); // Calculates the offsets of each variable declared in a scope
+void symtab_calc_offsets(); // Calculates offsets for vars in alls copes
+int symtab_calc_scope_offsets(struct scope_t *scope); // Calculates the offsets of each variable declared in a scope
+struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, char *id, int offset); // Adds to an offset list
+struct offset_list_t *new_offset_list();
 #endif

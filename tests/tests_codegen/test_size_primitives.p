@@ -9,7 +9,7 @@ BEGIN
       compilerWorks	      : boolean;
       numberOfLines	      : integer;
       numberOfHours	      : integer;
-      timeToWrite	      : ARRAY[4..9] OF integer;
+      timeToWrite	      : ARRAY[4..90] OF integer;
       timeToTest	      : ARRAY[9..12] OF integer;
 
 FUNCTION testSizePrimitives;
