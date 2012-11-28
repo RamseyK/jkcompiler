@@ -417,10 +417,9 @@ void ir_process_cfg(struct block_t *entryBlock) {
 	// Recursively process all nodes in the workList
 	// workList will expand on the first pass through the root node
 	struct block_list_t *it = workList;
-	struct set_t *cfg_vars = EMPTY; // Running list of all variables in this CFG
 	while(it != NULL) {
 		// Process the current node in the workList
-		ir_block_pass(it->block, 0, &cfg_vars);
+		ir_block_pass(it->block, 0);
 		
 		// Roll back numbering all the way to the start
 		cfg_vnt_hash_rollback(-1);
@@ -433,7 +432,7 @@ void ir_process_cfg(struct block_t *entryBlock) {
 }
 
 // Recursive worker function to perform a single processing / optimization pass of a basic block in the CFG
-void ir_block_pass(struct block_t *block, int block_level, struct set_t **cfg_vars) {
+void ir_block_pass(struct block_t *block, int block_level) {
 	IRLOG(("Block pass: %s\n", block->label));
 	
 	// Initial optimization and value numbering
@@ -462,11 +461,8 @@ void ir_block_pass(struct block_t *block, int block_level, struct set_t **cfg_va
 		// Perform dead code elimintation after a pass through the blocks TAC nodes
 		ir_opt_dead_code_elim(block);
 	}
-	
-	// Update running list of variables for the CFG
-	cfg_find_vars(block, cfg_vars);
-	
-	// Find upwards exposed and killed variables for each block
+
+	// Calculate all data flow sets for the block
 	ir_calc_flow_vars(block);
 		
 	// Go through the children of this block and perform processing
@@ -484,7 +480,7 @@ void ir_block_pass(struct block_t *block, int block_level, struct set_t **cfg_va
 			cfg_vnt_hash_rollback(block_level);
 		} else {
 			// Process current child block recursively
-			ir_block_pass(child->block, block_level+1, cfg_vars);
+			ir_block_pass(child->block, block_level+1);
 		}
 		
 		child = child->next;
@@ -600,11 +596,39 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	free(op);
 }
 
-// Calculate upwards exposed and killed variables
+// Calculate all data flow sets
 void ir_calc_flow_vars(struct block_t *block) {
+	struct set_t* temp_set = EMPTY;
+
+	// LiveIn is comprised of the intersection of all liveOut's from blocks parents
+	struct block_list_t *parent = block->parents;
+	if(parent != NULL) {
+		block->liveIn = set_union(parent->block->liveOut, EMPTY);
+	}
+	
+	while(parent != NULL) {
+		// Combine same vars from liveOuts into liveIn
+		temp_set = set_intersection(block->liveIn, parent->block->liveOut);
+		free(block->liveIn);
+		block->liveIn = temp_set;
+		
+		// Combine assignVar and killVar with parents assignVar and killVar
+		temp_set = set_union(parent->block->assignVar, block->assignVar);
+		free_set(block->assignVar);
+		block->assignVar = temp_set;
+		
+		temp_set = set_union(parent->block->killVar, block->killVar);
+		free_set(block->killVar);
+		block->killVar = temp_set;
+		temp_set = EMPTY;
+		
+		parent = parent->next;
+	}
+
+	// Calculate upwards exposed and killed variables
 	struct three_address_t *tac = block->entry;
-	while(tac != NULL) {
-		if(tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR) {
+	while(tac != NULL) {	
+		if(tac->op1 != NULL && !tac->op1->temporary && tac->op1->type == TAC_DATA_TYPE_VAR) {
 			if(!set_contains(block->killVar, tac->op1->d.id)) {
 				if(block->ueVar == EMPTY)
 					block->ueVar = new_set(tac->op1->d.id);
@@ -612,7 +636,7 @@ void ir_calc_flow_vars(struct block_t *block) {
 					set_add(block->ueVar, tac->op1->d.id);
 			}
 		}
-		if(tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR) {
+		if(tac->op2 != NULL && !tac->op2->temporary && tac->op2->type == TAC_DATA_TYPE_VAR) {
 			if(!set_contains(block->killVar, tac->op2->d.id)) {
 				if(block->ueVar == EMPTY)
 					block->ueVar = new_set(tac->op2->d.id);
@@ -620,15 +644,46 @@ void ir_calc_flow_vars(struct block_t *block) {
 					set_add(block->ueVar, tac->op2->d.id);
 			}
 		}
-		if(tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_VAR) {
-			if(block->killVar == EMPTY)
-				block->killVar = new_set(tac->lhs->d.id);
-			else
-				set_add(block->killVar, tac->lhs->d.id);
+		if(tac->lhs != NULL && !tac->lhs->temporary && tac->lhs->type == TAC_DATA_TYPE_VAR) {
+			if(!set_contains(block->killVar, tac->lhs->d.id)) {
+				if(set_contains(block->assignVar, tac->lhs->d.id)) {
+					if(block->killVar == EMPTY)
+						block->killVar = new_set(tac->lhs->d.id);
+					else
+						set_add(block->killVar, tac->lhs->d.id);
+					if(set_size(block->assignVar) == 1) {
+						free_set(block->assignVar);
+						block->assignVar = NULL;
+					} else {
+						set_remove(block->assignVar, tac->lhs->d.id);
+					}
+				} else {
+					if(block->assignVar == EMPTY)
+						block->assignVar = new_set(tac->lhs->d.id);
+					else
+						set_add(block->assignVar, tac->lhs->d.id);
+				}
+			}
 		}
 		
 		tac = tac->next;
 	}
+	
+	// Compound vars assigned and not killed / untouched
+	temp_set = set_union(block->assignVar, block->liveIn);
+	block->liveOut = set_difference(block->killVar, temp_set);
+	free(temp_set);
+	
+	IRLOG(("LIVEIN: "));
+	set_print(block->liveIn);
+	IRLOG(("ASSIGNVAR: "));
+	set_print(block->assignVar);
+	IRLOG(("UEVAR: "));
+	set_print(block->ueVar);
+	IRLOG(("KILLVAR: "));
+	set_print(block->killVar);
+	IRLOG(("LIVEOUT: "));
+	set_print(block->liveOut);
 }
 
 // Perform optimization on CFGs
@@ -651,9 +706,9 @@ void ir_optimize() {
 		cfg_it = cfg_it->next;
 	}
 
-	printf("\nPrint value numbering:\n");
+	/*printf("\nPrint value numbering:\n");
 	printf("%s", ir_vnt_out_buffer);
-	printf("\n");
+	printf("\n");*/
 	
 	/*printf("\nPrint constant expression optimizations:\n");
 	printf("%s", ir_opt_const_out_buffer);

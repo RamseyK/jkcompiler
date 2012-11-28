@@ -97,7 +97,7 @@ bool set_contains(struct set_t *set, const char *val) {
 }
 
 // Add an element (val) to a non-empty set if it doesn't already exist in set
-// Returns the previously added set_t object
+// Returns the previously added set_t object or NULL if nothing was added
 struct set_t *set_add(struct set_t *set, const char *val) {
 	if(set == NULL || val == NULL)
 		return NULL;
@@ -106,7 +106,7 @@ struct set_t *set_add(struct set_t *set, const char *val) {
 	struct set_t *set_it = set;
 	struct set_t *set_last = set;
 	while(set_it != NULL) {
-		// Val already exists, return the passed in set_t node
+		// Val already exists, return NULL
 		if(strcmp(set_it->value, val) == 0)
 			return NULL;
 

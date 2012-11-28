@@ -81,7 +81,9 @@ struct block_t {
 	struct three_address_t *entry; // Head of TAC list for this block
 	
 	struct set_t *ueVar; // Upward exposed
-	struct set_t *killVar; // Defined & Redefined 
+	struct set_t *killVar; // Defined & Redefined somewhere in the block or predecessor blocks
+	struct set_t *assignVar; // Vars defined ONLY once somewhere in the block or predecessor blocks
+	struct set_t *liveIn; // "live" variables at the entry of a block
 	struct set_t *liveOut; // "live" variables on exit of the block
 };
 

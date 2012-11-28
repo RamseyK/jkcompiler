@@ -239,8 +239,10 @@ struct block_t *cfg_create_simple_block() {
 	temp_block->parents = NULL;
 	temp_block->children = NULL;
 
+	temp_block->assignVar = NULL;
 	temp_block->ueVar = NULL;
 	temp_block->killVar = NULL;
+	temp_block->liveIn = NULL;
 	temp_block->liveOut = NULL;
 
 	// Connect all the tac
@@ -301,6 +303,18 @@ void cfg_free_block(struct block_t *block) {
 	cfg_free_block_list(&block->children, false);
 	block->parents = NULL;
 	block->children = NULL;
+	
+	// Free flow sets
+	free_set(block->liveIn);
+	block->liveIn = NULL;
+	free_set(block->assignVar);
+	block->assignVar = NULL;
+	free_set(block->ueVar);
+	block->ueVar = NULL;
+	free_set(block->killVar);
+	block->killVar = NULL;
+	free_set(block->liveOut);
+	block->liveOut = NULL;
 
 	// Free the basic block
 	free(block);
@@ -353,6 +367,8 @@ struct block_t *cfg_create_if_block(struct block_t *condition, struct block_t *t
 	condition->type = BLOCK_IF;
 	cfg_append_block_list(&condition->children, trueBranch);
 	cfg_append_block_list(&condition->children, falseBranch);
+	cfg_append_block_list(&trueBranch->parents, condition);
+	cfg_append_block_list(&falseBranch->parents, condition);
 	
 	// Link True and False branches to a dummy node at the bottom
 	struct block_t *dummy = cfg_create_simple_block(NULL);

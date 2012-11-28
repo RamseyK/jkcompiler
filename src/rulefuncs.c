@@ -1328,9 +1328,7 @@ void free_func_declaration_list(struct func_declaration_list_t *fdl) {
 	struct func_declaration_list_t *it = fdl, *current;
 	while(it != NULL) {
 		current = it;
-		//printf("free fd: %s\n", it->fd->fh->id);
-		free_function_declaration(fdl->fd);
-		//printf("freed\n");
+		free_function_declaration(current->fd);
 		it = it->next;
 		free(current);
 	}
