@@ -39,3 +39,8 @@ Optimize:
 - Constant Folding
 - Constant propagation
 
+Code Generation:
+-------------------
+- Size of primitives and arrays of primitives
+- Size of a class and a pointer
+- Size of a class with inheritence
