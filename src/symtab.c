@@ -437,7 +437,15 @@ int symtab_calc_class_size(struct scope_t *scope) {
 		while(vd_it != NULL) {
 
 			// Get the size for the type being declared
-			int vd_size = symtab_calc_td_size(vd_it->vd->tden);
+			int vd_size;
+
+			// If the td is a class type then treat the variable as a pointer to an object
+			// Which has a size of one word.  Otherwise get the actual size.
+			if(vd_it->vd->tden->type == TYPE_DENOTER_T_CLASS_TYPE) {
+				vd_size = SIZE_WORD;
+			} else {
+				vd_size = symtab_calc_td_size(vd_it->vd->tden);
+			}
 
 			// Add the size one time each for every identifier in the list
 			struct identifier_list_t *id_it = vd_it->vd->il;
@@ -470,10 +478,9 @@ int symtab_calc_td_size(struct type_denoter_t *td) {
 
 	// Array type
 	if(td->type == TYPE_DENOTER_T_ARRAY_TYPE) {
-		int element_count = td->data.at->r->max->ui - td->data.at->r->min->ui;
+		int element_count = td->data.at->r->max->ui - td->data.at->r->min->ui + 1;
 		int element_size = symtab_calc_td_size(td->data.at->td);
 		td->size = element_count * element_size;
-		printf("Array size is %i x %i = %i\n", element_count, element_size, td->size);
 		return td->size;
 	}
 

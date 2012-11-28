@@ -450,7 +450,7 @@ void ir_block_pass(struct block_t *block, int block_level, struct set_t **cfg_va
 		// Perform possible constant optimizations then value number the tac
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
-			if(tac->op != OP_BRANCH && tac->op != OP_GOTO) {
+			if(tac->op != OP_BRANCH && tac->op != OP_GOTO && tac->op != OP_NEW_OBJ) {
 				// Constant Optimizations/Eval
 				ir_opt_const_propagation(tac);
 				ir_opt_const_folding(tac);

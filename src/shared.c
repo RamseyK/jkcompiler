@@ -67,6 +67,9 @@ char *op_str(int i_op) {
 	case OP_BRANCH:
 		cw = sprintf(op, "goto");
 		break;
+	case OP_NEW_OBJ:
+		cw = sprintf(op, "NEW");
+		break;
 	default:
 		cw = sprintf(op, "uhoh");
 		break;

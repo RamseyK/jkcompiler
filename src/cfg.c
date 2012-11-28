@@ -613,6 +613,8 @@ void cfg_print_tac(struct three_address_t *tac) {
 		printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);
 	else if(tac->op == OP_GOTO)
 		printf("\t%s %s\n",op, op2_str);
+	else if(tac->op == OP_NEW_OBJ)
+		printf("\t%s := %s %s\n", lhs_str, op, op1_str);
 	else
 		printf("\t%s := %s %s %s\n", lhs_str, op1_str, op, op2_str);
 		
