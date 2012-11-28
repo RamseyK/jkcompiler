@@ -411,6 +411,11 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 
 // Start processing of IR and optimization on the entire cfg
 void ir_process_cfg(struct block_t *entryBlock) {
+	// If the entryBlock was null then there weren't any real blocks for this cfg
+	// Needed this because it was crashing while trying to process functions
+	// That had no cfg's because we had not implemented them for all statements yet
+	if(entryBlock == NULL) return;
+
 	// Work list contains list of blocks that have more than one parent that needs an additional pass by ir_process_block
 	workList = cfg_new_block_list(entryBlock);
 	
