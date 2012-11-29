@@ -99,6 +99,15 @@
 	#define IRLOG(x) (void)0
 #endif
 
+/*
+ * Macro for Machine Code Generation
+ */
+#if 0
+	#define MCLOG(x) printf x
+#else
+	#define MCLOG(x) (void)0
+#endif
+
 
 /* ================================================================
  * Global structures
