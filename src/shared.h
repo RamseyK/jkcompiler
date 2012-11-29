@@ -51,6 +51,7 @@
 #define OP_PARAM_ASSIGN 17
 #define OP_FUNC_CALL 18
 #define OP_MEM_ACCESS 19
+#define OP_NEW_OBJ 20
 
 // Sizes for code generation
 #define SIZE_BYTE 1
@@ -93,7 +94,7 @@
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 0
+#if 1
 	#define IRLOG(x) printf x
 #else
 	#define IRLOG(x) (void)0

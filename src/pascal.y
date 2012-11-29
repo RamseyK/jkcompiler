@@ -621,6 +621,14 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->va = $1;
 		$$->e = NULL;
 		$$->oe = $3;
+		
+		// CFG
+		// Create tacData for the class label
+		struct tac_data_t *class = cfg_new_tac_data();
+		class->type = TAC_DATA_TYPE_LABEL;
+		class->d.id = new_identifier($3->id);
+		cfg_generate_tac($1->expr->tacData->d.id, class, OP_NEW_OBJ, NULL);
+		$$->block = cfg_create_simple_block();
 	}
  ;
 
