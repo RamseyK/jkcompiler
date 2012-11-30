@@ -61,17 +61,29 @@ char *op_str(int i_op) {
 		cw = 0;
 		op[0] = '\0';
 		break;
+	case OP_BRANCH:
+			cw = sprintf(op, "goto");
+			break;
 	case OP_GOTO:
 		cw = sprintf(op, "goto");
 		break;
-	case OP_BRANCH:
-		cw = sprintf(op, "goto");
+	case OP_PARAM_ASSIGN:
+		cw = sprintf(op, "P=");
+		break;
+	case OP_FUNC_CALL:
+		cw = sprintf(op, "CALL");
+		break;
+	case OP_MEM_ACCESS:
+		cw = sprintf(op, "ACCESS");
 		break;
 	case OP_NEW_OBJ:
 		cw = sprintf(op, "NEW");
 		break;
+	case OP_PRINT:
+		cw = sprintf(op, "PRINT");
+		break;
 	default:
-		cw = sprintf(op, "uhoh");
+		cw = sprintf(op, "u-h-o-h");
 		break;
 	}
 	

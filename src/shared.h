@@ -52,6 +52,7 @@
 #define OP_FUNC_CALL 18
 #define OP_MEM_ACCESS 19
 #define OP_NEW_OBJ 20
+#define OP_PRINT 21
 
 // Sizes for code generation
 #define SIZE_BYTE 1
@@ -403,6 +404,7 @@ struct while_statement_t {
 
 struct print_statement_t {
     struct variable_access_t *va;
+    struct block_t *block; // Temp pointer For building CFG
 };
 
 struct function_block_t {

@@ -574,6 +574,8 @@ statement : assignment_statement
 		$$->type = STATEMENT_T_PRINT;
 		$$->data.ps = $1;
 		$$->line_number = line_number;
+		
+		$$->block = $1->block;
     }
  ;
 
@@ -649,6 +651,10 @@ print_statement : PRINT variable_access
     {
 		$$ = new_print_statement();
 		$$->va = $2;
+		
+		// CFG
+		cfg_generate_tac(NULL, $2->expr->tacData, OP_PRINT, NULL);
+		$$->block = cfg_create_simple_block();
     }
 ;
 
@@ -680,6 +686,15 @@ variable_access : identifier
 		$$->data.ad = $1;
 		$$->expr = new_expression_data();
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		
+		//CFG
+		// Make a tacData for variable access and identifier 
+		struct tac_data_t *va_tacData = $1->va->expr->tacData;
+		struct tac_data_t *id_tacData = cfg_new_tac_data();
+		id_tacData->type = TAC_DATA_TYPE_VAR;
+		id_tacData->d.id = new_identifier($1->id);
+		$$->expr->tacData = cfg_generate_tac(NULL, va_tacData, OP_MEM_ACCESS, id_tacData);
+		
 	}
  | method_designator
 	{
@@ -1028,6 +1043,11 @@ function_designator : identifier params
 		$$ = new_function_designator();
 		$$->id = $1;
 		$$->apl = $2;
+		
+		// Loop through each of the parameters
+			// Create a tac that will set each parameter
+			
+		// Create the tac to call the function
 	}
  ;
 
