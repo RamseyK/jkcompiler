@@ -573,7 +573,6 @@ struct print_statement_t *new_print_statement() {
     ps = (struct print_statement_t *) malloc(sizeof(struct print_statement_t));
     CHECK_MEM_ERROR(ps)
     ps->va = NULL;
-    ps->block = NULL;
 
     return ps;
 }

@@ -81,7 +81,7 @@ struct scope_t *symtab_lookup_function_scope(struct function_declaration_t *fd);
 
 //Functions to help with code gen
 void symtab_calc_sizes(); // Calculates the size of type denoters corresponding to classes in the symtab
-int symtab_calc_class_size(struct scope_t *scope); // Calculates the size of a single scope entry recursively to include inheritance
+int symtab_calc_scope_size(struct scope_t *scope); // Calculates the size of a single scope entry recursively to include inheritance
 int symtab_calc_td_size(struct type_denoter_t *td); // Returns the size of a type denoter or calculates it if it is unknown
 void symtab_calc_offsets(); // Calculates offsets for vars in alls copes
 int symtab_calc_scope_offsets(struct scope_t *scope); // Calculates the offsets of each variable declared in a scope

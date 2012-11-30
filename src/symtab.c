@@ -425,9 +425,9 @@ void symtab_calc_sizes() {
 }
 
 /*
- * Returns the size of the class in bytes.  Includes the size of any inherited types.
+ * Returns the size of the scope in bytes.  Includes the size of any inherited types.
  */
-int symtab_calc_class_size(struct scope_t *scope) {
+int symtab_calc_scope_size(struct scope_t *scope) {
 	int size = 0;
 
 	if(scope->attrId == SYM_ATTR_CLASS) {
@@ -462,7 +462,23 @@ int symtab_calc_class_size(struct scope_t *scope) {
 
 			// Get the scope for the parent
 			struct scope_t *parent = symtab_lookup_class(scope->cl->ci->extend);
-			size += symtab_calc_class_size(parent);
+			size += symtab_calc_scope_size(parent);
+		}
+	} else if(scope->attrId == SYM_ATTR_FUNC) {
+		// TODO: Need to include function parameters
+		struct variable_declaration_list_t *vd_it = scope->fd->fb->vdl;
+		while(vd_it != NULL) {
+			// Get the size for the type being declared
+			int vd_size = symtab_calc_td_size(vd_it->vd->tden);
+
+			// Add the size one time each for every identifier in the list
+			struct identifier_list_t *id_it = vd_it->vd->il;
+			while(id_it != NULL) {
+				size += vd_size;
+				id_it = id_it->next;
+			}
+
+			vd_it = vd_it->next;
 		}
 	}
 
@@ -491,7 +507,7 @@ int symtab_calc_td_size(struct type_denoter_t *td) {
 		struct scope_t *foundScope = symtab_lookup_class(td->data.cl->ci->id);
 
 		if(foundScope != NULL) {
-			td->size = symtab_calc_class_size(foundScope);
+			td->size = symtab_calc_scope_size(foundScope);
 		} else {
 			IRLOG(("A usrdef entry does not have a scope_t: %s", td->data.cl->ci->id));
 		}

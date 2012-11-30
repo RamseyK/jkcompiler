@@ -11,6 +11,7 @@
 #include "rulefuncs.h"
 #include "semantic.h"
 #include "ir.h"
+#include "mc.h"
 
 /* Flags if any errors occured */
 int error_flag = 0;
