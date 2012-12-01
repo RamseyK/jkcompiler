@@ -703,6 +703,15 @@ variable_access : identifier
 		$$->data.md = $1;
 		$$->expr = new_expression_data();
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		
+		//CFG
+		// Assign the calling object
+		struct tac_data_t *caller = $1->va->expr->tacData;
+		struct tac_data_t *func = cfg_new_tac_data();
+		func->type = TAC_DATA_TYPE_VAR;
+		func->d.id = new_identifier($1->fd->id);
+		$$->expr->tacData = cfg_generate_tac(NULL, caller, OP_FUNC_CALL, func);
+		
 	}
  ;
 
@@ -994,6 +1003,13 @@ primary : variable_access
 		$$->data.fd = $1;
 		$$->expr = new_expression_data();
 		$$->expr->type = PRIMITIVE_TYPE_NAME_UNKNOWN;
+		
+		//CFG
+		// Assign the calling object
+		struct tac_data_t *func = cfg_new_tac_data();
+		func->type = TAC_DATA_TYPE_VAR;
+		func->d.id = new_identifier($1->id);
+		$$->expr->tacData = cfg_generate_tac(NULL, NULL, OP_FUNC_CALL, func);
 	}
  | LPAREN expression RPAREN
 	{

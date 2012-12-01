@@ -67,6 +67,9 @@ char *op_str(int i_op) {
 	case OP_GOTO:
 		cw = sprintf(op, "goto");
 		break;
+	case OP_CALLER_ASSIGN:
+		cw = sprintf(op, "C=");
+		break;
 	case OP_PARAM_ASSIGN:
 		cw = sprintf(op, "P=");
 		break;

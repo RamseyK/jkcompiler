@@ -33,3 +33,7 @@ src/y.tab.h
 log.txt
 
 tests/.project
+
+version.ini
+
+tests/.cproject

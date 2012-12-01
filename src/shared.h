@@ -48,11 +48,12 @@
 #define OP_ASSIGN 14
 #define OP_BRANCH 15
 #define OP_GOTO 16
-#define OP_PARAM_ASSIGN 17
-#define OP_FUNC_CALL 18
-#define OP_MEM_ACCESS 19
-#define OP_NEW_OBJ 20
-#define OP_PRINT 21
+#define OP_CALLER_ASSIGN 17
+#define OP_PARAM_ASSIGN 18
+#define OP_FUNC_CALL 19
+#define OP_MEM_ACCESS 20
+#define OP_NEW_OBJ 21
+#define OP_PRINT 22
 
 // Sizes for code generation
 #define SIZE_BYTE 1
