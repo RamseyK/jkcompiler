@@ -22,7 +22,7 @@
  */
 
 // Type of the scope node which determines which struct members are set
-#define SYM_ATTR_VAR 1
+#define SYM_ATTR_VAR 1 // is this used..?
 #define SYM_ATTR_CLASS 2
 #define SYM_ATTR_FUNC 3
 #define SYM_ATTR_PROGRAM 4
@@ -71,6 +71,7 @@ void symtab_print_var_offsets(struct offset_list_t *offsets, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search
+struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name);
 struct formal_parameter_section_t *symtab_lookup_function_param(struct scope_t *funcScope, char *name);
 
 struct scope_t *new_scope();

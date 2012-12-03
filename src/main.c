@@ -6,12 +6,12 @@
  * Implements an object oriented pascal compiler
  */
 
-#include "shared.h"
+#include "mc.h"
+#include "ir.h"
+#include "semantic.h"
 #include "symtab.h"
 #include "rulefuncs.h"
-#include "semantic.h"
-#include "ir.h"
-#include "mc.h"
+#include "shared.h"
 
 /* Flags if any errors occured */
 int error_flag = 0;
@@ -130,6 +130,11 @@ int main(int argc, char **argv) {
     // Perform Intermediate Representation
     ir_init();
     ir_optimize();
+    
+    // Generate Code
+    //mc_init();
+    //mc_consume_cfg_list(cfgList);
+    //mc_print_listing();
 
     if (cmdArgs.verbose == 1) {
         printf("USER DEFINED DATA TYPES:\n");
@@ -143,6 +148,7 @@ int main(int argc, char **argv) {
     }
     
     // Free memory
+    //mc_destroy();
     ir_destroy();
 	cfg_destroy();
 	symtab_destroy();

@@ -378,6 +378,46 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
 }
 
 /*
+ * Looks up a variables parent scope using its name starting in the scope.  Looks in the
+ * parent scope until rootScope is reached.  Returns the scope of the variable
+ */
+struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name) {
+	// Reached the root scope and not found
+	if(scope == rootScope)
+		return NULL;
+	
+	struct variable_declaration_list_t *vdl;
+	// If scope is a class scope
+	if(scope->attrId == SYM_ATTR_CLASS) {
+		vdl = scope->cl->cb->vdl;
+	// The scope is a function scope
+	} else if(scope->attrId == SYM_ATTR_FUNC) {
+		vdl = scope->fd->fb->vdl;
+	// Scope isn't the right type
+	} else {
+		return NULL;
+	}
+	// Go through every variable declaration in the list
+	while(vdl != NULL) {
+		struct identifier_list_t *il = vdl->vd->il;
+		// Go through every identifier in the list
+		while(il != NULL) {
+			//printf("Comparing %s to %s\n",il->id,name);
+			if(strcmp(il->id,name) == 0) {
+				//printf("Match found! %s to %s",il->id,name);
+				return scope;
+			}
+			il = il->next;
+		}
+		vdl = vdl->next;
+	}
+	
+	// Not found, look in parent scope
+	//printf("Looking in parent scope\n");
+	return symtab_lookup_variable_scope(scope->parent, name);
+}
+
+/*
  * Look's up a parameter in the function's parameter list by name and returns the formal_parameter_section node
  * Return's NULL if the variable was not found
  */

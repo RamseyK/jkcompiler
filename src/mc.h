@@ -14,13 +14,17 @@
 #include "cfg.h"
 #include "shared.h"
 
+// Memory Location Storage Types (used in mem_list_t)
+#define MEM_REG 1
+#define MEM_STACK 2
+#define MEM_HEAP 3
+
 // Instruction Format Types
 // Unsupported: FI, FR
 #define R_TYPE 1 // Register: OP rd, rs, rt
 #define I_TYPE 2 // Immediate: Varies
 #define J_TYPE 3 // PC Relative: OP label
 #define P_TYPE 4 // Pseudo
-
 
 // MIPS registers
 #define NUM_REGS 32
@@ -61,6 +65,42 @@
  * MC Structures
  * ----------------------------------------------------------------
  */
+
+// Mips register string names used for printing
+static const char *reg_names[NUM_REGS] = {
+"$0", // 0
+"$at", // 1
+"$v0", // 2
+"$v1", // 3
+"$a0", // 4
+"$a1", // 5
+"$a2", // 6
+"$a3", // 7
+"$t0", // 8
+"$t1", // 9
+"$t2", // 10
+"$t3", // 11
+"$t4", // 12
+"$t5", // 13
+"$t6", // 14
+"$t7", // 15
+"$s0", // 16
+"$s1", // 17
+"$s2", // 18
+"$s3", // 19
+"$s4", // 20
+"$s5", // 21
+"$s6", // 22
+"$s7", // 23
+"$t8", // 24
+"$t9", // 25
+"$k0", // 26
+"$k1", // 27
+"$gp", // 28
+"$sp", // 29
+"$fp", // 30
+"$ra" // 31
+};
 
 // Helper struct for static mips_ops_list list
 struct mips_op_t {
@@ -123,10 +163,11 @@ static struct mips_op_t mips_ops_list[] = {
 {"mflo", R_TYPE}, // Move From Lo
 };
 
-// Directive representation
+// Assembler Directive representation
 struct directive_t {
 	char *label; // Optional label to prepend in front of the directive (ex. test: .word 4)
 	char *name; // Name of the directive (.space, .asciiz, .word etc)
+	bool no_val; // Disable value if true
 	char *val_str; // String value, will be enclosed in quotes on emit
 	int val; // Integer value
 	
@@ -141,14 +182,18 @@ struct instr_t {
 	
 	int lhs_reg; // reg_d
 	int op1_reg; // reg_s
+	bool op1_has_offset; // Flag to determine if op1_reg_offset should be used
 	int op1_reg_offset; // For load store ops: ex. offset($sp)
 	int op2_reg; // reg_t
-	int op2_imm; // Immediate
-	char *jump_label;
+	int imm; // Immediate
+	char *addr_label; // Address Label being used in the instruction
+	
+	char *comment; // Optional comment for debugging
 
 	struct instr_t *next;
 };
 
+// 'Block' of instructions defined by a label
 struct instr_list_t {
 	char *label;
 	struct instr_t *entryInstr; // First instruction
@@ -161,6 +206,17 @@ struct section_t {
 	struct instr_list_t *instrs; // Instruction Listings under this section
 };
 
+// Memory loc assigns a variable to a register and provides information for write backs
+struct mem_loc_t {
+	char *id;
+	int temp_reg; // Temporary reg to assign the var for a single operation
+	
+	int type; // MEM_*
+	union {
+		int reg; // Storage reg used if type is MEM_REG
+		int offset; // Memory offset (means different things depending on the type)
+	} loc;
+};
 
 /* ----------------------------------------------------------------
  * MC Generation State
@@ -182,12 +238,6 @@ void mc_destroy();
 
 struct mips_op_t *mc_lookup_mips_op(const char *mnemonic);
 
-// Output
-void mc_print_mips_instrs();
-char *mc_gen_listing();
-void mc_print_listing();
-void mc_write_listing(const char *filename);
-
 // MC Structures
 struct section_t *mc_new_section();
 void mc_free_section(struct section_t *sec);
@@ -198,14 +248,23 @@ void mc_free_instr(struct instr_t *instr);
 struct instr_list_t *mc_new_instr_list(const char *label);
 void mc_append_instr_list(struct instr_list_t **list, struct instr_list_t *entry);
 void mc_free_instr_list(struct instr_list_t **list);
+struct mem_loc_t *mc_new_mem_loc(const char *id);
+void mc_free_mem_loc(struct mem_loc_t *mem_loc);
 
 // CFG Parsing
 void mc_consume_cfg_list(struct cfg_list_t *cfgList);
-void mc_process_block(struct instr_list_t *cfg_instr_list, struct block_t *block);
-struct instr_t *mc_tac_to_instr(struct three_address_t *tac); 
+void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct block_t *block);
+struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *lhs_loc, struct mem_loc_t *op1_loc, struct mem_loc_t *op2_loc);
+
+// Misc Control Transfer
+void mc_leave_func(struct instr_list_t *cfg_instr_list);
 
 // Memory and Register Allocation
-void mc_mem_load(struct three_address_t *tac, struct instr_t *instr);
+struct mem_loc_t *mc_mem_access(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
+void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc);
+void mc_reset_temp_regs();
+int mc_next_temp_reg();
+int mc_next_saved_reg();
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 
@@ -213,5 +272,11 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 void mc_add_bootstrap(const char *main_func_name);
 void mc_emit_directive(struct section_t *sec, struct directive_t *dir);
 void mc_emit_instr(struct instr_list_t *list, struct instr_t *instr);
+
+// Output
+void mc_print_mips_instrs();
+char *mc_gen_listing();
+void mc_print_listing();
+void mc_write_listing(const char *filename);
 
 #endif
