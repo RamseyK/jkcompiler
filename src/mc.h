@@ -161,6 +161,8 @@ static struct mips_op_t mips_ops_list[] = {
 {"multu", R_TYPE}, // Multiply Unsigned
 {"mfhi", R_TYPE}, // Move From Hi
 {"mflo", R_TYPE}, // Move From Lo
+
+{"syscall", P_TYPE}, // Signal with OS
 };
 
 // Assembler Directive representation
@@ -223,6 +225,9 @@ struct mem_loc_t {
  * ----------------------------------------------------------------
  */ 
 
+// TODO: move used_regs into instr_list so used registers are tracked with an instruction listing
+// This will allow us to determine if, for a given instruction listing, which registers are allocated
+// and which are free. Helps with determining what regs to save/restore and bottom-up register allocation
 bool used_regs[NUM_REGS];
  
 struct section_t *dataSection;
@@ -252,7 +257,7 @@ struct mem_loc_t *mc_new_mem_loc(const char *id);
 void mc_free_mem_loc(struct mem_loc_t *mem_loc);
 
 // CFG Parsing
-void mc_consume_cfg_list(struct cfg_list_t *cfgList);
+void mc_consume_cfg_list(struct cfg_list_t *cfgs);
 void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct block_t *block);
 struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *lhs_loc, struct mem_loc_t *op1_loc, struct mem_loc_t *op2_loc);
 
@@ -260,21 +265,22 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 void mc_leave_func(struct instr_list_t *cfg_instr_list);
 
 // Memory and Register Allocation
-struct mem_loc_t *mc_mem_access(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
+struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
+struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct tac_data_t *td);
 void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc);
 void mc_reset_temp_regs();
 int mc_next_temp_reg();
 int mc_next_saved_reg();
+int mc_num_saved_regs_used();
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 
 // Final stage of adding generated code components to their respective listings
-void mc_add_bootstrap(const char *main_func_name);
+void mc_add_bootstrap(const char *entry_block_label);
 void mc_emit_directive(struct section_t *sec, struct directive_t *dir);
 void mc_emit_instr(struct instr_list_t *list, struct instr_t *instr);
 
 // Output
-void mc_print_mips_instrs();
 char *mc_gen_listing();
 void mc_print_listing();
 void mc_write_listing(const char *filename);

@@ -195,17 +195,13 @@ void mc_free_mem_loc(struct mem_loc_t *mem_loc) {
 }
 
 // Process a CFG list (functions) and allocate stack, registers and emit directives, instructions
-void mc_consume_cfg_list(struct cfg_list_t *cfgList) {
-	struct cfg_list_t *cfg_it = cfgList;
+void mc_consume_cfg_list(struct cfg_list_t *cfgs) {
+	struct cfg_list_t *cfg_it = cfgs;
 	struct instr_list_t *cfg_instr_list = mc_new_instr_list(cfg_it->entryBlock->label);
 	// Loop through function cfgs
 	while(cfg_it != NULL) {
 		if(cfg_it->scope->attrId != SYM_ATTR_FUNC)
 			MCLOG(("Scope is NOT a func as expected..\n"));
-			
-		// Reset all used_regs
-		for(int i = 0; i < NUM_REGS; i++)
-			used_regs[i] = false;
 	
 		// Allocate variables on the stack and backup register values
 		mc_alloc_stack(cfg_instr_list, cfg_it->scope);
@@ -235,9 +231,9 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 	while(tac != NULL) {
 		// Generate instructions and allocate temporary registers to access identifiers in memory
 		mc_reset_temp_regs();
-		lhs_loc = mc_mem_access(instr_list, cfg_scope, tac->lhs);
-		op1_loc = mc_mem_access(instr_list, cfg_scope, tac->op1);
-		op2_loc = mc_mem_access(instr_list, cfg_scope, tac->op2);
+		lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+		op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
+		op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
 		
 		// Convert TAC to instruction
 		instr = mc_tac_to_instr(tac, lhs_loc, op1_loc, op2_loc);
@@ -280,16 +276,67 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	struct instr_t *instr = NULL;
 	switch(tac->op) {
 		case OP_PLUS:
-			if(tac->op2->type == TAC_DATA_TYPE_INT)
+			if(tac->op2->type == TAC_DATA_TYPE_INT) {
 				instr = mc_new_instr("addi");
-			else
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->imm = tac->op2->d.val;
+			} else {
 				instr = mc_new_instr("add");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->op2_reg = op2_loc->temp_reg;
+			}
 			break;
 		case OP_MINUS:
-			instr = mc_new_instr("sub");
+			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_INT) {
+				// Var - Int (Reg - Imm)
+				instr = mc_new_instr("addi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->imm = 0-tac->op2->d.val;
+			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR) {
+				// Int - Var (Imm - Reg)
+				instr = mc_new_instr("addi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op2_loc->temp_reg;
+				instr->imm = 0-tac->op1->d.val;
+			} else {
+				// Var - Var (both regs)
+				instr = mc_new_instr("sub");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->op2_reg = op2_loc->temp_reg;
+			}
 			break;
 		case OP_OR:
-			instr = mc_new_instr("or");
+			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
+				// Var OR Var
+				instr = mc_new_instr("or");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->op2_reg = op2_loc->temp_reg;
+			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+				instr = mc_new_instr("ori");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				if(tac->op2->type == TAC_DATA_TYPE_INT)
+					instr->imm = tac->op2->d.val;
+				else if(tac->op2->type == TAC_DATA_TYPE_BOOL)
+					instr->imm = tac->op2->d.b;
+				else
+					MCLOG(("Invalid OR operand\n"));
+			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
+				instr = mc_new_instr("ori");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op2_loc->temp_reg;
+				if(tac->op1->type == TAC_DATA_TYPE_INT)
+					instr->imm = tac->op1->d.val;
+				else if(tac->op1->type == TAC_DATA_TYPE_BOOL)
+					instr->imm = tac->op1->d.b;
+				else
+					MCLOG(("Invalid OR operand\n"));
+			}
 			break;
 		case OP_STAR:
 			instr = mc_new_instr("mult");
@@ -301,13 +348,42 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			//instr = mc_new_instr("");
 			break;
 		case OP_AND:
-			instr = mc_new_instr("and");
+			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
+				// Var OR Var
+				instr = mc_new_instr("and");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->op2_reg = op2_loc->temp_reg;
+			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+				instr = mc_new_instr("andi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				if(tac->op2->type == TAC_DATA_TYPE_INT)
+					instr->imm = tac->op2->d.val;
+				else if(tac->op2->type == TAC_DATA_TYPE_BOOL)
+					instr->imm = tac->op2->d.b;
+				else
+					MCLOG(("Invalid AND operand\n"));
+			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
+				instr = mc_new_instr("andi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op2_loc->temp_reg;
+				if(tac->op1->type == TAC_DATA_TYPE_INT)
+					instr->imm = tac->op1->d.val;
+				else if(tac->op1->type == TAC_DATA_TYPE_BOOL)
+					instr->imm = tac->op1->d.b;
+				else
+					MCLOG(("Invalid AND operand\n"));
+			}
 			break;
 		case OP_EQUAL:
 			//instr = mc_new_instr("slt");
 			break;
 		case OP_NOTEQUAL:
-			//instr = mc_new_instr("slt");
+			instr = mc_new_instr("nor");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = $0;
 			break;
 		case OP_LT:
 			instr = mc_new_instr("slt");
@@ -338,14 +414,17 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_GOTO:
 			instr = mc_new_instr("j");
 			break;
+		case OP_CALLER_ASSIGN:
+			break;
 		case OP_PARAM_ASSIGN:
-			//instr = mc_new_instr("");
 			break;
 		case OP_FUNC_CALL:
-			//instr = mc_new_instr("");
 			break;
 		case OP_MEM_ACCESS:
-			//instr = mc_new_instr("");
+			break;
+		case OP_NEW_OBJ:
+			break;
+		case OP_PRINT:
 			break;
 		default:
 			MCLOG(("Could not convert tac to instr: %s\n", cfg_tac_data_to_str(tac->lhs)));
@@ -364,7 +443,7 @@ void mc_leave_func(struct instr_list_t *cfg_instr_list) {
 }
 
 // Generate instructions and allocate temporary registers to access identifiers in memory
-struct mem_loc_t *mc_mem_access(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td) {
+struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td) {
 	if(td == NULL || td->type != TAC_DATA_TYPE_VAR) {
 		return NULL;
 	}
@@ -420,8 +499,40 @@ struct mem_loc_t *mc_mem_access(struct instr_list_t *instr_list, struct scope_t 
 	return mem_loc;
 }
 
+// Generate instructions to allocate a temporary register to hold a constant
+// This is needed for instructions that do not have I_TYPE counterparts to their R_TYPE
+struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct tac_data_t *td) {
+	if(td == NULL || td->type == TAC_DATA_TYPE_VAR)
+		return NULL;
+	
+	struct mem_loc_t *mem_loc = mc_new_mem_loc(NULL);
+	mem_loc->type = MEM_REG;
+	mem_loc->temp_reg = mc_next_temp_reg();
+	mem_loc->loc.reg = mem_loc->temp_reg;
+	
+	struct instr_t *instr = mc_new_instr("addi");
+	instr->lhs_reg = mem_loc->temp_reg;
+	instr->op1_reg = $0;
+	if(td->type == TAC_DATA_TYPE_INT) {
+		instr->imm = td->d.val;
+	} else if(td->type == TAC_DATA_TYPE_BOOL) {
+		instr->imm = (int)(td->d.b);
+	} else {
+		MCLOG(("Unable to load constant from tac\n"));
+		mc_free_instr(instr);
+		return NULL;
+	}
+	instr->comment = new_identifier("Temp Constant");
+	mc_emit_instr(instr_list, instr);
+	
+	return mem_loc;
+}
+
 // Write back a register value to the permanent location
 void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc) {
+	if(mem_loc == NULL || mem_loc->temp_reg == -1)
+		return;
+
 	if(mem_loc->type == MEM_STACK) {
 		struct instr_t *instr = mc_new_instr("sw");
 		instr->lhs_reg = mem_loc->temp_reg;
@@ -473,13 +584,24 @@ int mc_next_saved_reg() {
 	return -1;
 }
 
+// Returns the number of saved registers in use
+int mc_num_saved_regs_used() {
+	int count = 0;
+	for(int i = $s0; i <= $s7; i++) {
+		if(used_regs[i])
+			count++;
+	}
+	return count;
+}
+
 // Backup preserved registers and allocate stack memory for each variable and emits the appropriate instructions
 // Called just before jumping into a new function
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	int backup_size = SIZE_WORD*10; // Save registers: s0-s7, fp, ra
+	// Saved registers: s0-s7. Always preserved: fp, ra
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
-	int sp_pointer = sp_size;
+	int sp_pointer = 0;
 	struct instr_t *instr = NULL;
 	
 	// Allocate space on the stack addi $sp, $sp, -sp_size
@@ -493,14 +615,17 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	// Save arguments on stack
 	
 	// Restore registers and saved registers from previous frames
-	// Backup registers $s0 - $s7
+	// Backup registers $s0 - $s7 if in use
 	for(int i = $s0; i <= $s7; i++) {
+		if(!used_regs[i])
+			continue;
+	
 		instr = mc_new_instr("sw");
 		instr->lhs_reg = i;
 		instr->op1_reg = $sp;
-		sp_pointer -= 4;
 		instr->op1_has_offset = true;
 		instr->op1_reg_offset = sp_pointer;
+		sp_pointer += SIZE_WORD;
 		mc_emit_instr(cfg_instr_list, instr);
 	}
 	
@@ -508,35 +633,36 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr = mc_new_instr("sw");
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
-	sp_pointer -= 4;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
+	sp_pointer += SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Backup $ra
 	instr = mc_new_instr("sw");
 	instr->lhs_reg = $ra;
 	instr->op1_reg = $sp;
-	sp_pointer -= 4;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
+	sp_pointer += SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
-	// Set new Frame Pointer to start of local variables (grows upwards from end of sp)
+	// Set new Frame Pointer to start of local variables
 	instr = mc_new_instr("addi");
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
-	instr->imm = sp_pointer;
-	instr->comment = new_identifier("Frame Pointer grows up (end of sp)");
+	instr->imm = backup_size;
+	instr->comment = new_identifier("Start of frame");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
 // Restore preserved registers and deallocate stack memory
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	int backup_size = SIZE_WORD*10; // Save registers: s0-s7, fp, ra
+	// Saved registers: s0-s7. Always preserved: fp, ra
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
-	int sp_pointer = frame_size-4; // Start past the frame
+	int sp_pointer = backup_size-SIZE_WORD;
 	struct instr_t *instr = NULL;
 	
 	// Restore registers and saved registers from previous frames
@@ -544,28 +670,31 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr = mc_new_instr("lw");
 	instr->lhs_reg = $ra;
 	instr->op1_reg = $sp;
-	sp_pointer += 4;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Restore $fp
 	instr = mc_new_instr("lw");
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
-	sp_pointer += 4;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
-	// Restore registers $s7 - $s0
+	// Restore registers $s7 - $s0 if used
 	for(int i = $s7; i >= $s0; i--) {
+		if(!used_regs[i])
+			continue;
+		
 		instr = mc_new_instr("lw");
 		instr->lhs_reg = i;
 		instr->op1_reg = $sp;
-		sp_pointer += 4;
 		instr->op1_has_offset = true;
 		instr->op1_reg_offset = sp_pointer;
+		sp_pointer -= SIZE_WORD;
 		mc_emit_instr(cfg_instr_list, instr);
 	}
 	
@@ -579,8 +708,33 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 }
 
 // Generates .globl main_func_name, and extra bootstrap code to jump into the main func of the main class, and termination syscall when last method returns
-void mc_add_bootstrap(const char *main_func_name) {
+void mc_add_bootstrap(const char *entry_block_label) {
+	// Label the bootstrap function
+	struct directive_t *gldir = mc_new_directive(NULL, "globl");
+	gldir->val_str = new_identifier("main");
+	mc_emit_directive(textSection, gldir);
+	
+	// Create instruction listing for the bootstrap
+	struct instr_list_t *instr_list = mc_new_instr_list("main");
 
+	// Jump into starting function
+	struct instr_t *instr = mc_new_instr("jal");
+	instr->addr_label = new_identifier(entry_block_label);
+	mc_emit_instr(instr_list, instr);
+	
+	// Syscall to terminate the program properly
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $v0;
+	instr->op1_reg = $0;
+	instr->imm = 10;
+	mc_emit_instr(instr_list, instr);
+	instr = mc_new_instr("syscall");
+	mc_emit_instr(instr_list, instr);
+	
+	// Add the instruction listing to HEAD of the text section instr lists
+	struct instr_list_t *old_head = textSection->instrs;
+	textSection->instrs = instr_list;
+	instr_list->next = old_head;
 }
 
 // Add directive to a section
@@ -627,7 +781,6 @@ void mc_print_mips_ops() {
 char *mc_gen_listing() {
 	char buf[2048];
 	memset(buf, 0, sizeof(buf));
-	bool first = true;
 	
 	// .data section and all of it's sub directives
 	struct directive_t *dir = dataSection->dirs;
@@ -635,19 +788,13 @@ char *mc_gen_listing() {
 		// label:
 		if(dir->label != NULL)
 			sprintf(buf, "%s%s:\n", buf, dir->label);
-			
-		// Indent all directives that arent first
-		if(first)
-			first = false;
-		else
-			sprintf(buf, "%s\t", buf);
 		
 		// .name
 		sprintf(buf, "%s.%s ", buf, dir->name);
 		
 		if(!dir->no_val) {
-			if(dir->val_str != NULL) { // String Value: "val" or Number Value: 0
-				sprintf(buf, "%s\"%s\"", buf, dir->val_str);
+			if(dir->val_str != NULL) { // String or number value
+				sprintf(buf, "%s%s", buf, dir->val_str);
 			} else { // Integer value
 				sprintf(buf, "%s%i", buf, dir->val);
 			}
@@ -665,25 +812,18 @@ char *mc_gen_listing() {
 	sprintf(buf, "%s\n", buf);
 	
 	// .text section with directives and instructions
-	first = true;
 	dir = textSection->dirs;
 	while(dir != NULL) {
 		// label:
 		if(dir->label != NULL)
 			sprintf(buf, "%s%s:\n", buf, dir->label);
-			
-		// Indent all directives that arent first
-		if(first)
-			first = false;
-		else
-			sprintf(buf, "%s\t", buf);
 		
 		// .name
 		sprintf(buf, "%s.%s ", buf, dir->name);
 		
 		if(!dir->no_val) {
-			if(dir->val_str != NULL) { // String Value: "val" or Number Value: 0
-				sprintf(buf, "%s\"%s\"", buf, dir->val_str);
+			if(dir->val_str != NULL) { // String or number value
+				sprintf(buf, "%s%s", buf, dir->val_str);
 			} else { // Integer value
 				sprintf(buf, "%s%i", buf, dir->val);
 			}
@@ -712,23 +852,21 @@ char *mc_gen_listing() {
 			sprintf(buf, "%s\t%s ", buf, instr->mips_op->name);
 			switch(instr->mips_op->format) {
 			case R_TYPE:
-				sprintf(buf, "%s%s", buf, reg_names[instr->lhs_reg]);
+				sprintf(buf, "%s%s", buf, reg_names[instr->lhs_reg]); // R[lhs]
 				if(instr->op1_reg != -1 && instr->op2_reg != -1) {
 					if(instr->imm == 0)
-						sprintf(buf, "%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg]);
+						sprintf(buf, "%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg]); // = R[op1] op R[op2]
 					else
-						sprintf(buf, "%s, %s, %i(%s)", buf, reg_names[instr->op1_reg], instr->imm, reg_names[instr->op2_reg]);
+						sprintf(buf, "%s, %s, %i(%s)", buf, reg_names[instr->op1_reg], instr->imm, reg_names[instr->op2_reg]); // = R[op1] op (off)R[op2]
 				}
 				break;
 			case I_TYPE:
-				sprintf(buf, "%s%s, ", buf, reg_names[instr->lhs_reg]);
 				if(instr->op1_has_offset) {
-					sprintf(buf, "%s%i(%s)", buf, instr->op1_reg_offset, reg_names[instr->op1_reg]);
-				} else { 
-					if(instr->addr_label == NULL)
-						sprintf(buf, "%s%s, %i", buf, reg_names[instr->op1_reg], instr->imm);
-					else
-						sprintf(buf, "%s%s %s", buf, reg_names[instr->op1_reg], instr->addr_label);
+					sprintf(buf, "%s%s, %i(%s)", buf, reg_names[instr->lhs_reg], instr->op1_reg_offset, reg_names[instr->op1_reg]); // R[lhs] op (off)R[op1]
+				} else if(instr->addr_label != NULL) {
+					sprintf(buf, "%s%s, %i, %s", buf, reg_names[instr->op1_reg], instr->imm, instr->addr_label); // R[op1] op imm addr
+				} else {
+					sprintf(buf, "%s%s, %s, %i", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg], instr->imm); // R[lhs] = R[op1] op imm
 				}
 				break;
 			case J_TYPE:
@@ -737,11 +875,11 @@ char *mc_gen_listing() {
 				break;
 			case P_TYPE: // Pseudo instructions dont follow a pattern, so each must have a finer tuned output
 				if(strcmp(instr->mips_op->name, "li") == 0 || strcmp(instr->mips_op->name, "la") == 0 ) {
-					sprintf(buf, "%s%s, %i", buf, reg_names[instr->lhs_reg], instr->imm);
+					sprintf(buf, "%s%s, %i", buf, reg_names[instr->lhs_reg], instr->imm); // R[lhs] = imm
 				} else if(strcmp(instr->mips_op->name, "move") == 0) {
-					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]);
+					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]); // R[lhs] = R[rs]
 				} else if(instr->addr_label != NULL) {
-					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg], instr->addr_label);
+					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg], instr->addr_label); // R[op1] op R[op2] addr
 				} else {
 				
 				}

@@ -130,11 +130,6 @@ int main(int argc, char **argv) {
     // Perform Intermediate Representation
     ir_init();
     ir_optimize();
-    
-    // Generate Code
-    //mc_init();
-    //mc_consume_cfg_list(cfgList);
-    //mc_print_listing();
 
     if (cmdArgs.verbose == 1) {
         printf("USER DEFINED DATA TYPES:\n");
@@ -147,8 +142,14 @@ int main(int argc, char **argv) {
         symtab_print(0);
     }
     
+    // Generate Code
+    /*mc_init();
+    mc_consume_cfg_list(cfgList);
+    mc_add_bootstrap("b_0"); // TODO: Need to actually find the entry functions block name
+    mc_print_listing();
+    mc_destroy();*/
+    
     // Free memory
-    //mc_destroy();
     ir_destroy();
 	cfg_destroy();
 	symtab_destroy();
