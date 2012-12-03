@@ -4,6 +4,7 @@ CLASS Node
 BEGIN
 VAR value : integer;
     next : Node;
+
 END
 
 CLASS LinkedList
@@ -13,7 +14,8 @@ VAR list, eol : Node;
 
 FUNCTION LinkedList;
 BEGIN
-	list := NEW Node
+	list := NEW Node;
+	list.value := 5
 END
 
 END
