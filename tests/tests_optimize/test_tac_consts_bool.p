@@ -3,7 +3,8 @@ program testConstsBool;
 class testConstsBool
 
 BEGIN
-   VAR aa, bb, cc, dd, xx, yy, zz: boolean;
+   VAR aa, bb, ee, xx, yy, zz: boolean;
+	cc, dd: integer;
 
 FUNCTION testConstsBool;
 BEGIN
@@ -13,7 +14,8 @@ BEGIN
 	dd := 6;
 	xx := aa AND bb;
 	yy := aa = bb;
-	zz := cc > dd
+	zz := cc > dd;
+	ee := True
 END
 
 END

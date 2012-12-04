@@ -1061,9 +1061,11 @@ function_designator : identifier params
 		$$->apl = $2;
 		
 		// Loop through each of the parameters
-			// Create a tac that will set each parameter
-			
-		// Create the tac to call the function
+		struct actual_parameter_list_t *apl_it = $2;
+		while(apl_it != NULL) {			
+			cfg_generate_tac(NULL, apl_it->ap->e1->expr->tacData, OP_PARAM_ASSIGN, NULL);
+			apl_it = apl_it->next;	
+		}
 	}
  ;
 

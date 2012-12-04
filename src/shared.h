@@ -48,7 +48,7 @@
 #define OP_ASSIGN 14
 #define OP_BRANCH 15
 #define OP_GOTO 16
-#define OP_CALLER_ASSIGN 17
+#define OP_CALLER_ASSIGN 17 // Unused
 #define OP_PARAM_ASSIGN 18
 #define OP_FUNC_CALL 19
 #define OP_MEM_ACCESS 20

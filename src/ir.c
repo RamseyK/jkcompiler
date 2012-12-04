@@ -449,7 +449,9 @@ void ir_block_pass(struct block_t *block, int block_level) {
 		// Perform possible constant optimizations then value number the tac
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
-			if(tac->op != OP_BRANCH && tac->op != OP_GOTO && tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL && tac->op != OP_PRINT) {
+			if(tac->op != OP_BRANCH && tac->op != OP_GOTO
+					&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
+					&& tac->op != OP_PRINT) {
 				// Constant Optimizations/Eval
 				ir_opt_const_propagation(tac);
 				ir_opt_const_folding(tac);
@@ -512,7 +514,7 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	}
 
 	// Case: a = b (no op2)
-	if(tac->op == OP_ASSIGN) {
+	if(tac->op == OP_ASSIGN || tac->op == OP_PARAM_ASSIGN || tac->op == OP_PRINT) {
 		// Copy the value numbering from the right hand side to the left hand side (simple assignment a = b)
 		IRLOG(("lhs insert (nop)\n"));
 		vnum_lhs = new_identifier(vnum_op1);
@@ -584,6 +586,10 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	} else if(tac->op == OP_GOTO) {
 		// Uses the pretty name
 		sprintf(ir_vnt_out_buffer, "%s\t%s %s(%s)\n", ir_vnt_out_buffer, op, print_op2, entry_op2->vnt_node->pretty_name);
+	} else if(tac->op == OP_PARAM_ASSIGN) {
+		sprintf(ir_vnt_out_buffer, "%s\t%s %s(%s)\n", ir_vnt_out_buffer, op, print_op1, entry_op1->vnt_node->pretty_name);
+	} else if(tac->op == OP_PRINT) {
+		sprintf(ir_vnt_out_buffer, "%s\t%s %s(%s)\n", ir_vnt_out_buffer, op, print_op1, entry_op1->vnt_node->pretty_name);
 	} else {
 		// Uses the hash value
 		//sprintf(ir_vnt_out_buffer, "%s\t%s(%s) := %s(%s) %s %s(%s)\n", ir_vnt_out_buffer, print_lhs, entry_lhs->vnt_node->val, print_op1, entry_op1->vnt_node->val, op, print_op2, entry_op2->vnt_node->val);
