@@ -470,7 +470,7 @@ void ir_block_pass(struct block_t *block, int block_level) {
 	}
 
 	// Calculate all data flow sets for the block
-	ir_calc_flow_vars(block);
+	//ir_calc_flow_vars(block);
 		
 	// Go through the children of this block and perform processing
 	struct block_list_t *child = block->children;

@@ -78,7 +78,7 @@
 /*
  * Macro for grammar logging
  */
-#if 0
+#if 1
 	#define GLOG(x) printf x
 #else
 	#define GLOG(x) (void)0
@@ -87,7 +87,7 @@
 /*
  * Macro for semantic logging
  */
-#if 0
+#if 1
 	#define SLOG(x) printf x
 #else
 	#define SLOG(x) (void)0

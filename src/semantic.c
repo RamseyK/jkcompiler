@@ -280,9 +280,16 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 		}
 
 		// Check for the values "true" and "false" not case sensitive and return
-		// this as a bool if found
+		// this as a bool if found.  Also update the tacData to reflect a bool value
 		char *bool_lower = stringtolower(va->data.id);
 		if(strcmp(bool_lower,BOOLEAN_VALUE_TRUE) == 0 || strcmp(bool_lower,BOOLEAN_VALUE_FALSE) == 0) {
+			// Update the tacdata
+			va->expr->tacData->type = TAC_DATA_TYPE_BOOL;
+			if(strcmp(bool_lower,BOOLEAN_VALUE_TRUE) == 0) {
+				va->expr->tacData->d.b = true;
+			} else {
+				va->expr->tacData->d.b = false;
+			}
 			free(bool_lower);
 			return PRIMITIVE_TYPE_NAME_BOOLEAN;
 		}
@@ -620,7 +627,8 @@ char *verify_expression(struct semantic_state_t *sem_state, struct expression_t 
 			error_type_mismatch(sem_state->line_number, td1->name, td2->name);
 			return PRIMITIVE_TYPE_NAME_UNKNOWN;
 		} else {
-			return td1->name;
+			//return td1->name;
+			return e->expr->type;
 		}
 	}
 
