@@ -50,7 +50,7 @@ yacc:
 	mv $(SRCDIR)/y.tab.h.tmp $(SRCDIR)/y.tab.h
 	
 clean:
-	echo " Cleaning...";
+	@echo "Cleaning...";
 	rm -rf $(BUILDDIR) $(BINDIR)/$(TARGET)*
 	cd $(SRCDIR); rm -f y.tab.h.tmp y.output
 	rm -f $(TESTSDIR)/tests_lib_shared_auto.inc

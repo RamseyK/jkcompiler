@@ -5,9 +5,9 @@ class testConsts
 BEGIN
 
 FUNCTION testConsts;
+VAR aa, bb, cc: integer;
 BEGIN
-   VAR aa, bb, cc: integer;
-   aa := 1 - bb;
+   aa := 1;
    bb := 12;
    cc := 5
 END

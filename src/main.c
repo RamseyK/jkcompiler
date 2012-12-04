@@ -6,12 +6,12 @@
  * Implements an object oriented pascal compiler
  */
 
-#include "shared.h"
+#include "mc.h"
+#include "ir.h"
+#include "semantic.h"
 #include "symtab.h"
 #include "rulefuncs.h"
-#include "semantic.h"
-#include "ir.h"
-#include "mc.h"
+#include "shared.h"
 
 /* Flags if any errors occured */
 int error_flag = 0;
@@ -141,6 +141,13 @@ int main(int argc, char **argv) {
         printf("-------------\n");
         symtab_print(0);
     }
+    
+    // Generate Code
+    /*mc_init();
+    mc_consume_cfg_list(cfgList);
+    mc_add_bootstrap("b_0"); // TODO: Need to actually find the entry functions block name
+    mc_print_listing();
+    mc_destroy();*/
     
     // Free memory
     ir_destroy();

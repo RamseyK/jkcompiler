@@ -105,7 +105,7 @@
 /*
  * Macro for Machine Code Generation
  */
-#if 0
+#if 1
 	#define MCLOG(x) printf x
 #else
 	#define MCLOG(x) (void)0
