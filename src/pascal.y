@@ -611,7 +611,12 @@ assignment_statement : variable_access ASSIGNMENT expression
 		$$->e = $3;
 		$$->oe = NULL;
 		
-		cfg_generate_tac($1->expr->tacData->d.id, $3->expr->tacData, OP_ASSIGN, NULL);
+		struct three_address_t *tac = cfg_generate_tac($1->expr->tacData->d.id, $3->expr->tacData, OP_ASSIGN, NULL);
+		// We do this so that an identifier on the rhs on its own can be resolved
+		// To a function call in semantic analysis.
+		if($3->expr->tac == NULL)
+			$3->expr->tac = tac;
+			
 		IRLOG(("About to create block\n"));
 		$$->block = cfg_create_simple_block();
 		IRLOG(("Created block\n"));
@@ -693,8 +698,10 @@ variable_access : identifier
 		struct tac_data_t *id_tacData = cfg_new_tac_data();
 		id_tacData->type = TAC_DATA_TYPE_VAR;
 		id_tacData->d.id = new_identifier($1->id);
-		$$->expr->tacData = cfg_generate_tac(NULL, va_tacData, OP_MEM_ACCESS, id_tacData);
-		
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac = cfg_generate_tac(NULL, va_tacData, OP_MEM_ACCESS, id_tacData);
+		$$->expr->tacData = tac->lhs;
+		$$->expr->tac = tac; // This is what allows us to identify parameterless functions in semantic
 	}
  | method_designator
 	{
@@ -710,8 +717,10 @@ variable_access : identifier
 		struct tac_data_t *func = cfg_new_tac_data();
 		func->type = TAC_DATA_TYPE_VAR;
 		func->d.id = new_identifier($1->fd->id);
-		$$->expr->tacData = cfg_generate_tac(NULL, caller, OP_FUNC_CALL, func);
 		
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac = cfg_generate_tac(NULL, caller, OP_FUNC_CALL, func);
+		$$->expr->tacData = tac->lhs;
 	}
  ;
 
@@ -851,7 +860,9 @@ expression : simple_expression
 		}
 		
 		// CFG
-		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac =cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		$$->expr->tacData = tac->lhs;
 	}
  ;
 
@@ -892,7 +903,9 @@ simple_expression : term
 		}
 		
 		// CFG
-		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac =cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		$$->expr->tacData = tac->lhs;
 	}
  ;
 
@@ -936,7 +949,9 @@ term : factor
 		}
 		
 		// CFG
-		$$->expr->tacData = cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac =cfg_generate_tac(NULL, $1->expr->tacData, $2, $3->expr->tacData);
+		$$->expr->tacData = tac->lhs;
 	}
  ;
 
@@ -967,7 +982,10 @@ factor : sign factor
 		struct tac_data_t *zero = cfg_new_tac_data();
 		zero->type = TAC_DATA_TYPE_INT;
 		zero->d.val = 0;
-		$$->expr->tacData = cfg_generate_tac(NULL, zero, *$1, $2->expr->tacData);
+
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac =cfg_generate_tac(NULL, zero, *$1, $2->expr->tacData);
+		$$->expr->tacData = tac->lhs;
 	}
  | primary 
 	{
@@ -1009,7 +1027,10 @@ primary : variable_access
 		struct tac_data_t *func = cfg_new_tac_data();
 		func->type = TAC_DATA_TYPE_VAR;
 		func->d.id = new_identifier($1->id);
-		$$->expr->tacData = cfg_generate_tac(NULL, NULL, OP_FUNC_CALL, func);
+
+		// Generate the tac and set the tacData for the expr to be the lhs
+		struct three_address_t *tac = cfg_generate_tac(NULL, NULL, OP_FUNC_CALL, func);
+		$$->expr->tacData = tac->lhs;
 	}
  | LPAREN expression RPAREN
 	{

@@ -29,6 +29,7 @@
 #define TAC_DATA_TYPE_BOOL 3
 #define TAC_DATA_TYPE_LABEL 4
 #define TAC_DATA_TYPE_KEYWORD 5
+#define TAC_DATA_TYPE_FUNCCALL_NOPARAM 6
 
 #define TABLE_SIZE 29
 
@@ -186,7 +187,7 @@ void cfg_free_tac_list();
 void cfg_free_tac(struct three_address_t *tac);
 void cfg_free_tac_data_list();
 void cfg_print_tac(struct three_address_t *tac);
-struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2);
+struct three_address_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2);
 struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
 struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching

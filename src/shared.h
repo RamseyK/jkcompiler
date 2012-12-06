@@ -78,7 +78,7 @@
 /*
  * Macro for grammar logging
  */
-#if 1
+#if 0
 	#define GLOG(x) printf x
 #else
 	#define GLOG(x) (void)0
@@ -267,6 +267,7 @@ struct expression_data_t {
     float val;
     char *type;
 	struct tac_data_t *tacData; // Data used for tac generation
+	struct three_address_t *tac;// Data used for code generation
 };
 
 struct unsigned_number_t {
