@@ -1559,6 +1559,7 @@ struct expression_data_t *new_expression_data() {
     ed->tacData = (struct tac_data_t *) malloc(sizeof(struct tac_data_t));
     ed->tacData->type = 0;
     ed->tacData->d.id = NULL;
+    ed->tac = NULL;
 
     return ed;
 }

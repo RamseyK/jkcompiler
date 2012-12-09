@@ -663,7 +663,7 @@ char *cfg_new_temp_name() {
 
 // Generate a TAC node and add it to the master list. Returns the name of the tac
 // If lhs_id is NULL, a temporary name is generated
-struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2) {
+struct three_address_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, int op, struct tac_data_t *op2) {
 	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
 	CHECK_MEM_ERROR(temp_tac);
 	
@@ -706,7 +706,7 @@ struct tac_data_t *cfg_generate_tac(const char *lhs_id, struct tac_data_t *op1, 
 	IRLOG(("Tac node just created: "));
 	//cfg_print_tac(temp_tac);
 
-	return temp_tac->lhs;
+	return temp_tac;
 }
 
 struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label) {

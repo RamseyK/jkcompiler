@@ -87,7 +87,7 @@
 /*
  * Macro for semantic logging
  */
-#if 0
+#if 1
 	#define SLOG(x) printf x
 #else
 	#define SLOG(x) (void)0
@@ -267,6 +267,7 @@ struct expression_data_t {
     float val;
     char *type;
 	struct tac_data_t *tacData; // Data used for tac generation
+	struct three_address_t *tac;// Data used for code generation
 };
 
 struct unsigned_number_t {

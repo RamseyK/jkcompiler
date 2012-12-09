@@ -280,9 +280,16 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 		}
 
 		// Check for the values "true" and "false" not case sensitive and return
-		// this as a bool if found
+		// this as a bool if found.  Also update the tacData to reflect a bool value
 		char *bool_lower = stringtolower(va->data.id);
 		if(strcmp(bool_lower,BOOLEAN_VALUE_TRUE) == 0 || strcmp(bool_lower,BOOLEAN_VALUE_FALSE) == 0) {
+			// Update the tacdata
+			va->expr->tacData->type = TAC_DATA_TYPE_BOOL;
+			if(strcmp(bool_lower,BOOLEAN_VALUE_TRUE) == 0) {
+				va->expr->tacData->d.b = true;
+			} else {
+				va->expr->tacData->d.b = false;
+			}
 			free(bool_lower);
 			return PRIMITIVE_TYPE_NAME_BOOLEAN;
 		}
@@ -300,17 +307,33 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 				}
 			}
 		}
-
+		SLOG(("This far\n"));
 		// Check the function parameters and variables for the identifier
 		struct variable_declaration_t *vd = symtab_lookup_variable(sem_state->scope, va->data.id);
 		if(vd == NULL) {
 			struct formal_parameter_section_t *fps = symtab_lookup_function_param(sem_state->scope, va->data.id);
 			if(fps == NULL) {
-				// If the name doesn't match the function name, it's undeclared
+				// If the name doesn't match the function name, it's undeclared or a function call
 				if(strcmp(sem_state->scope->fd->fh->id, va->data.id) != 0) {
-					error_variable_not_declared(sem_state->line_number, va->data.id);
-					return PRIMITIVE_TYPE_NAME_UNKNOWN;
+					SLOG(("Could not find the field.  Checking if it is a function: %s\n", va->data.id));
+
+					// Check to see if the identifier is actually a function (in this class) with no parameters
+					struct scope_t *funcScope = symtab_lookup_function(sem_state->scope->parent, va->data.id);
+					if(funcScope == NULL) {
+						// not declared
+						error_variable_not_declared(sem_state->line_number, va->data.id);
+						return PRIMITIVE_TYPE_NAME_UNKNOWN;
+					} else {
+						// Change the tac node to be a function call
+						va->expr->tac->op = OP_FUNC_CALL;
+						va->expr->tac->op2 = va->expr->tac->op1;
+						va->expr->tac->op1 = NULL;
+
+						return funcScope->fd->fh->res;
+					}
 				}
+
+
 			}
 			// Return the type name of the variable in the parameter section
 			//printf("(In function params)Identifier %s has type %s\n",va->data.id,fps->id);
@@ -390,10 +413,20 @@ char *verify_variable_access(struct semantic_state_t *sem_state, struct variable
 			SLOG(("Looking for field %s in class\n",va->data.ad->id));
 			struct variable_declaration_t *var = symtab_lookup_variable(va_classScope, va->data.ad->id);
 			if(var == NULL) {
-				//printf("Could not find the field\n");
-				// not declared
-				error_variable_not_declared(sem_state->line_number, va->data.ad->id);
-				return PRIMITIVE_TYPE_NAME_UNKNOWN;
+				SLOG(("Could not find the field.  Checking if it is a function: %s\n", va->data.ad->id));
+
+				// Check to see if the identifier is actually a function with no parameters
+				struct scope_t *funcScope = symtab_lookup_function(va_classScope, va->data.ad->id);
+				if(funcScope == NULL) {
+					// not declared
+					error_variable_not_declared(sem_state->line_number, va->data.ad->id);
+					return PRIMITIVE_TYPE_NAME_UNKNOWN;
+				} else {
+					// Fix the tac node to be a function call
+					va->expr->tac->op = OP_FUNC_CALL;
+
+					return funcScope->fd->fh->res;
+				}
 			}
 			// Variable was found in the class, return the class name..... its type
 			SLOG(("Variable found in class, returning class name %s\n", var->tden->name));
@@ -620,7 +653,8 @@ char *verify_expression(struct semantic_state_t *sem_state, struct expression_t 
 			error_type_mismatch(sem_state->line_number, td1->name, td2->name);
 			return PRIMITIVE_TYPE_NAME_UNKNOWN;
 		} else {
-			return td1->name;
+			//return td1->name;
+			return e->expr->type;
 		}
 	}
 

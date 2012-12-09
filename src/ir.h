@@ -55,5 +55,6 @@ void ir_opt_const_folding(struct three_address_t *tac);
 
 // Fixups
 void ir_resolve_label_aliases();
+void ir_resolve_func_calls_no_param();
 
 #endif

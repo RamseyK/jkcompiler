@@ -470,7 +470,7 @@ void ir_block_pass(struct block_t *block, int block_level) {
 	}
 
 	// Calculate all data flow sets for the block
-	ir_calc_flow_vars(block);
+	//ir_calc_flow_vars(block);
 		
 	// Go through the children of this block and perform processing
 	struct block_list_t *child = block->children;
@@ -729,6 +729,8 @@ void ir_calc_flow_vars(struct block_t *block) {
 void ir_optimize() {
 	// Ensures target of jumps resolves properly
 	ir_resolve_label_aliases();
+	// Do fixups for parameterless func calls that were taken as identifiers
+	ir_resolve_func_calls_no_param();
 
     printf("\nTACs:\n");
 	cfg_print_tacs();
@@ -784,5 +786,36 @@ void ir_resolve_label_aliases() {
 		}
 		tac_it = tac_it->next;
 	}
+}
+
+void ir_resolve_func_calls_no_param() {
+	// Go through each tac node
+	struct three_address_list_t *tac_it = tacList;
+	while(tac_it != NULL) {
+		// If the tac op is assign
+		if(tac_it->tac->op == OP_ASSIGN) {
+			// If the op1 has the flag tacData type
+			if(tac_it->tac->op1->type == TAC_DATA_TYPE_FUNCCALL_NOPARAM) {
+				// Insert a new tac before this one that calls the function
+					// Problem:  If this tac is the entry to the block, how to update the block entry?
+
+				//Change the op1 of this assign tac to the lhs of the newly made tac
+
+			}
+
+		}
+
+		// If the tac op is an access
+		if(tac_it->tac->op == OP_MEM_ACCESS) {
+			// Check if op2 has the flag tacData type
+			if(tac_it->tac->op2 == TAC_DATA_TYPE_FUNCCALL_NOPARAM) {
+				// Change the op to a functionc all
+				//tac_it->tac->op = OP_FUNC_CALL;
+			}
+		}
+
+		tac_it = tac_it->next;
+	}
+
 }
 
