@@ -35,6 +35,7 @@ struct scope_t {
 	struct class_list_t *cl; // Class in this scope
 	struct scope_t *func_scopes; // Head node of function scopes in this scope
 	struct function_declaration_t *fd; // Function declaration in this scope
+	struct set_t *temps; // Compiler generated temporaries during IR
 	struct offset_list_t *offset_list; // Offset list of variables for the current scope
 	struct scope_t *next; // Next scope in the horizontal master list
 	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
@@ -86,6 +87,6 @@ int symtab_calc_scope_size(struct scope_t *scope); // Calculates the size of a s
 int symtab_calc_td_size(struct type_denoter_t *td); // Returns the size of a type denoter or calculates it if it is unknown
 void symtab_calc_offsets(); // Calculates offsets for vars in alls copes
 int symtab_calc_scope_offsets(struct scope_t *scope); // Calculates the offsets of each variable declared in a scope
-struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, char *id, int offset); // Adds to an offset list
+struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, const char *id, int offset); // Adds to an offset list
 struct offset_list_t *new_offset_list();
 #endif

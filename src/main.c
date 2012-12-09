@@ -122,14 +122,14 @@ int main(int argc, char **argv) {
         exit(0);
     }
 
+    // Perform Intermediate Representation
+    ir_init();
+    ir_optimize();
+    
     // Calculate usrdef sizes
     symtab_calc_sizes();
     // Calc var offsets
     symtab_calc_offsets();
-
-    // Perform Intermediate Representation
-    ir_init();
-    ir_optimize();
 
     if (cmdArgs.verbose == 1) {
         printf("USER DEFINED DATA TYPES:\n");
@@ -143,11 +143,12 @@ int main(int argc, char **argv) {
     }
     
     // Generate Code
-    /*mc_init();
+    mc_init();
     mc_consume_cfg_list(cfgList);
     mc_add_bootstrap("b_0"); // TODO: Need to actually find the entry functions block name
     mc_print_listing();
-    mc_destroy();*/
+	//mc_write_listing("test.s");
+    mc_destroy();
     
     // Free memory
     ir_destroy();

@@ -607,6 +607,34 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	free(op);
 }
 
+// Add all compiler generated temporaries from the entire CFG to the scope
+void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block) {
+	struct three_address_t *tac = block->entry;
+	while(tac != NULL) {
+		if(tac->op != OP_BRANCH && tac->op != OP_GOTO
+			&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
+			&& tac->op != OP_PRINT) {
+			
+			if(tac->lhs != NULL && tac->lhs->temporary) {
+				if(scope->temps == NULL)
+					scope->temps = new_set(tac->lhs->d.id);
+				else
+					set_add(scope->temps, tac->lhs->d.id);
+			}
+			
+		}
+		
+		tac = tac->next;
+	}
+	
+	struct block_list_t *child = block->children;
+	while(child != NULL) {
+		ir_add_cfg_temps_to_scope(scope, child->block);
+	
+		child = child->next;
+	}
+}
+
 // Calculate all data flow sets
 void ir_calc_flow_vars(struct block_t *block) {
 	struct set_t* temp_set = EMPTY;
@@ -655,7 +683,7 @@ void ir_calc_flow_vars(struct block_t *block) {
 					set_add(block->ueVar, tac->op2->d.id);
 			}
 		}
-		if(tac->lhs != NULL && !tac->lhs->temporary && tac->lhs->type == TAC_DATA_TYPE_VAR) {
+		if(tac->lhs != NULL && !tac->lhs->temporary) {
 			if(!set_contains(block->killVar, tac->lhs->d.id)) {
 				if(set_contains(block->assignVar, tac->lhs->d.id)) {
 					if(block->killVar == EMPTY)
@@ -714,6 +742,7 @@ void ir_optimize() {
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
 		ir_process_cfg(cfg_it->entryBlock);
+		ir_add_cfg_temps_to_scope(cfg_it->scope, cfg_it->entryBlock);
 		cfg_it = cfg_it->next;
 	}
 

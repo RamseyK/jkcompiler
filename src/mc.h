@@ -213,6 +213,7 @@ struct mem_loc_t {
 	char *id;
 	int temp_reg; // Temporary reg to assign the var for a single operation
 	
+	bool wb; // Writeback flag. Set to true if the temp_reg value should be copied back into the memory location
 	int type; // MEM_*
 	union {
 		int reg; // Storage reg used if type is MEM_REG

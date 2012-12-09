@@ -112,7 +112,8 @@ struct instr_t *mc_new_instr(const char *mnemonic) {
 	instr->op2_reg = -1;
 	instr->imm = 0;
 	instr->addr_label = NULL;
-	instr->comment = NULL;
+	instr->comment = (char*)malloc(32);
+	memset(instr->comment, 0, 32);
 	instr->next = NULL;
 	
 	return instr;
@@ -178,6 +179,7 @@ struct mem_loc_t *mc_new_mem_loc(const char *id) {
 	
 	mem_loc->id = new_identifier(id);
 	mem_loc->temp_reg = -1;
+	mem_loc->wb = false;
 	mem_loc->type = 0;
 	
 	return mem_loc;
@@ -228,12 +230,21 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 	struct three_address_t *tac = block->entry;
 	struct instr_t *instr = NULL;
 	struct mem_loc_t *lhs_loc = NULL, *op1_loc = NULL, *op2_loc = NULL;
+	
 	while(tac != NULL) {
-		// Generate instructions and allocate temporary registers to access identifiers in memory
+		// Load variables/compiler temps into registers
 		mc_reset_temp_regs();
 		lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 		op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 		op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
+		
+		// Load constants into registers for instructions that do not have I_TYPE equivalents
+		if(tac->op == OP_STAR || tac->op == OP_SLASH || tac->op == OP_MOD) {
+			if(op1_loc == NULL)
+				op1_loc = mc_mem_access_const(instr_list, tac->op1);
+			if(op2_loc == NULL)
+				op2_loc = mc_mem_access_const(instr_list, tac->op2);
+		}
 		
 		// Convert TAC to instruction
 		instr = mc_tac_to_instr(tac, lhs_loc, op1_loc, op2_loc);
@@ -241,8 +252,9 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 			// Add converted instruction to the end of the instruction list
 			mc_emit_instr(instr_list, instr);
 		
-			// Write back the lhs_loc because it's the only location that could have changed
-			mc_mem_writeback(instr_list, lhs_loc);
+			// Write back the lhs_loc if its indicated that it changed (wb flag)
+			if(lhs_loc != NULL && lhs_loc->wb)
+				mc_mem_writeback(instr_list, lhs_loc);
 		}
 		
 		// Free mem_loc structures, no longer needed
@@ -273,43 +285,58 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 
 // Convert three address code to corresponding instructions with registers/memory
 struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *lhs_loc, struct mem_loc_t *op1_loc, struct mem_loc_t *op2_loc) {
-	struct instr_t *instr = NULL;
+	// Get string representations of lhs, op1 and op2
+	char *lhs_str = cfg_tac_data_to_str(tac->lhs);
+	char *op1_str = cfg_tac_data_to_str(tac->op1);
+	char *op2_str = cfg_tac_data_to_str(tac->op2);
+
+	struct instr_t *instr = NULL, *instr2 = NULL, *instr3 = NULL;
 	switch(tac->op) {
 		case OP_PLUS:
+			lhs_loc->wb = true;
 			if(tac->op2->type == TAC_DATA_TYPE_INT) {
+				// Var + Int (Reg + Imm)
 				instr = mc_new_instr("addi");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = tac->op2->d.val;
+				sprintf(instr->comment, "%s = %s + %i", lhs_str, op1_str, tac->op2->d.val);
 			} else {
+				// Var + Var (both regs)
 				instr = mc_new_instr("add");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
+				sprintf(instr->comment, "%s = %s + %s", lhs_str, op1_str, op2_str);
 			}
 			break;
 		case OP_MINUS:
+			lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_INT) {
 				// Var - Int (Reg - Imm)
 				instr = mc_new_instr("addi");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = 0-tac->op2->d.val;
+				sprintf(instr->comment, "%s = %s - %i", lhs_str, op1_str, tac->op2->d.val);
 			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Int - Var (Imm - Reg)
 				instr = mc_new_instr("addi");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op2_loc->temp_reg;
 				instr->imm = 0-tac->op1->d.val;
+				sprintf(instr->comment, "%s = %i - %s", lhs_str, tac->op1->d.val, op2_str);
 			} else {
 				// Var - Var (both regs)
 				instr = mc_new_instr("sub");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
+				sprintf(instr->comment, "%s = %s - %s", lhs_str, op1_str, op2_str);
 			}
 			break;
 		case OP_OR:
+			lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Var OR Var
 				instr = mc_new_instr("or");
@@ -339,15 +366,45 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			}
 			break;
 		case OP_STAR:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("mult");
+			// Var * Var (both must be regs)
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "Lo = %s * %s", op1_str, op2_str);
+			// Move the result from Lo into the LHS reg
+			instr2 = mc_new_instr("mflo");
+			instr2->lhs_reg = lhs_loc->temp_reg;
+			sprintf(instr2->comment, "%s = Lo", lhs_str);
+			instr->next = instr2; // Link mult and mflo instructions
 			break;
 		case OP_SLASH:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("div");
+			// Var * Var (both must be regs)
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "Lo = %s / %s", op1_str, op2_str);
+			// Move the result from Lo into the LHS reg
+			instr2 = mc_new_instr("mflo");
+			instr2->lhs_reg = lhs_loc->temp_reg;
+			sprintf(instr2->comment, "%s = Lo", lhs_str);
+			instr->next = instr2; // Link div and mflo instructions
 			break;
 		case OP_MOD:
-			//instr = mc_new_instr("");
+			lhs_loc->wb = true;
+			instr = mc_new_instr("div");
+			// Var * Var (both must be regs)
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "Hi = %s / %s", op1_str, op2_str);
+			// Move the result from Hi into the LHS reg
+			instr2 = mc_new_instr("mfhi");
+			instr2->lhs_reg = lhs_loc->temp_reg;
+			sprintf(instr2->comment, "%s = Hi (Remainder)", lhs_str);
 			break;
 		case OP_AND:
+			lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Var OR Var
 				instr = mc_new_instr("and");
@@ -397,19 +454,27 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_GE:
 			instr = mc_new_instr("slt");
 			break;
-		case OP_ASSIGN: // Move (avoids generating separate move or li instructions)
+		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
 			instr = mc_new_instr("addi");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR) {
 				instr->op1_reg = op1_loc->temp_reg;
-				instr->op2_reg = $0;
+				instr->op2_reg = $0;			
+				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);	
 			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
 				instr->op1_reg = $0;
 				instr->imm = tac->op1->d.val;
+				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);	
+			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
+				instr->op1_reg = $0;
+				instr->imm = (int)tac->op1->d.b;
+				sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));	
+			} else {
+				MCLOG(("Error: Unknown assign operation"));
 			}
 			break;
 		case OP_BRANCH:
-			instr = mc_new_instr("beq");
+			instr = mc_new_instr("j");
 			break;
 		case OP_GOTO:
 			instr = mc_new_instr("j");
@@ -425,11 +490,37 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_NEW_OBJ:
 			break;
 		case OP_PRINT:
+			// Set syscall service number for print_int
+			instr = mc_new_instr("addi");
+			instr->lhs_reg = $v0;
+			instr->op1_reg = $0;
+			instr->imm = 1;
+			
+			// Set integer to print (argument)
+			instr2 = mc_new_instr("add");
+			instr2->lhs_reg = $a0;
+			instr2->op1_reg = $0;
+			instr2->op2_reg = op1_loc->temp_reg;
+			
+			// Execute the syscall
+			instr3 = mc_new_instr("syscall");
+			sprintf(instr3->comment, "print_int");
+			
+			// Link instructions in order
+			instr->next = instr2;
+			instr2->next = instr3;
 			break;
 		default:
 			MCLOG(("Could not convert tac to instr: %s\n", cfg_tac_data_to_str(tac->lhs)));
 			break;
 	}
+	
+	if(lhs_str != NULL)
+		free(lhs_str);
+	if(op1_str != NULL)
+		free(op1_str);
+	if(op2_str != NULL)
+		free(op2_str);
 	
 	return instr;
 }
@@ -438,24 +529,31 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 void mc_leave_func(struct instr_list_t *cfg_instr_list) {
 	struct instr_t *instr = mc_new_instr("jr");
 	instr->lhs_reg = $ra;
-	instr->comment = new_identifier("return");
+	sprintf(instr->comment, "return");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
 // Generate instructions and allocate temporary registers to access identifiers in memory
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td) {
-	if(td == NULL || td->type != TAC_DATA_TYPE_VAR) {
+	if(td == NULL || td->type != TAC_DATA_TYPE_VAR)
 		return NULL;
-	}
 
 	struct mem_loc_t *mem_loc = NULL;
 	struct scope_t *scope = NULL;
 	
-	// Get scope for all variable in the TAC and allocate mem_loc structures
-	scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
-	if(scope == NULL) {
-		MCLOG(("Could not find scope for %s\n", td->d.id));
-		return mem_loc;
+	if(td->temporary) {
+		if(set_contains(cfg_scope->temps, td->d.id)) { // Temporarys should exist in the function scopes temps set
+			scope = cfg_scope;
+		} else {
+			MCLOG(("Could not find temporary %s in the scopes temps set\n", td->d.id));
+			return mem_loc;
+		}
+	} else { // Get scope for the variable in the TAC
+		scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
+		if(scope == NULL) {
+			MCLOG(("Could not find scope for %s\n", td->d.id));
+			return mem_loc;
+		}
 	}
 
 	// Determine if the variable is in a register, on stack, or on heap
@@ -479,7 +577,7 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 				instr->op1_reg = $fp;
 				instr->op1_has_offset = true;
 				instr->op1_reg_offset = mem_loc->loc.offset;
-				instr->comment = new_identifier(it->id);
+				sprintf(instr->comment, "Load %s", it->id);
 				mc_emit_instr(instr_list, instr);
 				break;
 			}
@@ -522,7 +620,7 @@ struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct ta
 		mc_free_instr(instr);
 		return NULL;
 	}
-	instr->comment = new_identifier("Temp Constant");
+	sprintf(instr->comment, "Temp constant");
 	mc_emit_instr(instr_list, instr);
 	
 	return mem_loc;
@@ -539,7 +637,7 @@ void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc
 		instr->op1_reg = $fp;
 		instr->op1_has_offset = true;
 		instr->op1_reg_offset = mem_loc->loc.offset;
-		instr->comment = new_identifier(mem_loc->id);
+		sprintf(instr->comment, "Store %s", mem_loc->id);
 		mc_emit_instr(instr_list, instr);
 	} else {
 		MCLOG(("Unsupported write back for mem_loc of type %i\n", mem_loc->type));
@@ -609,7 +707,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->lhs_reg = $sp;
 	instr->op1_reg = $sp;
 	instr->imm = 0-sp_size;
-	instr->comment = new_identifier("Allocate stack");
+	sprintf(instr->comment, "Allocate stack");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Save arguments on stack
@@ -652,7 +750,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
 	instr->imm = backup_size;
-	instr->comment = new_identifier("Start of frame");
+	sprintf(instr->comment, "Start of frame");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
@@ -703,7 +801,7 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr->lhs_reg = $sp;
 	instr->op1_reg = $sp;
 	instr->imm = sp_size;
-	instr->comment = new_identifier("Deallocate stack");
+	sprintf(instr->comment, "Deallocate stack");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
@@ -779,7 +877,7 @@ void mc_print_mips_ops() {
 
 // Generate current asm listing as a string
 char *mc_gen_listing() {
-	char buf[2048];
+	char buf[8192];
 	memset(buf, 0, sizeof(buf));
 	
 	// .data section and all of it's sub directives
@@ -852,12 +950,17 @@ char *mc_gen_listing() {
 			sprintf(buf, "%s\t%s ", buf, instr->mips_op->name);
 			switch(instr->mips_op->format) {
 			case R_TYPE:
-				sprintf(buf, "%s%s", buf, reg_names[instr->lhs_reg]); // R[lhs]
-				if(instr->op1_reg != -1 && instr->op2_reg != -1) {
+				if(instr->lhs_reg != -1)
+					sprintf(buf, "%s%s", buf, reg_names[instr->lhs_reg]); // R[lhs]
+				
+				if(instr->lhs_reg != -1 && instr->op1_reg != -1) // Comma between R[lhs] and R[op1] if both are present
+					sprintf(buf, "%s, ", buf);
+				
+				if(instr->op2_reg != -1) {
 					if(instr->imm == 0)
-						sprintf(buf, "%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg]); // = R[op1] op R[op2]
+						sprintf(buf, "%s%s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg]); // = R[op1] op R[op2]
 					else
-						sprintf(buf, "%s, %s, %i(%s)", buf, reg_names[instr->op1_reg], instr->imm, reg_names[instr->op2_reg]); // = R[op1] op (off)R[op2]
+						sprintf(buf, "%s%s, %i(%s)", buf, reg_names[instr->op1_reg], instr->imm, reg_names[instr->op2_reg]); // = R[op1] op (off)R[op2]
 				}
 				break;
 			case I_TYPE:
@@ -889,7 +992,7 @@ char *mc_gen_listing() {
 			}
 			
 			// Optional Comment
-			if(instr->comment != NULL)
+			if(instr->comment != NULL && strlen(instr->comment) > 0)
 				sprintf(buf, "%s # %s", buf, instr->comment);
 			
 			sprintf(buf, "%s\n", buf);
@@ -922,6 +1025,22 @@ void mc_print_listing() {
 
 // Generate and Write the current asm listing to a file
 void mc_write_listing(const char *filename) {
+	char *listing = mc_gen_listing();
+	if(listing == NULL) {
+		MCLOG(("No listing to write\n"));
+		return;
+	}
 
+	FILE *fp = fopen(filename, "w");
+	if(fp == NULL) {
+		printf("Could not open %s to write assembly listing\n", filename);
+		return;
+	}
+	
+	fprintf(fp, "# jkcompiler assembly output\n# File: %s\n\n", filename);
+	fprintf(fp, "%s", listing);
+	
+	fclose(fp);
+	free(listing);
 }
 

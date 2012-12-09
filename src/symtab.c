@@ -24,6 +24,8 @@ struct scope_t *new_scope() {
 	temp_scope->cl = NULL;
 	temp_scope->func_scopes = NULL;
 	temp_scope->fd = NULL;
+	temp_scope->temps = NULL;
+	temp_scope->offset_list = NULL;
 	temp_scope->next = NULL;
 	temp_scope->nextSibling = NULL;
 	
@@ -62,6 +64,8 @@ void symtab_destroy() {
 	while(it != NULL) {
 		curr = it;
 		it = curr->next;
+		free_set(curr->temps);
+		//free_offset_list(curr->offset_list);
 		free(curr);
 	}
 	allScopes = NULL;
@@ -517,6 +521,9 @@ int symtab_calc_scope_size(struct scope_t *scope) {
 				size += vd_size;
 				id_it = id_it->next;
 			}
+			
+			// Compiler generated temporaries for the function are always WORDs
+			size += SIZE_WORD * set_size(scope->temps);
 
 			vd_it = vd_it->next;
 		}
@@ -631,7 +638,16 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 
 			vdl_it = vdl_it->next;
 		}
-
+		
+		// Compiler generated temporaries occupy one WORD each
+		struct set_t *set_it = scope->temps;
+		while(set_it != NULL) {
+			add_to_offset_list(&scope->offset_list, set_it->value, off);
+			off += SIZE_WORD;
+			
+			set_it = set_it->next;
+		}
+ 
 		return off;
 
 	}
@@ -639,9 +655,9 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 }
 
 /*
- * Adds a new offset list entry with the id and offset to an offsetList
+ * Adds a new offset list entry with the unique id and offset to an offsetList
  */
-struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, char *id, int offset) {
+struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, const char *id, int offset) {
 
 	// List was empty so initialize
 	if(*offsetList == NULL) {
@@ -652,7 +668,14 @@ struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, char
 		return *offsetList;
 	} else {
 		struct offset_list_t *end = *offsetList;
-		GOTO_END_OF_LIST(end);
+		
+		// Ensures only unique ids are added
+		while(end->next != NULL) {
+			if(strcmp(end->id, id) == 0)
+				return end;
+			end = end->next;
+		}
+		
 		end->next = new_offset_list();
 		end->next->id = new_identifier(id);
 		end->next->offset = offset;
