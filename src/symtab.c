@@ -624,7 +624,6 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 		while(vdl_it != NULL) {
 			// Size of the data structure for the var
 			int size = symtab_calc_td_size(vdl_it->vd->tden);
-			printf("Size is %i\n", size);
 
 			// Iterate through every identifier in the list
 			struct identifier_list_t *il_it = vdl_it->vd->il;

@@ -12,8 +12,9 @@ BEGIN
    if aa = 0 THEN
       bb := 1
    ELSE
-      bb := 0
-
+      bb := 0;
+   PRINT bb
+	
 END
    
 END   

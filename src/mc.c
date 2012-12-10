@@ -251,9 +251,11 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 		lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 		op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 		op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
-		
+
 		// Load constants into registers for instructions that do not have I_TYPE equivalents
-		if(tac->op == OP_STAR || tac->op == OP_SLASH || tac->op == OP_MOD) {
+		if(tac->op == OP_STAR || tac->op == OP_SLASH || tac->op == OP_MOD
+			|| tac->op == OP_LT || tac->op == GT || tac->op == LE || tac->op == GE
+			|| tac->op == OP_EQUAL || tac->op == OP_NOTEQUAL) {
 			if(op1_loc == NULL)
 				op1_loc = mc_mem_access_const(instr_list, tac->op1);
 			if(op2_loc == NULL)
@@ -269,6 +271,8 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 			// Write back the lhs_loc if its indicated that it changed (wb flag)
 			if(lhs_loc != NULL && lhs_loc->wb)
 				mc_mem_writeback(instr_list, lhs_loc);
+		} else {
+			MCLOG(("mc_tac_to_instr returned null!\n"));
 		}
 		
 		// Free mem_loc structures, no longer needed
@@ -428,8 +432,6 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			instr2->lhs_reg = lhs_loc->temp_reg;
 			sprintf(instr2->comment, "%s = Hi (Remainder)", lhs_str);
 			break;
-		case OP_EQUAL:
-		case OP_NOTEQUAL:
 		case OP_AND:
 			lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
@@ -464,19 +466,52 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				MCLOG(("Invalid AND operand\n"));
 			}
 			break;
+		case OP_EQUAL:
+			lhs_loc->wb = true;
+			instr = mc_new_instr("seq");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s == %s", lhs_str, op1_str, op2_str);
+			break;
+		case OP_NOTEQUAL:
+			lhs_loc->wb = true;
+			instr = mc_new_instr("sne");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s != %s", lhs_str, op1_str, op2_str);
+			break;
 		case OP_LT:
 			instr = mc_new_instr("slt");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s < %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_GT:
-			instr = mc_new_instr("slt");
+			instr = mc_new_instr("sgt");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s > %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_LE:
-			instr = mc_new_instr("slt");
+			instr = mc_new_instr("sle");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s <= %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_GE:
-			instr = mc_new_instr("slt");
+			instr = mc_new_instr("sge");
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->temp_reg;
+			instr->op2_reg = op2_loc->temp_reg;
+			sprintf(instr->comment, "%s = %s >= %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
+			lhs_loc->wb = true;
 			instr = mc_new_instr("addi");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR) {
@@ -499,8 +534,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			if(tac->op2->type == TAC_DATA_TYPE_LABEL) {
 				instr = mc_new_instr("beq");
 				instr->op1_reg = op1_loc->temp_reg;
-				instr->imm = 0;
+				instr->imm = true;
 				instr->addr_label = tac->op2->d.id;
+				sprintf(instr->comment, "if %s goto %s", op1_str, instr->addr_label);
 			} else {
 				MCLOG(("Error: Invalid BRANCH TAC"));
 			}
@@ -763,30 +799,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	int sp_pointer = 0;
 	struct instr_t *instr = NULL;
 	
-	// Allocate space on the stack addi $sp, $sp, -sp_size
-	instr = mc_new_instr("addi");
-	instr->lhs_reg = $sp;
-	instr->op1_reg = $sp;
-	instr->imm = 0-sp_size;
-	sprintf(instr->comment, "Allocate stack");
-	mc_emit_instr(cfg_instr_list, instr);
-	
 	// Save arguments on stack
-	
-	// Restore registers and saved registers from previous frames
-	// Backup registers $s0 - $s7 if in use
-	for(int i = $s0; i <= $s7; i++) {
-		if(!mc_used_regs[i])
-			continue;
-	
-		instr = mc_new_instr("sw");
-		instr->lhs_reg = i;
-		instr->op1_reg = $sp;
-		instr->op1_has_offset = true;
-		instr->op1_reg_offset = sp_pointer;
-		sp_pointer += SIZE_WORD;
-		mc_emit_instr(cfg_instr_list, instr);
-	}
 	
 	// Backup $fp
 	instr = mc_new_instr("sw");
@@ -806,12 +819,34 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	sp_pointer += SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
+	// Backup registers $s0 - $s7 if in use
+	for(int i = $s0; i <= $s7; i++) {
+		if(!mc_used_regs[i])
+			continue;
+	
+		instr = mc_new_instr("sw");
+		instr->lhs_reg = i;
+		instr->op1_reg = $sp;
+		instr->op1_has_offset = true;
+		instr->op1_reg_offset = sp_pointer;
+		sp_pointer += SIZE_WORD;
+		mc_emit_instr(cfg_instr_list, instr);
+	}
+	
 	// Set new Frame Pointer to start of local variables
 	instr = mc_new_instr("addi");
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
 	instr->imm = backup_size;
 	sprintf(instr->comment, "Start of frame");
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Move the stack pointer addi $sp, $sp, -sp_size
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $sp;
+	instr->op1_reg = $sp;
+	instr->imm = 0-sp_size;
+	sprintf(instr->comment, "Move stack pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
@@ -824,23 +859,12 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	int sp_pointer = backup_size-SIZE_WORD;
 	struct instr_t *instr = NULL;
 	
-	// Restore registers and saved registers from previous frames
-	// Restore $ra
-	instr = mc_new_instr("lw");
-	instr->lhs_reg = $ra;
+	// Deallocate space on the stack addi $sp, $sp, sp_size
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $sp;
 	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer -= SIZE_WORD;
-	mc_emit_instr(cfg_instr_list, instr);
-	
-	// Restore $fp
-	instr = mc_new_instr("lw");
-	instr->lhs_reg = $fp;
-	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer -= SIZE_WORD;
+	instr->imm = sp_size;
+	sprintf(instr->comment, "Deallocate stack");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Restore registers $s7 - $s0 if used
@@ -857,12 +881,22 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 		mc_emit_instr(cfg_instr_list, instr);
 	}
 	
-	// Deallocate space on the stack addi $sp, $sp, sp_size
-	instr = mc_new_instr("addi");
-	instr->lhs_reg = $sp;
+	// Restore $ra
+	instr = mc_new_instr("lw");
+	instr->lhs_reg = $ra;
 	instr->op1_reg = $sp;
-	instr->imm = sp_size;
-	sprintf(instr->comment, "Deallocate stack");
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Restore $fp
+	instr = mc_new_instr("lw");
+	instr->lhs_reg = $fp;
+	instr->op1_reg = $sp;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 }
 

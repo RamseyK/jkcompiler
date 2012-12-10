@@ -133,6 +133,11 @@ static struct mips_op_t mips_ops_list[] = {
 {"slti", I_TYPE}, // Set Less Than Immediate
 {"sltiu", I_TYPE}, // Set Less Than Immediate Unsigned
 {"sltu", R_TYPE}, // Set Less Than Unsigned
+{"sle", P_TYPE}, // Set on Less than or Equal
+{"seq", P_TYPE}, // Set on Equal
+{"sge", P_TYPE}, // Set on Greater Than or Equal
+{"sgt", P_TYPE}, // Set on Greater Than
+{"sne", P_TYPE}, // Set on Not Equal
 {"beq", I_TYPE}, // Branch On Equal
 {"bne", I_TYPE}, // Branch On Not Equal
 {"blt", P_TYPE}, // Branch Less Than

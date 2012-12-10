@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
     mc_consume_cfg_list();
     mc_add_bootstrap(program->ph->id);
     mc_print_listing();
-	//mc_write_listing("test.s");
+	//mc_write_listing("/Users/ramseykant/Desktop/test.s");
     mc_destroy();
     
     // Free memory
