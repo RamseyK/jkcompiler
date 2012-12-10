@@ -658,7 +658,8 @@ print_statement : PRINT variable_access
 		$$->va = $2;
 		
 		// CFG
-		cfg_generate_tac(NULL, $2->expr->tacData, OP_PRINT, NULL);
+		struct three_address_t *tac = cfg_generate_tac(NULL, $2->expr->tacData, OP_PRINT, NULL);
+		tac->lhs = NULL;
 		$$->block = cfg_create_simple_block();
     }
 ;
