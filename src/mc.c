@@ -16,9 +16,14 @@ void mc_init() {
 	struct directive_t *alignDir = mc_new_directive(NULL, "align");
 	alignDir->val = 2;
 	
+	// Allocate space for the heap
+	struct directive_t *heapDir = mc_new_directive("heap", "space");
+	heapDir->val = HEAP_SIZE;
+	
 	// Emit data section directives
 	mc_emit_directive(mc_data_section, dataDir);
 	mc_emit_directive(mc_data_section, alignDir);
+	mc_emit_directive(mc_data_section, heapDir);
 	
 	// Text Section
 	mc_text_section = mc_new_section();
@@ -948,6 +953,12 @@ void mc_add_bootstrap(char *program_name) {
 	
 	// Create instruction listing for the bootstrap
 	struct instr_list_t *instr_list = mc_new_instr_list("main");
+	
+	// Load the address of the heap into $s7
+	struct instr_t *instr = mc_new_instr("la");
+	instr->lhs_reg = $s7;
+	instr->addr_label = new_identifier("heap");
+	mc_emit_instr(instr_list, instr);
 
 	// Call the actual entry function
 	struct scope_t *classScope = symtab_lookup_class(program_name);
@@ -955,7 +966,7 @@ void mc_add_bootstrap(char *program_name) {
 	mc_call_func(instr_list, funcScope); // Need to actually determine entry block
 	
 	// Syscall to terminate the program properly
-	struct instr_t *instr = mc_new_instr("addi");
+	instr = mc_new_instr("addi");
 	instr->lhs_reg = $v0;
 	instr->op1_reg = $0;
 	instr->imm = 10;
@@ -1111,7 +1122,9 @@ char *mc_gen_listing() {
 					sprintf(buf, "%s%s", buf, instr->addr_label);
 				break;
 			case P_TYPE: // Pseudo instructions dont follow a pattern, so each must have a finer tuned output
-				if(strcmp(instr->mips_op->name, "li") == 0 || strcmp(instr->mips_op->name, "la") == 0 ) {
+				if(strcmp(instr->mips_op->name, "la") == 0) {
+					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], instr->addr_label);
+				} else if(strcmp(instr->mips_op->name, "li") == 0) {
 					sprintf(buf, "%s%s, %i", buf, reg_names[instr->lhs_reg], instr->imm); // R[lhs] = imm
 				} else if(strcmp(instr->mips_op->name, "move") == 0) {
 					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]); // R[lhs], R[rs]

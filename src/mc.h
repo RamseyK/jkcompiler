@@ -14,6 +14,8 @@
 #include "cfg.h"
 #include "shared.h"
 
+#define HEAP_SIZE 8192
+
 // Memory Location Storage Types (used in mem_list_t)
 #define MEM_REG 1
 #define MEM_STACK 2
