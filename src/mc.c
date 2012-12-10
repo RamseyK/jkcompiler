@@ -1,12 +1,12 @@
 #include "mc.h"
 
 void mc_init() {
-	// Reset used_regs
+	// Reset mc_used_regs
 	for(int i = 0; i < NUM_REGS; i++)
-		used_regs[i] = false;
+		mc_used_regs[i] = false;
 
 	// Data Section
-	dataSection = mc_new_section();
+	mc_data_section = mc_new_section();
 	
 	// Default data directive
 	struct directive_t *dataDir = mc_new_directive(NULL, "data");
@@ -17,23 +17,24 @@ void mc_init() {
 	alignDir->val = 2;
 	
 	// Emit data section directives
-	mc_emit_directive(dataSection, dataDir);
-	mc_emit_directive(dataSection, alignDir);
+	mc_emit_directive(mc_data_section, dataDir);
+	mc_emit_directive(mc_data_section, alignDir);
 	
 	// Text Section
-	textSection = mc_new_section();
+	mc_text_section = mc_new_section();
 	
 	// Default text directive
 	struct directive_t *textDir = mc_new_directive(NULL, "text");
 	textDir->no_val = true;
 	
 	// Emit text section directives
-	mc_emit_directive(textSection, textDir);
+	mc_emit_directive(mc_text_section, textDir);
 }
 
 void mc_destroy() {
-	mc_free_section(dataSection);
-	mc_free_section(textSection);
+	mc_free_section(mc_data_section);
+	mc_free_section(mc_text_section);
+	free_set(mc_processed_labels);
 }
 
 // Lookup a mips_op structure in the mips_ops_list by its name
@@ -143,6 +144,7 @@ struct instr_list_t *mc_new_instr_list(const char *label) {
 	return list;
 }
 
+// Add an instr_list_t node to the end of an instr_list_t list
 void mc_append_instr_list(struct instr_list_t **list, struct instr_list_t *entry) {
 	if(*list == NULL) {
 		*list = entry;
@@ -153,6 +155,21 @@ void mc_append_instr_list(struct instr_list_t **list, struct instr_list_t *entry
 	while(it->next != NULL)
 		it = it->next;
 	it->next = entry;
+}
+
+// Get an instr_list_t node from a list given its label
+struct instr_list_t *mc_get_instr_list(struct instr_list_t **list, const char *label) {
+	if(*list == NULL || label == NULL)
+		return NULL;
+	
+	struct instr_list_t *it = *list;
+	while(it != NULL) {
+		if(strcmp(it->label, label) == 0)
+			return it;
+		it = it->next;
+	}
+	
+	return NULL;
 }
 
 // Frees an instruction list, all list connected list nodes, and all instruction objects within it
@@ -196,36 +213,33 @@ void mc_free_mem_loc(struct mem_loc_t *mem_loc) {
 	free(mem_loc);
 }
 
-// Process a CFG list (functions) and allocate stack, registers and emit directives, instructions
-void mc_consume_cfg_list(struct cfg_list_t *cfgs) {
-	struct cfg_list_t *cfg_it = cfgs;
+// Process the master CFG list (functions) and generate machine code
+void mc_consume_cfg_list() {
+	struct cfg_list_t *cfg_it = cfgList;
 	struct instr_list_t *cfg_instr_list = mc_new_instr_list(cfg_it->entryBlock->label);
 	// Loop through function cfgs
 	while(cfg_it != NULL) {
 		if(cfg_it->scope->attrId != SYM_ATTR_FUNC)
 			MCLOG(("Scope is NOT a func as expected..\n"));
-	
-		// Allocate variables on the stack and backup register values
-		mc_alloc_stack(cfg_instr_list, cfg_it->scope);
 		
 		// Process the function entry block and is children recursively
 		mc_process_block(cfg_instr_list, cfg_it->scope, cfg_it->entryBlock);
-		
-		// Deallocate stack and restore register values
-		mc_dealloc_stack(cfg_instr_list, cfg_it->scope);
-		
-		// Return out of the function (jump to ra)
-		mc_leave_func(cfg_instr_list);
 		
 		cfg_it = cfg_it->next;
 	}
 	
 	// Add the cfg instruction listing to the text section instr lists
-	mc_append_instr_list(&(textSection->instrs), cfg_instr_list);
+	mc_append_instr_list(&(mc_text_section->instrs), cfg_instr_list);
 }
 
 // Recursively process a block and its children by converting its TAC to Instructions
 void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct block_t *block) {
+	// Add the block label to the mc_processed_labels set so this will be the only time this block is processed
+	if(mc_processed_labels == NULL)
+		mc_processed_labels = new_set(block->label);
+	else
+		set_add(mc_processed_labels, block->label);
+
 	// Loop through TAC nodes
 	struct three_address_t *tac = block->entry;
 	struct instr_t *instr = NULL;
@@ -271,12 +285,19 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 	// Recursively process this blocks children
 	struct block_list_t *child = block->children;
 	while(child !=  NULL) {
+		// Ensure a child block isnt being processed twice
+		if(set_contains(mc_processed_labels, child->block->label)) {
+			child = child->next;
+			continue;
+		}
+	
 		// Create an instruction listing for this block
 		struct instr_list_t *block_instr_list = mc_new_instr_list(child->block->label);
 		
+		// Process the child block	
 		mc_process_block(block_instr_list, cfg_scope, child->block);
 		
-		// Add the block instruction listing to the previous instr list
+		// Add the completed child instruction listing
 		mc_append_instr_list(&instr_list, block_instr_list);
 		
 		child = child->next;
@@ -344,6 +365,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+				// Var OR Const
 				instr = mc_new_instr("ori");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
@@ -354,6 +376,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				else
 					MCLOG(("Invalid OR operand\n"));
 			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
+				// Const OR Var
 				instr = mc_new_instr("ori");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op2_loc->temp_reg;
@@ -363,6 +386,8 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 					instr->imm = tac->op1->d.b;
 				else
 					MCLOG(("Invalid OR operand\n"));
+			} else {
+				MCLOG(("Invalid OR operand\n"));
 			}
 			break;
 		case OP_STAR:
@@ -403,15 +428,18 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			instr2->lhs_reg = lhs_loc->temp_reg;
 			sprintf(instr2->comment, "%s = Hi (Remainder)", lhs_str);
 			break;
+		case OP_EQUAL:
+		case OP_NOTEQUAL:
 		case OP_AND:
 			lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
-				// Var OR Var
+				// Var AND Var
 				instr = mc_new_instr("and");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+				// Var AND Const
 				instr = mc_new_instr("andi");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op1_loc->temp_reg;
@@ -422,6 +450,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				else
 					MCLOG(("Invalid AND operand\n"));
 			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
+				// Const AND Var
 				instr = mc_new_instr("andi");
 				instr->lhs_reg = lhs_loc->temp_reg;
 				instr->op1_reg = op2_loc->temp_reg;
@@ -431,16 +460,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 					instr->imm = tac->op1->d.b;
 				else
 					MCLOG(("Invalid AND operand\n"));
+			} else {
+				MCLOG(("Invalid AND operand\n"));
 			}
-			break;
-		case OP_EQUAL:
-			//instr = mc_new_instr("slt");
-			break;
-		case OP_NOTEQUAL:
-			instr = mc_new_instr("nor");
-			instr->lhs_reg = lhs_loc->temp_reg;
-			instr->op1_reg = op1_loc->temp_reg;
-			instr->op2_reg = $0;
 			break;
 		case OP_LT:
 			instr = mc_new_instr("slt");
@@ -474,16 +496,34 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			}
 			break;
 		case OP_BRANCH:
-			instr = mc_new_instr("j");
+			if(tac->op2->type == TAC_DATA_TYPE_LABEL) {
+				instr = mc_new_instr("beq");
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->imm = 0;
+				instr->addr_label = tac->op2->d.id;
+			} else {
+				MCLOG(("Error: Invalid BRANCH TAC"));
+			}
 			break;
 		case OP_GOTO:
-			instr = mc_new_instr("j");
+			if(tac->op2->type == TAC_DATA_TYPE_LABEL) {
+				instr = mc_new_instr("j");
+				instr->addr_label = tac->op2->d.id;
+			} else {
+				MCLOG(("Error: Invalid GOTO TAC"));
+			}
 			break;
 		case OP_CALLER_ASSIGN:
 			break;
 		case OP_PARAM_ASSIGN:
 			break;
 		case OP_FUNC_CALL:
+			break;
+		case OP_FUNC_RETURN:
+			// Jump to the return address
+			instr = mc_new_instr("jr");
+			instr->lhs_reg = $ra;
+			sprintf(instr->comment, "return");
 			break;
 		case OP_MEM_ACCESS:
 			break;
@@ -525,12 +565,33 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	return instr;
 }
 
-// Control Transfer out of a function (return by jumping to ra)
-void mc_leave_func(struct instr_list_t *cfg_instr_list) {
-	struct instr_t *instr = mc_new_instr("jr");
-	instr->lhs_reg = $ra;
-	sprintf(instr->comment, "return");
-	mc_emit_instr(cfg_instr_list, instr);
+// Generate instructions to control Transfer into and out of a function
+// Setup the stack and jump and link into the entry block, then destroy the stack
+void mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
+	// Look through the master cfg list and find the cfg_list node
+	struct cfg_list_t *cfg_it = cfgList;
+	while(cfg_it != NULL) {
+		if(cfg_it->scope == funcScope)
+			break;
+		cfg_it = cfg_it->next;
+	}
+	
+	// Set the entry block label for the function
+	if(cfg_it->entryBlock->label == NULL) {
+		MCLOG(("Unable to find entry block label for function call\n"));
+		return;
+	}
+
+	// Allocate variables on the stack and backup register values
+	mc_alloc_stack(instr_list, funcScope);
+	
+	// Jump into entry block
+	struct instr_t *instr = mc_new_instr("jal");
+	instr->addr_label = new_identifier(cfg_it->entryBlock->label);
+	mc_emit_instr(instr_list, instr);
+	
+	// Deallocate stack and restore register values
+	mc_dealloc_stack(instr_list, funcScope);
 }
 
 // Generate instructions and allocate temporary registers to access identifiers in memory
@@ -600,7 +661,7 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 // Generate instructions to allocate a temporary register to hold a constant
 // This is needed for instructions that do not have I_TYPE counterparts to their R_TYPE
 struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct tac_data_t *td) {
-	if(td == NULL || td->type == TAC_DATA_TYPE_VAR)
+	if(td == NULL || td->type == TAC_DATA_TYPE_VAR || td->type == TAC_DATA_TYPE_KEYWORD || td->type == TAC_DATA_TYPE_LABEL)
 		return NULL;
 	
 	struct mem_loc_t *mem_loc = mc_new_mem_loc(NULL);
@@ -647,14 +708,14 @@ void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc
 // Returns the next available temporary register and marks it as used. -1 if none available
 int mc_next_temp_reg() {
 	for(int i = $t0; i <= $t7; i++) {
-		if(!used_regs[i]) {
-			used_regs[i] = true;
+		if(!mc_used_regs[i]) {
+			mc_used_regs[i] = true;
 			return i;
 		}
 	}
 	for(int i = $t8; i <= $t9; i++) {
-		if(!used_regs[i]) {
-			used_regs[i] = true;
+		if(!mc_used_regs[i]) {
+			mc_used_regs[i] = true;
 			return i;
 		}
 	}
@@ -664,18 +725,18 @@ int mc_next_temp_reg() {
 // Resets all temporary registers to unused
 void mc_reset_temp_regs() {
 	for(int i = $t0; i <= $t7; i++) {
-		used_regs[i] = false;
+		mc_used_regs[i] = false;
 	}
 	for(int i = $t8; i <= $t9; i++) {
-		used_regs[i] = false;
+		mc_used_regs[i] = false;
 	}
 }
 
 // Gets the next available saved register and marks it as used. -1 if none available
 int mc_next_saved_reg() {
 	for(int i = $s0; i <= $s7; i++) {
-		if(!used_regs[i]) {
-			used_regs[i] = true;
+		if(!mc_used_regs[i]) {
+			mc_used_regs[i] = true;
 			return i;
 		}
 	}
@@ -686,7 +747,7 @@ int mc_next_saved_reg() {
 int mc_num_saved_regs_used() {
 	int count = 0;
 	for(int i = $s0; i <= $s7; i++) {
-		if(used_regs[i])
+		if(mc_used_regs[i])
 			count++;
 	}
 	return count;
@@ -715,7 +776,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	// Restore registers and saved registers from previous frames
 	// Backup registers $s0 - $s7 if in use
 	for(int i = $s0; i <= $s7; i++) {
-		if(!used_regs[i])
+		if(!mc_used_regs[i])
 			continue;
 	
 		instr = mc_new_instr("sw");
@@ -784,7 +845,7 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	
 	// Restore registers $s7 - $s0 if used
 	for(int i = $s7; i >= $s0; i--) {
-		if(!used_regs[i])
+		if(!mc_used_regs[i])
 			continue;
 		
 		instr = mc_new_instr("lw");
@@ -806,22 +867,22 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 }
 
 // Generates .globl main_func_name, and extra bootstrap code to jump into the main func of the main class, and termination syscall when last method returns
-void mc_add_bootstrap(const char *entry_block_label) {
+void mc_add_bootstrap(char *program_name) {
 	// Label the bootstrap function
 	struct directive_t *gldir = mc_new_directive(NULL, "globl");
 	gldir->val_str = new_identifier("main");
-	mc_emit_directive(textSection, gldir);
+	mc_emit_directive(mc_text_section, gldir);
 	
 	// Create instruction listing for the bootstrap
 	struct instr_list_t *instr_list = mc_new_instr_list("main");
 
-	// Jump into starting function
-	struct instr_t *instr = mc_new_instr("jal");
-	instr->addr_label = new_identifier(entry_block_label);
-	mc_emit_instr(instr_list, instr);
+	// Call the actual entry function
+	struct scope_t *classScope = symtab_lookup_class(program_name);
+	struct scope_t *funcScope = symtab_lookup_function(classScope, program_name);
+	mc_call_func(instr_list, funcScope); // Need to actually determine entry block
 	
 	// Syscall to terminate the program properly
-	instr = mc_new_instr("addi");
+	struct instr_t *instr = mc_new_instr("addi");
 	instr->lhs_reg = $v0;
 	instr->op1_reg = $0;
 	instr->imm = 10;
@@ -830,8 +891,8 @@ void mc_add_bootstrap(const char *entry_block_label) {
 	mc_emit_instr(instr_list, instr);
 	
 	// Add the instruction listing to HEAD of the text section instr lists
-	struct instr_list_t *old_head = textSection->instrs;
-	textSection->instrs = instr_list;
+	struct instr_list_t *old_head = mc_text_section->instrs;
+	mc_text_section->instrs = instr_list;
 	instr_list->next = old_head;
 }
 
@@ -881,7 +942,7 @@ char *mc_gen_listing() {
 	memset(buf, 0, sizeof(buf));
 	
 	// .data section and all of it's sub directives
-	struct directive_t *dir = dataSection->dirs;
+	struct directive_t *dir = mc_data_section->dirs;
 	while(dir != NULL) {
 		// label:
 		if(dir->label != NULL)
@@ -910,7 +971,7 @@ char *mc_gen_listing() {
 	sprintf(buf, "%s\n", buf);
 	
 	// .text section with directives and instructions
-	dir = textSection->dirs;
+	dir = mc_text_section->dirs;
 	while(dir != NULL) {
 		// label:
 		if(dir->label != NULL)
@@ -936,7 +997,7 @@ char *mc_gen_listing() {
 		dir = dir->next;
 	}
 	
-	struct instr_list_t *instr_list = textSection->instrs;
+	struct instr_list_t *instr_list = mc_text_section->instrs;
 	struct instr_t *instr = NULL;
 	while(instr_list != NULL) {
 		instr = instr_list->entryInstr;
@@ -980,11 +1041,12 @@ char *mc_gen_listing() {
 				if(strcmp(instr->mips_op->name, "li") == 0 || strcmp(instr->mips_op->name, "la") == 0 ) {
 					sprintf(buf, "%s%s, %i", buf, reg_names[instr->lhs_reg], instr->imm); // R[lhs] = imm
 				} else if(strcmp(instr->mips_op->name, "move") == 0) {
-					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]); // R[lhs] = R[rs]
+					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]); // R[lhs], R[rs]
+				} else if(strcmp(instr->mips_op->name, "syscall") == 0) {
 				} else if(instr->addr_label != NULL) {
 					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg], instr->addr_label); // R[op1] op R[op2] addr
 				} else {
-				
+					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg], reg_names[instr->op2_reg]); // R[lhs], R[rs], R[rt]
 				}
 				break;
 			default:

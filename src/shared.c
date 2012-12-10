@@ -62,8 +62,8 @@ char *op_str(int i_op) {
 		op[0] = '\0';
 		break;
 	case OP_BRANCH:
-			cw = sprintf(op, "goto");
-			break;
+		cw = sprintf(op, "goto");
+		break;
 	case OP_GOTO:
 		cw = sprintf(op, "goto");
 		break;
@@ -75,6 +75,9 @@ char *op_str(int i_op) {
 		break;
 	case OP_FUNC_CALL:
 		cw = sprintf(op, "CALL");
+		break;
+	case OP_FUNC_RETURN:
+		cw = sprintf(op, "RETURN");
 		break;
 	case OP_MEM_ACCESS:
 		cw = sprintf(op, "ACCESS");

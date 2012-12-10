@@ -451,7 +451,7 @@ void ir_block_pass(struct block_t *block, int block_level) {
 		while(tac != NULL) {
 			if(tac->op != OP_BRANCH && tac->op != OP_GOTO
 					&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
-					&& tac->op != OP_PRINT) {
+					&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT) {
 				// Constant Optimizations/Eval
 				ir_opt_const_propagation(tac);
 				ir_opt_const_folding(tac);
@@ -613,7 +613,7 @@ void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block) {
 	while(tac != NULL) {
 		if(tac->op != OP_BRANCH && tac->op != OP_GOTO
 			&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
-			&& tac->op != OP_PRINT) {
+			&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT) {
 			
 			if(tac->lhs != NULL && tac->lhs->temporary) {
 				if(scope->temps == NULL)
@@ -808,7 +808,7 @@ void ir_resolve_func_calls_no_param() {
 		// If the tac op is an access
 		if(tac_it->tac->op == OP_MEM_ACCESS) {
 			// Check if op2 has the flag tacData type
-			if(tac_it->tac->op2 == TAC_DATA_TYPE_FUNCCALL_NOPARAM) {
+			if(tac_it->tac->op2->type == TAC_DATA_TYPE_FUNCCALL_NOPARAM) {
 				// Change the op to a functionc all
 				//tac_it->tac->op = OP_FUNC_CALL;
 			}

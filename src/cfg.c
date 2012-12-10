@@ -40,7 +40,6 @@ void cfg_init() {
 	TAC_DATA_KEYWORD_IF = cfg_new_tac_data();
 	TAC_DATA_KEYWORD_IF->type = TAC_DATA_TYPE_KEYWORD;
 	TAC_DATA_KEYWORD_IF->d.id = new_identifier("if");
-
 }
 
 // Destroy any objects used for intermediate representation
@@ -110,6 +109,18 @@ struct cfg_list_t *cfg_create_func_cfg(struct scope_t *funcScope) {
 		struct cfg_list_t *cfg_it = cfgList;
 		GOTO_END_OF_LIST(cfg_it);
 		cfg_it->next = temp_cfg;
+	}
+	
+	// Find the bottom of this CFG and add a RETURN tac as the last statement
+	struct block_t *bottom = cfg_find_bottom(temp_cfg->entryBlock);
+	if(bottom->entry == NULL) {
+		bottom->entry = cfg_generate_return_tac();
+	} else {
+		struct three_address_t *end = bottom->entry;
+		while(end->next != NULL)
+			end = end->next;
+		
+		end->next = cfg_generate_return_tac();
 	}
 
 	return temp_cfg;
@@ -626,15 +637,17 @@ void cfg_print_tac(struct three_address_t *tac) {
 	if(tac->op == OP_ASSIGN)
 		printf("\t%s := %s\n", lhs_str, op1_str);
 	else if(tac->op == OP_BRANCH)
-		printf("\t%s %s %s %s\n", lhs_str, op1_str, "goto", op2_str);
+		printf("\t%s %s %s %s\n", lhs_str, op1_str, op, op2_str);
 	else if(tac->op == OP_GOTO)
-		printf("\t%s %s\n",op, op2_str);
+		printf("\t%s %s\n", op, op2_str);
 	else if(tac->op == OP_PARAM_ASSIGN)
 		printf("\t%s %s\n", op, op1_str);
 	else if(tac->op == OP_NEW_OBJ)
 		printf("\t%s := %s %s\n", lhs_str, op, op1_str);
 	else if(tac->op == OP_PRINT)
 		printf("\t%s %s\n", op, op1_str);
+	else if(tac->op == OP_FUNC_RETURN)
+		printf("\t%s\n", op);
 	else
 		printf("\t%s := %s %s %s\n", lhs_str, op1_str, op, op2_str);
 		
@@ -752,6 +765,38 @@ struct three_address_t *cfg_generate_goto_tac(const char *label) {
 	temp_tac->op2 = cfg_new_tac_data();
 	temp_tac->op2->type = TAC_DATA_TYPE_LABEL;
 	temp_tac->op2->d.id = new_identifier(label);
+	temp_tac->next = NULL;
+	temp_tac->prev = NULL;
+
+	// Insert the TAC node into the master list
+	if(tacList == NULL) {
+		tacList = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(tacList);
+		tacList->tac = temp_tac;
+		tacList->next = NULL;
+	} else {
+		// Find the end of the TAC list
+		struct three_address_list_t *end = tacList;
+		while(end->next != NULL)
+			end = end->next;
+
+		// Link to the end of the list
+		end->next = (struct three_address_list_t *)malloc(sizeof(struct three_address_list_t));
+		CHECK_MEM_ERROR(end->next);
+		end->next->tac = temp_tac;
+		end->next->next = NULL;
+	}
+
+	return temp_tac;
+}
+
+struct three_address_t *cfg_generate_return_tac() {
+	struct three_address_t *temp_tac = (struct three_address_t *)malloc(sizeof(struct three_address_t));
+	CHECK_MEM_ERROR(temp_tac);
+	temp_tac->lhs = NULL;
+	temp_tac->op = OP_FUNC_RETURN;
+	temp_tac->op1 = NULL;
+	temp_tac->op2 = NULL;
 	temp_tac->next = NULL;
 	temp_tac->prev = NULL;
 

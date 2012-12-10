@@ -192,6 +192,7 @@ struct three_address_t *cfg_lookup_tac(const char *id);
 void cfg_connect_tac(struct three_address_t *tac1, struct three_address_t *tac2);
 struct three_address_t *cfg_generate_branch_tac(struct tac_data_t *cond, const char *label); // Creates tac for branching
 struct three_address_t *cfg_generate_goto_tac(const char *label); // Creates tac for goto/jump
+struct three_address_t *cfg_generate_return_tac(); // Creates tac for IR return
 char *cfg_tac_data_to_str(struct tac_data_t *td);
 struct tac_data_t *cfg_new_tac_data();
 void cfg_free_tac_data(struct tac_data_t *td);

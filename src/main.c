@@ -144,8 +144,8 @@ int main(int argc, char **argv) {
     
     // Generate Code
     mc_init();
-    mc_consume_cfg_list(cfgList);
-    mc_add_bootstrap("b_0"); // TODO: Need to actually find the entry functions block name
+    mc_consume_cfg_list();
+    mc_add_bootstrap(program->ph->id);
     mc_print_listing();
 	//mc_write_listing("test.s");
     mc_destroy();
