@@ -198,6 +198,7 @@ struct mem_loc_t *mc_new_mem_loc(const char *id) {
 	mem_loc->temp_reg = -1;
 	mem_loc->wb = false;
 	mem_loc->type = 0;
+	mem_loc->objScope = NULL;
 	
 	return mem_loc;
 }
@@ -248,10 +249,22 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 	while(tac != NULL) {
 		// Load variables/compiler temps into registers
 		mc_reset_temp_regs();
-		lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+		if(tac->op == OP_NEW_OBJ) {
+			lhs_loc = mc_mem_alloc_heap(instr_list, tac->op1->d.id);
+		} else {
+			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+		}
+
 		op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
-		op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
 		
+		// Depending on the operator for the tac, determine how to get the location for op2
+		if(tac->op == OP_MEM_ACCESS) {
+			op2_loc = mc_mem_access_var(instr_list, op1_loc->objScope, tac->op2);
+
+		} else {
+			op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
+		}
+
 		// Load constants into registers for instructions that do not have I_TYPE equivalents
 		if(tac->op == OP_STAR || tac->op == OP_SLASH || tac->op == OP_MOD) {
 			if(op1_loc == NULL)
@@ -626,31 +639,46 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 		mem_loc->type = MEM_STACK;
 		
 		// Emit instruction to load stack value into a temp regs
-		struct offset_list_t *it = scope->offset_list;
-		while(it != NULL) {
+		struct offset_list_t *offset = symtab_get_variable_offset(scope, td->d.id);
+		if(offset != NULL) {
 			// Found the variable in the offset list
-			if(strcmp(it->id, td->d.id) == 0) {
-				mem_loc->temp_reg = mc_next_temp_reg();
-				mem_loc->loc.offset = it->offset;
-				
-				struct instr_t *instr = mc_new_instr("lw");
-				instr->lhs_reg = mem_loc->temp_reg;
-				instr->op1_reg = $fp;
-				instr->op1_has_offset = true;
-				instr->op1_reg_offset = mem_loc->loc.offset;
-				sprintf(instr->comment, "Load %s", it->id);
-				mc_emit_instr(instr_list, instr);
-				break;
-			}
+			mem_loc->temp_reg = mc_next_temp_reg();
+			mem_loc->loc.offset = offset->offset;
 			
-			it = it->next;
+			struct instr_t *instr = mc_new_instr("lw");
+			instr->lhs_reg = mem_loc->temp_reg;
+			instr->op1_reg = $fp;
+			instr->op1_has_offset = true;
+			instr->op1_reg_offset = mem_loc->loc.offset;
+			sprintf(instr->comment, "Load %s", td->d.id);
+			mc_emit_instr(instr_list, instr);
+		} else {
+			MCLOG(("Could not find the offset for variable %s\n",td->d.id));
 		}
-	} /*else if(scope->attrId == SYM_ATTR_CLASS) {
+	} else if(scope->attrId == SYM_ATTR_CLASS) {
 		mem_loc = mc_new_mem_loc(td->d.id);
 		mem_loc->type = MEM_HEAP;
 		
+		// Emit instruction to load the heap offset value into a temp reg
+		struct offset_list_t *offset = symtab_get_variable_offset(scope, td->d.id);
+		if(offset != NULL) {
+			// Found the variable in the offset list
+			mem_loc->temp_reg = mc_next_temp_reg();
+			mem_loc->loc.offset = offset->offset;
+
+			struct instr_t *instr = mc_new_instr("lw");
+			instr->lhs_reg = mem_loc->temp_reg;
+			instr->op1_reg = $fp;
+			instr->op1_has_offset = true;
+			instr->op1_reg_offset = mem_loc->loc.offset;
+			sprintf(instr->comment, "Load %s", td->d.id);
+			mc_emit_instr(instr_list, instr);
+		} else {
+			MCLOG(("Could not find the offset for variable %s\n",td->d.id));
+		}
+
 		// Emit instructions to load heap values into temp regs
-	}*/ else {
+	} else {
 		MCLOG(("Scope of variable %s is unhandled: %i\n", td->d.id, scope->attrId));
 		return mem_loc;
 	}
@@ -864,6 +892,17 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr->imm = sp_size;
 	sprintf(instr->comment, "Deallocate stack");
 	mc_emit_instr(cfg_instr_list, instr);
+}
+
+//TODO: FINISH
+struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, char *objClassName) {
+	// Create the mem_loc_t
+	// Type is heap
+	// Offset is the address from the heap, gotta get that
+	// Lookup the class to get the scope
+	// Set the objScope
+
+	return NULL;
 }
 
 // Generates .globl main_func_name, and extra bootstrap code to jump into the main func of the main class, and termination syscall when last method returns

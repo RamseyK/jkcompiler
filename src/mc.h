@@ -215,6 +215,7 @@ struct mem_loc_t {
 	
 	bool wb; // Writeback flag. Set to true if the temp_reg value should be copied back into the memory location
 	int type; // MEM_*
+	struct scope_t *objScope; // The scope of the object stored at this mem_loc
 	union {
 		int reg; // Storage reg used if type is MEM_REG
 		int offset; // Memory offset (means different things depending on the type)
@@ -279,6 +280,7 @@ int mc_next_saved_reg();
 int mc_num_saved_regs_used();
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
+struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, char *objClassName);
 
 // Final stage of adding generated code components to their respective listings
 void mc_add_bootstrap(char *program_name);

@@ -383,7 +383,8 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
 
 /*
  * Looks up a variables parent scope using its name starting in the scope.  Looks in the
- * parent scope until rootScope is reached.  Returns the scope of the variable
+ * parent scope until rootScope is reached.  If not found that way, look in other classes.
+ * Returns the scope of the variable
  */
 struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name) {
 	// Reached the root scope and not found
@@ -417,8 +418,8 @@ struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name) 
 	}
 	
 	// Not found, look in parent scope
-	//printf("Looking in parent scope\n");
-	return symtab_lookup_variable_scope(scope->parent, name);
+	struct scope_t *foundScope = symtab_lookup_variable_scope(scope->parent, name);
+	return foundScope;
 }
 
 /*
@@ -583,6 +584,22 @@ void symtab_calc_offsets() {
 		scope_it = scope_it->next;
 	}
 
+}
+
+/*
+ * Looks through a scope's offset list for the id and returns the offset for that id
+ */
+struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id) {
+
+	struct offset_list_t *it = scope->offset_list;
+	while(it != NULL) {
+		// Found the variable in the offset list
+		if(strcmp(it->id, id) == 0) {
+			return it;
+		}
+		it = it->next;
+	}
+	return NULL;
 }
 
 /*

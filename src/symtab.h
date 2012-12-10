@@ -87,6 +87,7 @@ int symtab_calc_scope_size(struct scope_t *scope); // Calculates the size of a s
 int symtab_calc_td_size(struct type_denoter_t *td); // Returns the size of a type denoter or calculates it if it is unknown
 void symtab_calc_offsets(); // Calculates offsets for vars in alls copes
 int symtab_calc_scope_offsets(struct scope_t *scope); // Calculates the offsets of each variable declared in a scope
+struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id);//  Looks up a variable's offset in a scope
 struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, const char *id, int offset); // Adds to an offset list
 struct offset_list_t *new_offset_list();
 #endif
