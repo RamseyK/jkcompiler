@@ -839,7 +839,7 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 		mc_used_regs[$v1] = true; // Mark $v1 as used
 		return mem_loc;
 	}
-		
+	
 	// Get scope for the variable in the TAC
 	MCLOG(("Looking for scope for %s\n",td->d.id));
 	scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
