@@ -388,7 +388,7 @@ struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, cha
  */
 struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name) {
 	// Reached the root scope and not found
-	if(scope == rootScope)
+	if(scope == rootScope || scope == NULL)
 		return NULL;
 	
 	struct variable_declaration_list_t *vdl;
@@ -409,7 +409,7 @@ struct scope_t *symtab_lookup_variable_scope(struct scope_t *scope, char *name) 
 		while(il != NULL) {
 			//printf("Comparing %s to %s\n",il->id,name);
 			if(strcmp(il->id,name) == 0) {
-				//printf("Match found! %s to %s",il->id,name);
+				//printf("Match found! %s to %s\n",il->id,name);
 				return scope;
 			}
 			il = il->next;
@@ -588,8 +588,12 @@ void symtab_calc_offsets() {
 
 /*
  * Looks through a scope's offset list for the id and returns the offset for that id
+ * Looks up in the parent scope if not found
  */
 struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id) {
+	if(scope == rootScope || scope == NULL) {
+		return NULL;
+	}
 
 	struct offset_list_t *it = scope->offset_list;
 	while(it != NULL) {
@@ -599,7 +603,7 @@ struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id
 		}
 		it = it->next;
 	}
-	return NULL;
+	return symtab_get_variable_offset(scope->parent, id);
 }
 
 /*
@@ -642,11 +646,19 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 			// Size of the data structure for the var
 			int size = symtab_calc_td_size(vdl_it->vd->tden);
 
+			// The scope for the type of the declared variable (for objects)
+			struct scope_t *objScope = symtab_lookup_class(vdl_it->vd->tden->name);
+
 			// Iterate through every identifier in the list
 			struct identifier_list_t *il_it = vdl_it->vd->il;
 			while(il_it != NULL) {
 				// Add to the offset list
-				add_to_offset_list(&scope->offset_list, il_it->id, off);
+				struct offset_list_t *addedOffset = add_to_offset_list(&scope->offset_list, il_it->id, off);
+				// If the scope found above was not null ( meaning it is a pointer ) set the objScope
+				if(objScope != NULL) {
+					addedOffset->objScope = objScope;
+				}
+
 				off += size; // Update the start by the size
 
 				il_it = il_it->next;
@@ -709,6 +721,7 @@ struct offset_list_t *new_offset_list() {
 	struct offset_list_t *temp_offset = (struct offset_list_t *) malloc(sizeof(struct offset_list_t));
 	CHECK_MEM_ERROR(temp_offset);
 	temp_offset->id = NULL;
+	temp_offset->objScope = NULL;
 	temp_offset->next = NULL;
 	temp_offset->offset = 0;
 

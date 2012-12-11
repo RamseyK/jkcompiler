@@ -53,7 +53,7 @@
 #define $s4 20
 #define $s5 21
 #define $s6 22
-#define $s7 23
+#define $s7 23 // Heap pointer
 #define $t8 24
 #define $t9 25
 #define $k0 26
@@ -219,10 +219,9 @@ struct section_t {
 struct mem_loc_t {
 	char *id;
 	int temp_reg; // Temporary reg to assign the var for a single operation
-	
+	struct offset_list_t *objOffset; // Stores the offset entry for a var, used to carry around objScope
 	bool wb; // Writeback flag. Set to true if the temp_reg value should be copied back into the memory location
 	int type; // MEM_*
-	struct scope_t *objScope; // The scope of the object stored at this mem_loc
 	union {
 		int reg; // Storage reg used if type is MEM_REG
 		int offset; // Memory offset (means different things depending on the type)
@@ -287,7 +286,7 @@ int mc_next_saved_reg();
 int mc_num_saved_regs_used();
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
-struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, char *objClassName);
+struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td, char *objClassName);
 
 // Final stage of adding generated code components to their respective listings
 void mc_add_bootstrap(char *program_name);
