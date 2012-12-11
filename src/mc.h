@@ -280,7 +280,8 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
 struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct tac_data_t *td);
 struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
-void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc);
+//void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc);
+struct instr_t *mc_mem_writeback(int addrReg, int valueReg);
 void mc_reset_temp_regs();
 int mc_next_temp_reg();
 int mc_next_saved_reg();

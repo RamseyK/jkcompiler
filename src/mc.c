@@ -258,8 +258,8 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 		mc_reset_temp_regs();
 		
 		if(tac->op == OP_NEW_OBJ) {
-			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
-			lhs_loc->wb = true;
+			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+			//lhs_loc->wb = true;
 
 			// If the lhs represents an address on the heap in memory, change this type to
 			// heap so that writeback is done correctly.
@@ -388,6 +388,8 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	char *op2_str = cfg_tac_data_to_str(tac->op2);
 
 	// Instructions for converting rvalues from addr to val if needed
+	// I will finish the stuff for these later so that we can convert addr on the rhs to proper vals.
+	// Don't worry about it !
 	struct instr_t *convOp1 = NULL, *convOp2 = NULL;
 	// Instructions for computing
 	struct instr_t *instr = NULL, *instr2 = NULL, *instr3 = NULL;
@@ -396,64 +398,68 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 	switch(tac->op) {
 		case OP_PLUS:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			if(tac->op2->type == TAC_DATA_TYPE_INT) {
 				// Var + Int (Reg + Imm)
 				instr = mc_new_instr("addi");
-				instr->lhs_reg = lhs_loc->temp_reg;
-				//instr->lhs_reg = mc_next_temp_reg();
+				//instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = tac->op2->d.val;
 				sprintf(instr->comment, "%s = %s + %i", lhs_str, op1_str, tac->op2->d.val);
 			} else {
 				// Var + Var (both regs)
 				instr = mc_new_instr("add");
-				instr->lhs_reg = lhs_loc->temp_reg;
-				//instr->lhs_reg = mc_next_temp_reg();
+				//instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 				sprintf(instr->comment, "%s = %s + %s", lhs_str, op1_str, op2_str);
 			}
 
-			//wbInstr = mc_mem_writeback()
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_MINUS:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_INT) {
 				// Var - Int (Reg - Imm)
 				instr = mc_new_instr("addi");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = 0-tac->op2->d.val;
 				sprintf(instr->comment, "%s = %s - %i", lhs_str, op1_str, tac->op2->d.val);
 			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Int - Var (Imm - Reg)
+				// TODO: Don't think this instruction is right?  This does var - int again..
 				instr = mc_new_instr("addi");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op2_loc->temp_reg;
 				instr->imm = 0-tac->op1->d.val;
 				sprintf(instr->comment, "%s = %i - %s", lhs_str, tac->op1->d.val, op2_str);
 			} else {
 				// Var - Var (both regs)
 				instr = mc_new_instr("sub");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 				sprintf(instr->comment, "%s = %s - %s", lhs_str, op1_str, op2_str);
 			}
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_OR:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Var OR Var
 				instr = mc_new_instr("or");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
 				// Var OR Const
 				instr = mc_new_instr("ori");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				if(tac->op2->type == TAC_DATA_TYPE_INT)
 					instr->imm = tac->op2->d.val;
@@ -464,7 +470,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Const OR Var
 				instr = mc_new_instr("ori");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op2_loc->temp_reg;
 				if(tac->op1->type == TAC_DATA_TYPE_INT)
 					instr->imm = tac->op1->d.val;
@@ -475,9 +481,11 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			} else {
 				MCLOG(("Invalid OR operand\n"));
 			}
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_STAR:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("mult");
 			// Var * Var (both must be regs)
 			instr->op1_reg = op1_loc->temp_reg;
@@ -485,12 +493,16 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "Lo = %s * %s", op1_str, op2_str);
 			// Move the result from Lo into the LHS reg
 			instr2 = mc_new_instr("mflo");
-			instr2->lhs_reg = lhs_loc->temp_reg;
+			instr2->lhs_reg = mc_next_temp_reg();
 			sprintf(instr2->comment, "%s = Lo", lhs_str);
 			instr->next = instr2; // Link mult and mflo instructions
+
+			// Store
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr2->lhs_reg);
+			instr2->next = wbInstr;
 			break;
 		case OP_SLASH:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("div");
 			// Var * Var (both must be regs)
 			instr->op1_reg = op1_loc->temp_reg;
@@ -498,12 +510,15 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "Lo = %s / %s", op1_str, op2_str);
 			// Move the result from Lo into the LHS reg
 			instr2 = mc_new_instr("mflo");
-			instr2->lhs_reg = lhs_loc->temp_reg;
+			instr2->lhs_reg = mc_next_temp_reg();
 			sprintf(instr2->comment, "%s = Lo", lhs_str);
 			instr->next = instr2; // Link div and mflo instructions
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr2->lhs_reg);
+			instr2->next = wbInstr;
 			break;
 		case OP_MOD:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("div");
 			// Var * Var (both must be regs)
 			instr->op1_reg = op1_loc->temp_reg;
@@ -511,21 +526,24 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "Hi = %s / %s", op1_str, op2_str);
 			// Move the result from Hi into the LHS reg
 			instr2 = mc_new_instr("mfhi");
-			instr2->lhs_reg = lhs_loc->temp_reg;
+			instr2->lhs_reg = mc_next_temp_reg();
 			sprintf(instr2->comment, "%s = Hi (Remainder)", lhs_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr2->lhs_reg);
+			instr2->next = wbInstr;
 			break;
 		case OP_AND:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			if(tac->op1->type == TAC_DATA_TYPE_VAR && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Var AND Var
 				instr = mc_new_instr("and");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 			} else if(tac->op1->type == TAC_DATA_TYPE_VAR) {
 				// Var AND Const
 				instr = mc_new_instr("andi");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				if(tac->op2->type == TAC_DATA_TYPE_INT)
 					instr->imm = tac->op2->d.val;
@@ -536,7 +554,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			} else if(tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Const AND Var
 				instr = mc_new_instr("andi");
-				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op2_loc->temp_reg;
 				if(tac->op1->type == TAC_DATA_TYPE_INT)
 					instr->imm = tac->op1->d.val;
@@ -547,54 +565,75 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			} else {
 				MCLOG(("Invalid AND operand\n"));
 			}
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_EQUAL:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("seq");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s == %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_NOTEQUAL:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("sne");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s != %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_LT:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("slt");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s < %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_GT:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("sgt");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s > %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_LE:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("sle");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s <= %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_GE:
-			lhs_loc->wb = true;
+			//lhs_loc->wb = true;
 			instr = mc_new_instr("sge");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
 			instr->op2_reg = op2_loc->temp_reg;
 			sprintf(instr->comment, "%s = %s >= %s", lhs_str, op1_str, op2_str);
+
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
 			// If the lhs represents an object on the heap then store the value directly to that addr
@@ -707,14 +746,8 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			instr->imm = op2_loc->loc.offset;
 			sprintf(instr->comment, "Calc addr");
 
-			instr2 = mc_new_instr("sw");
-			instr2->op1_reg = lhs_loc->temp_reg;
-			instr2->lhs_reg = instr->lhs_reg;
-			instr2->op1_has_offset = true;
-			instr2->op1_reg_offset = 0;
-			sprintf(instr2->comment, "Saving addr to %s", lhs_loc->id);
-
-			instr->next = instr2;
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 
 			break;
 		case OP_NEW_OBJ:
@@ -735,11 +768,18 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr2->lhs_reg = lhs_loc->temp_reg;
 				instr2->op1_reg = op1_loc->temp_reg;
 				instr2->imm = 0;
-				sprintf(instr2->comment, "%s = new %s (to stack)", lhs_loc->id, op1_loc->id);
+				sprintf(instr2->comment, "Move to %s", lhs_loc->id);
 
-				lhs_loc->type = MEM_STACK; // So that wb will occur
+				// Write back to the stack
+				wbInstr = mc_new_instr("sw");
+				wbInstr->lhs_reg = lhs_loc->temp_reg;
+				wbInstr->op1_reg = $fp;
+				wbInstr->op1_has_offset = true;
+				wbInstr->op1_reg_offset = -1 * lhs_loc->loc.offset;
+				sprintf(wbInstr->comment, "Store %s (on stack)", lhs_loc->id);
 
 				instr->next = instr2;
+				instr2->next = wbInstr;
 			} else {
 				// Move the addr so it can be written back to the stack
 				instr = mc_new_instr("addi");
@@ -747,6 +787,16 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = 0;
 				sprintf(instr->comment, "%s = new %s", lhs_loc->id, op1_loc->id);
+
+				// Write back to the stack
+				wbInstr = mc_new_instr("sw");
+				wbInstr->lhs_reg = lhs_loc->temp_reg;
+				wbInstr->op1_reg = $fp;
+				wbInstr->op1_has_offset = true;
+				wbInstr->op1_reg_offset = -1 * lhs_loc->loc.offset;
+				sprintf(wbInstr->comment, "Store %s (on stack)", lhs_loc->id);
+
+				instr->next = wbInstr;
 			}
 
 			break;
@@ -1041,16 +1091,16 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 }*/
 
 // NEW VERSION
-// Basically creates a sw to store the value in valueReg at 0(addrReg)
-void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *valueLoc, struct mem_loc_t *addrLoc) {
+// Basically creates a sw instr to store the value in valueReg at 0(addrReg)
+struct instr_t *mc_mem_writeback(int addrReg, int valueReg) {
 
 	struct instr_t *instr = mc_new_instr("sw");
-	instr->lhs_reg = valueLoc->loc.reg;
-	instr->op1_reg = valueLoc->loc.reg;
+	instr->lhs_reg = valueReg;
+	instr->op1_reg = addrReg;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = 0;
-	sprintf(instr->comment, "Writeback %s to %s", valueLoc->id, addrLoc->id);
-	mc_emit_instr(instr_list, instr);
+	sprintf(instr->comment, "Writeback");
+	return instr;
 
 }
 
