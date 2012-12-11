@@ -256,7 +256,7 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 		mc_reset_temp_regs();
 
 		if(tac->op == OP_NEW_OBJ) {
-			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 			lhs_loc->wb = true;
 
 			// If the lhs represents an address on the heap in memory, change this type to
@@ -297,7 +297,7 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 		} else
 		{
 			//MCLOG(("Not mem access or new\n"));
-			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 			op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
 		}
@@ -321,8 +321,8 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 			mc_emit_instr(instr_list, instr);
 		
 			// Write back the lhs_loc if its indicated that it changed (wb flag)
-			if(lhs_loc != NULL && lhs_loc->wb)
-				mc_mem_writeback(instr_list, lhs_loc);
+			//if(lhs_loc != NULL && lhs_loc->wb)
+				//mc_mem_writeback(instr_list, lhs_loc);
 		} else {
 			MCLOG(("mc_tac_to_instr returned null!\n"));
 		}
@@ -367,7 +367,13 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	char *op1_str = cfg_tac_data_to_str(tac->op1);
 	char *op2_str = cfg_tac_data_to_str(tac->op2);
 
+	// Instructions for converting rvalues from addr to val if needed
+	struct instr_t *convOp1 = NULL, *convOp2 = NULL;
+	// Instructions for computing
 	struct instr_t *instr = NULL, *instr2 = NULL, *instr3 = NULL;
+	// Instruction for writing back the result
+	struct instr_t *wbInstr = NULL;
+
 	switch(tac->op) {
 		case OP_PLUS:
 			lhs_loc->wb = true;
@@ -375,6 +381,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				// Var + Int (Reg + Imm)
 				instr = mc_new_instr("addi");
 				instr->lhs_reg = lhs_loc->temp_reg;
+				//instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->imm = tac->op2->d.val;
 				sprintf(instr->comment, "%s = %s + %i", lhs_str, op1_str, tac->op2->d.val);
@@ -382,10 +389,13 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				// Var + Var (both regs)
 				instr = mc_new_instr("add");
 				instr->lhs_reg = lhs_loc->temp_reg;
+				//instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = op2_loc->temp_reg;
 				sprintf(instr->comment, "%s = %s + %s", lhs_str, op1_str, op2_str);
 			}
+
+			//wbInstr = mc_mem_writeback()
 			break;
 		case OP_MINUS:
 			lhs_loc->wb = true;
@@ -961,7 +971,8 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 }
 
 // Write back a register value to the permanent location
-void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc) {
+// OLD VERSION
+/*void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc) {
 	if(mem_loc == NULL || mem_loc->temp_reg == -1)
 		return;
 
@@ -976,6 +987,20 @@ void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc
 	} else {
 		MCLOG(("Unsupported write back for mem_loc of type %i\n", mem_loc->type));
 	}
+}*/
+
+// NEW VERSION
+// Basically creates a sw to store the value in valueReg at 0(addrReg)
+void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *valueLoc, struct mem_loc_t *addrLoc) {
+
+	struct instr_t *instr = mc_new_instr("sw");
+	instr->lhs_reg = valueLoc->loc.reg;
+	instr->op1_reg = valueLoc->loc.reg;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = 0;
+	sprintf(instr->comment, "Writeback %s to %s", valueLoc->id, addrLoc->id);
+	mc_emit_instr(instr_list, instr);
+
 }
 
 // Returns the next available temporary register and marks it as used. -1 if none available
