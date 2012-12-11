@@ -10,14 +10,15 @@ END
 class testObjectAccess
 
 BEGIN
-   VAR
-      classPtr	: testObject;
-      a1	: integer;
 
 FUNCTION testObjectAccess;
+VAR
+      classPtr	: testObject;
+      a1	: integer;
 BEGIN
    classPtr := new testObject;
-   a1 := classPtr.numberOfHours
+   classPtr.numberOfHours := 1337;
+   print classPtr.numberOfHours
 END
 
 END

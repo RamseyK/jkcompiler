@@ -1359,6 +1359,29 @@ void mc_add_bootstrap(char *program_name) {
 	instr->addr_label = new_identifier("heap");
 	mc_emit_instr(instr_list, instr);
 
+	// Instantiate the program object on the heap and load it as the calling object in $s6
+	// First move the heap pointer to s6
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $s6;
+	instr->op1_reg = $s7;
+	instr->imm = 0;
+	sprintf(instr->comment, "Heap alloc for main obj");
+	mc_emit_instr(instr_list, instr);
+
+	// Mark s6 as used (should be permanent)
+	mc_used_regs[$s6] = true;
+
+	// Increment the heap pointer by the appropriate amount
+	// Look up the class matching program_name
+	struct scope_t *mainScope = symtab_lookup_class(program_name);
+	int size = symtab_calc_scope_size(mainScope);
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $s7;
+	instr->op1_reg = $s7;
+	instr->imm = size;
+	sprintf(instr->comment, "Move HP");
+	mc_emit_instr(instr_list, instr);
+
 	// Call the actual entry function
 	struct scope_t *classScope = symtab_lookup_class(program_name);
 	struct scope_t *funcScope = symtab_lookup_function(classScope, program_name);
