@@ -46,7 +46,7 @@ void cfg_init() {
 void cfg_destroy() {
 	// Free master list of blocks and all block objects
 	cfg_free_block_list(&blockList, true);
-		
+	
 	// Free the master list of TAC nodes
 	cfg_free_tac_list();
 	// Free the master list of tac data
@@ -109,18 +109,6 @@ struct cfg_list_t *cfg_create_func_cfg(struct scope_t *funcScope) {
 		struct cfg_list_t *cfg_it = cfgList;
 		GOTO_END_OF_LIST(cfg_it);
 		cfg_it->next = temp_cfg;
-	}
-	
-	// Find the bottom of this CFG and add a RETURN tac as the last statement
-	struct block_t *bottom = cfg_find_bottom(temp_cfg->entryBlock);
-	if(bottom->entry == NULL) {
-		bottom->entry = cfg_generate_return_tac();
-	} else {
-		struct three_address_t *end = bottom->entry;
-		while(end->next != NULL)
-			end = end->next;
-		
-		end->next = cfg_generate_return_tac();
 	}
 
 	return temp_cfg;
@@ -825,7 +813,7 @@ struct three_address_t *cfg_generate_return_tac() {
 // Converts the tac data to a string representation
 char *cfg_tac_data_to_str(struct tac_data_t *td) {
 	if(td == NULL) return NULL;
-	if(td->type == TAC_DATA_TYPE_VAR) {
+	if(td->type == TAC_DATA_TYPE_VAR || td->type == TAC_DATA_TYPE_FUNC_RET) {
 		return new_identifier(td->d.id);
 	}
 	if(td->type == TAC_DATA_TYPE_INT) {
@@ -1121,6 +1109,10 @@ struct vnt_entry_t *cfg_vnt_hash_lookup_td(struct tac_data_t *td) {
 		}
 		// BOOL
 		if(it->var_td->type == TAC_DATA_TYPE_BOOL && td->type == TAC_DATA_TYPE_BOOL && it->var_td->d.b == td->d.b) {
+			return it;
+		}
+		// FUNC_RET
+		if(it->var_td->type == TAC_DATA_TYPE_FUNC_RET && td->type == TAC_DATA_TYPE_FUNC_RET && strcmp(it->var_td->d.id,td->d.id) == 0){
 			return it;
 		}
 		it = it->next;

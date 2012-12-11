@@ -38,8 +38,9 @@ void ir_init();
 void ir_destroy();
 
 // IR Processing
-void ir_process_cfg(struct block_t *entryBlock);
-void ir_block_pass(struct block_t *block, int block_level);
+void ir_process_cfg(struct scope_t *scope, struct block_t *entryBlock);
+void ir_block_pass(struct scope_t *scope, struct block_t *block, int block_level);
+void ir_add_cfg_return(struct block_t *entryBlock);
 void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block);
 void ir_calc_flow_vars(struct block_t *block);
 
@@ -55,6 +56,6 @@ void ir_opt_const_folding(struct three_address_t *tac);
 
 // Fixups
 void ir_resolve_label_aliases();
-void ir_resolve_func_calls_no_param();
+//void ir_resolve_func_calls_no_param();
 
 #endif
