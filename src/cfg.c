@@ -858,7 +858,7 @@ struct tac_data_t *cfg_new_tac_data() {
 	temp_td->type = 0;
 	temp_td->d.id = NULL; // Only set this element in the union to NULL
 
-	// Add the tac data to the master listso we can destroy it all later
+	// Add the tac data to the master list so we can destroy it all later
 	if(tacDataList == NULL) {
 		tacDataList = (struct tac_data_list_t *) malloc(sizeof(struct tac_data_list_t));
 		tacDataList->td = temp_td;

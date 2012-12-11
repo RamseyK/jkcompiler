@@ -27,10 +27,7 @@ FUNCTION testObjectAccess;
 BEGIN
    classPtr := new testObject;
    classPtr.firstField := new testObjectTwo;
-   classPtr.firstField.secondField := 6;
-   a1 := classPtr.firstField.secondField;
-   a2 := a1 + 1;
-   PRINT a2
+   classPtr.firstField.secondField := 6
 END
 
 END

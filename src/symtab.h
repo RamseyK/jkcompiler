@@ -41,10 +41,11 @@ struct scope_t {
 	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
 };
 
-// List of variable identifiers matched with their offsets
+// List of variable identifiers matched with their offsets and runtime scope (for obj access)
 struct offset_list_t {
 	char *id;
 	int offset;
+	struct scope_t *objScope;
 	struct offset_list_t *next;
 };
 
