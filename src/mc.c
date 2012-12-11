@@ -259,14 +259,6 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 		
 		if(tac->op == OP_NEW_OBJ) {
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
-			//lhs_loc->wb = true;
-
-			// If the lhs represents an address on the heap in memory, change this type to
-			// heap so that writeback is done correctly.
-			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
-				MCLOG(("Heap addr on lhs!\n"));
-				lhs_loc->type = MEM_HEAP;
-			}
 
 			op1_loc = mc_mem_alloc_heap(instr_list, cfg_scope, tac->op1);
 		} else if(tac->op == OP_FUNC_CALL) {
@@ -318,7 +310,11 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
 		}
 
-
+		// Check if the lhs should be flagged as a heap value (for ASSIGN and NEW)
+		if(lhs_loc != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+			MCLOG(("Heap addr on lhs!\n"));
+			lhs_loc->type = MEM_HEAP;
+		}
 
 
 		// Load constants into registers for instructions that do not have I_TYPE equivalents
@@ -390,7 +386,20 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	// Instructions for converting rvalues from addr to val if needed
 	// I will finish the stuff for these later so that we can convert addr on the rhs to proper vals.
 	// Don't worry about it !
-	struct instr_t *convOp1 = NULL, *convOp2 = NULL;
+	struct instr_t *conv1Instr = NULL, *conv2Instr = NULL;
+	bool conv1, conv2;
+	// Assume we will convert for most instructions
+	if(op1_loc != NULL && tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR && op1_loc->objSymbol->memLoc == MEM_HEAP)
+		conv1 = true;
+	else
+		conv1 = false;
+
+	if(op2_loc != NULL && tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR && op2_loc->objSymbol->memLoc == MEM_HEAP)
+		conv2 = true;
+	else
+		conv2 = false;
+
+
 	// Instructions for computing
 	struct instr_t *instr = NULL, *instr2 = NULL, *instr3 = NULL;
 	// Instruction for writing back the result
@@ -638,64 +647,57 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
 			// If the lhs represents an object on the heap then store the value directly to that addr
 			// and don't perform a writeback (would overwrite the addr with the value - bad)
-			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
-				// First move the value being assigned to a register
-				instr = mc_new_instr("addi");
-				instr->lhs_reg = mc_next_temp_reg();
-				if(tac->op1->type == TAC_DATA_TYPE_VAR) {
-					instr->op1_reg = op1_loc->temp_reg;
-					instr->op2_reg = $0;
-					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
-				} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
-					instr->op1_reg = $0;
-					instr->imm = tac->op1->d.val;
-					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
-				} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
-					instr->op1_reg = $0;
-					instr->imm = (int)tac->op1->d.b;
-					sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));
-				}
 
-				// Now store the value
-				instr2 = mc_new_instr("sw");
-				instr2->lhs_reg = instr->lhs_reg;
+
+			// Two parts:  Put the value to be stored in a register, writeback
+			// Put the value in a temp reg
+			instr = mc_new_instr("addi");
+			if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+				instr->lhs_reg = mc_next_temp_reg();
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->op2_reg = $0;
+				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
+				instr->lhs_reg = mc_next_temp_reg();
+				instr->op1_reg = $0;
+				instr->imm = tac->op1->d.val;
+				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+			} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
+				instr->lhs_reg = mc_next_temp_reg();
+				instr->op1_reg = $0;
+				instr->imm = (int)tac->op1->d.b;
+				sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));
+			} else {
+				MCLOG(("Error: Unknown assign operation"));
+			}
+
+			// Store in the appropriate place
+			if(tac->lhs->type == TAC_DATA_TYPE_VAR) {
+				wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+				instr->next = wbInstr;
+			} else if(tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
+				wbInstr = mc_mem_writeback(lhs_loc->loc.reg, instr->lhs_reg);
+				instr->next = wbInstr;
+			} else {
+				MCLOG(("Invalid LHS tac data type for ASSIGN\n"));
+				mc_free_instr(instr);
+				return NULL;
+			}
+
+			// If the lhs is MEM_HEAP, load its value into itself so writeback is done correctly
+			if(lhs_loc->type == MEM_HEAP) {
+				instr2 = mc_new_instr("lw");
+				instr2->lhs_reg = lhs_loc->temp_reg;
 				instr2->op1_reg = lhs_loc->temp_reg;
 				instr2->op1_has_offset = true;
 				instr2->op1_reg_offset = 0;
-				sprintf(instr2->comment, "Store %s", lhs_loc->id);
+				sprintf(instr2->comment, "Load heap addr");
 
+				// Insert this instruction between isntr1 and the wb
+				instr2->next = wbInstr;
 				instr->next = instr2;
-
-			} else {
-
-				instr = mc_new_instr("addi");
-				if(tac->lhs->type == TAC_DATA_TYPE_VAR) {
-					lhs_loc->wb = true;
-					instr->lhs_reg = lhs_loc->temp_reg;
-				} else if(tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
-					instr->lhs_reg = lhs_loc->loc.reg;
-				} else {
-					MCLOG(("Invalid LHS tac data type for ASSIGN\n"));
-					mc_free_instr(instr);
-					return NULL;
-				}
-				
-				if(tac->op1->type == TAC_DATA_TYPE_VAR) {
-					instr->op1_reg = op1_loc->temp_reg;
-					instr->op2_reg = $0;
-					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
-				} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
-					instr->op1_reg = $0;
-					instr->imm = tac->op1->d.val;
-					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
-				} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
-					instr->op1_reg = $0;
-					instr->imm = (int)tac->op1->d.b;
-					sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));
-				} else {
-					MCLOG(("Error: Unknown assign operation"));
-				}
 			}
+
 			break;
 		case OP_BRANCH:
 			if(tac->op2->type == TAC_DATA_TYPE_LABEL) {
@@ -749,6 +751,10 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
 			instr->next = wbInstr;
 
+			// Don't convert ops
+			conv1 = false;
+			conv2 = false;
+
 			break;
 		case OP_NEW_OBJ:
 			// lhs_loc is a reg that has the addr where the result goes
@@ -799,6 +805,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr->next = wbInstr;
 			}
 
+			conv1 = false;
+			conv2 = false;
+
 			break;
 		case OP_PRINT:
 			// Set syscall service number for print_int
@@ -833,7 +842,38 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	if(op2_str != NULL)
 		free(op2_str);
 	
-	return instr;
+	// Perform any op conversions then insert these before instr
+	// The conversion basically loads the value into itself
+	if(conv1) {
+		conv1Instr = mc_new_instr("lw");
+		conv1Instr->lhs_reg = op1_loc->temp_reg;
+		conv1Instr->op1_reg = op1_loc->temp_reg;
+		conv1Instr->op1_has_offset = true;
+		conv1Instr->op1_reg_offset = 0;
+		sprintf(conv1Instr->comment, "Convert %s from addr to val", op1_loc->id);
+	}
+	if(conv2) {
+		conv2Instr = mc_new_instr("lw");
+		conv2Instr->lhs_reg = op2_loc->temp_reg;
+		conv2Instr->op1_reg = op2_loc->temp_reg;
+		conv2Instr->op1_has_offset = true;
+		conv2Instr->op1_reg_offset = 0;
+		sprintf(conv2Instr->comment, "Convert %s from addr to val", op2_loc->id);
+	}
+	// Link the instructions
+	if(conv1 && conv2) {
+		conv1Instr->next = conv2Instr;
+		conv2Instr->next = instr;
+		return conv1Instr;
+	} else if(conv1) {
+		conv1Instr->next = instr;
+		return conv1Instr;
+	} else if(conv2) {
+		conv2Instr->next = instr;
+		return conv2Instr;
+	} else {
+		return instr;
+	}
 }
 
 // Generate instructions to control Transfer into and out of a function
