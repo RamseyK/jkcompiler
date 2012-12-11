@@ -36,17 +36,18 @@ struct scope_t {
 	struct scope_t *func_scopes; // Head node of function scopes in this scope
 	struct function_declaration_t *fd; // Function declaration in this scope
 	struct set_t *temps; // Compiler generated temporaries during IR
-	struct offset_list_t *offset_list; // Offset list of variables for the current scope
+	struct symbol_list_t *symbol_list; // Offset list of variables for the current scope
 	struct scope_t *next; // Next scope in the horizontal master list
 	struct scope_t *nextSibling; // Next node within the same scope (class_scopes, func_scopes)
 };
 
 // List of variable identifiers matched with their offsets and runtime scope (for obj access)
-struct offset_list_t {
+struct symbol_list_t {
 	char *id;
 	int offset;
 	struct scope_t *objScope;
-	struct offset_list_t *next;
+	int memLoc; // HEAP or STACK
+	struct symbol_list_t *next;
 };
 
 /* ----------------------------------------------------------------
@@ -69,7 +70,7 @@ void symtab_init(struct program_t* program);
 void symtab_destroy();
 void symtab_print(int numOfTabs);
 void symtab_print_recursive(struct scope_t* start, int numTabs);
-void symtab_print_var_offsets(struct offset_list_t *offsets, int numTabs);
+void symtab_print_var_offsets(struct symbol_list_t *offsets, int numTabs);
 struct scope_t *symtab_lookup_class(char *name); // looks from the root
 struct scope_t *symtab_lookup_function(struct scope_t *classScope, char *name); //looks in a class
 struct variable_declaration_t *symtab_lookup_variable(struct scope_t *scope, char *name); // looks in a class or function, allowed to move to outer scopes to search
@@ -88,7 +89,7 @@ int symtab_calc_scope_size(struct scope_t *scope); // Calculates the size of a s
 int symtab_calc_td_size(struct type_denoter_t *td); // Returns the size of a type denoter or calculates it if it is unknown
 void symtab_calc_offsets(); // Calculates offsets for vars in alls copes
 int symtab_calc_scope_offsets(struct scope_t *scope); // Calculates the offsets of each variable declared in a scope
-struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id);//  Looks up a variable's offset in a scope
-struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, const char *id, int offset); // Adds to an offset list
-struct offset_list_t *new_offset_list();
+struct symbol_list_t *symtab_get_variable_symbol(struct scope_t *scope, char *id);//  Looks up a variable's offset in a scope
+struct symbol_list_t *add_to_symbol_list(struct symbol_list_t **offsetList, const char *id, int offset); // Adds to an offset list
+struct symbol_list_t *new_symbol_list();
 #endif

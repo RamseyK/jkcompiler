@@ -219,7 +219,7 @@ struct section_t {
 struct mem_loc_t {
 	char *id;
 	int temp_reg; // Temporary reg to assign the var for a single operation
-	struct offset_list_t *objOffset; // Stores the offset entry for a var, used to carry around objScope
+	struct symbol_list_t *objSymbol; // Stores the offset entry for a var, used to carry around objScope
 	bool wb; // Writeback flag. Set to true if the temp_reg value should be copied back into the memory location
 	int type; // MEM_*
 	union {
@@ -279,6 +279,7 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 // Memory and Register Allocation
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
 struct mem_loc_t *mc_mem_access_const(struct instr_list_t *instr_list, struct tac_data_t *td);
+struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
 void mc_mem_writeback(struct instr_list_t *instr_list, struct mem_loc_t *mem_loc);
 void mc_reset_temp_regs();
 int mc_next_temp_reg();
@@ -286,7 +287,7 @@ int mc_next_saved_reg();
 int mc_num_saved_regs_used();
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
-struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td, char *objClassName);
+struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
 
 // Final stage of adding generated code components to their respective listings
 void mc_add_bootstrap(char *program_name);

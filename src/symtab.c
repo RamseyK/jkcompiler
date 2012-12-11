@@ -25,7 +25,7 @@ struct scope_t *new_scope() {
 	temp_scope->func_scopes = NULL;
 	temp_scope->fd = NULL;
 	temp_scope->temps = NULL;
-	temp_scope->offset_list = NULL;
+	temp_scope->symbol_list = NULL;
 	temp_scope->next = NULL;
 	temp_scope->nextSibling = NULL;
 	
@@ -65,7 +65,7 @@ void symtab_destroy() {
 		curr = it;
 		it = curr->next;
 		free_set(curr->temps);
-		//free_offset_list(curr->offset_list);
+		//free_symbol_list(curr->symbol_list);
 		free(curr);
 	}
 	allScopes = NULL;
@@ -211,7 +211,7 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 			// Print vars with offsets
 			print_tabs(numTabs+1);
 			printf("VARS (offset)\n");
-			symtab_print_var_offsets(node->offset_list, numTabs+1);
+			symtab_print_var_offsets(node->symbol_list, numTabs+1);
 		} else if(node->attrId == SYM_ATTR_CLASS) {
 			//printf("attrId = CLASS");
 			struct class_list_t* cl = node->cl;
@@ -242,7 +242,7 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 			// Print vars with offsets
 			print_tabs(numTabs+1);
 			printf("VARS (offset)\n");
-			symtab_print_var_offsets(node->offset_list, numTabs+1);
+			symtab_print_var_offsets(node->symbol_list, numTabs+1);
 
 			// Descend into function nodes to print their parse trees
 			symtab_print_recursive(node->func_scopes, numTabs+1);
@@ -272,9 +272,9 @@ void symtab_print_recursive(struct scope_t* start, int numTabs) {
 /*
  * Prints an offset list by printing the variable name and its offset, and the specified number of tabs
  */
-void symtab_print_var_offsets(struct offset_list_t *offsets, int numTabs) {
+void symtab_print_var_offsets(struct symbol_list_t *offsets, int numTabs) {
 
-	struct offset_list_t *it = offsets;
+	struct symbol_list_t *it = offsets;
 	while(it != NULL) {
 		print_tabs(numTabs);
 
@@ -577,7 +577,7 @@ void symtab_calc_offsets() {
 	while(scope_it != NULL) {
 
 		// Only calculate offsets for scopes that have not been done yet.
-		if(scope_it->offset_list == NULL) {
+		if(scope_it->symbol_list == NULL) {
 			symtab_calc_scope_offsets(scope_it);
 		}
 
@@ -590,12 +590,12 @@ void symtab_calc_offsets() {
  * Looks through a scope's offset list for the id and returns the offset for that id
  * Looks up in the parent scope if not found
  */
-struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id) {
+struct symbol_list_t *symtab_get_variable_symbol(struct scope_t *scope, char *id) {
 	if(scope == rootScope || scope == NULL) {
 		return NULL;
 	}
 
-	struct offset_list_t *it = scope->offset_list;
+	struct symbol_list_t *it = scope->symbol_list;
 	while(it != NULL) {
 		// Found the variable in the offset list
 		if(strcmp(it->id, id) == 0) {
@@ -603,7 +603,7 @@ struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id
 		}
 		it = it->next;
 	}
-	return symtab_get_variable_offset(scope->parent, id);
+	return symtab_get_variable_symbol(scope->parent, id);
 }
 
 /*
@@ -613,8 +613,8 @@ struct offset_list_t *symtab_get_variable_offset(struct scope_t *scope, char *id
 int symtab_calc_scope_offsets(struct scope_t *scope) {
 
 	// If the offsets have already been done, just return the last value
-	if(scope->offset_list != NULL) {
-		struct offset_list_t *end = scope->offset_list;
+	if(scope->symbol_list != NULL) {
+		struct symbol_list_t *end = scope->symbol_list;
 		GOTO_END_OF_LIST(end);
 
 		// Figure out the size of this variable
@@ -653,7 +653,7 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 			struct identifier_list_t *il_it = vdl_it->vd->il;
 			while(il_it != NULL) {
 				// Add to the offset list
-				struct offset_list_t *addedOffset = add_to_offset_list(&scope->offset_list, il_it->id, off);
+				struct symbol_list_t *addedOffset = add_to_symbol_list(&scope->symbol_list, il_it->id, off);
 				// If the scope found above was not null ( meaning it is a pointer ) set the objScope
 				if(objScope != NULL) {
 					addedOffset->objScope = objScope;
@@ -670,7 +670,7 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 		// Compiler generated temporaries occupy one WORD each
 		struct set_t *set_it = scope->temps;
 		while(set_it != NULL) {
-			add_to_offset_list(&scope->offset_list, set_it->value, off);
+			add_to_symbol_list(&scope->symbol_list, set_it->value, off);
 			off += SIZE_WORD;
 			
 			set_it = set_it->next;
@@ -685,17 +685,17 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 /*
  * Adds a new offset list entry with the unique id and offset to an offsetList
  */
-struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, const char *id, int offset) {
+struct symbol_list_t *add_to_symbol_list(struct symbol_list_t **offsetList, const char *id, int offset) {
 
 	// List was empty so initialize
 	if(*offsetList == NULL) {
-		*offsetList = new_offset_list();
+		*offsetList = new_symbol_list();
 		(*offsetList)->id = new_identifier(id);
 		(*offsetList)->offset = offset;
 
 		return *offsetList;
 	} else {
-		struct offset_list_t *end = *offsetList;
+		struct symbol_list_t *end = *offsetList;
 		
 		// Ensures only unique ids are added
 		while(end->next != NULL) {
@@ -704,7 +704,7 @@ struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, cons
 			end = end->next;
 		}
 		
-		end->next = new_offset_list();
+		end->next = new_symbol_list();
 		end->next->id = new_identifier(id);
 		end->next->offset = offset;
 
@@ -716,14 +716,15 @@ struct offset_list_t *add_to_offset_list(struct offset_list_t **offsetList, cons
 /*
  * Allocates memory for a new offset list
  */
-struct offset_list_t *new_offset_list() {
+struct symbol_list_t *new_symbol_list() {
 
-	struct offset_list_t *temp_offset = (struct offset_list_t *) malloc(sizeof(struct offset_list_t));
+	struct symbol_list_t *temp_offset = (struct symbol_list_t *) malloc(sizeof(struct symbol_list_t));
 	CHECK_MEM_ERROR(temp_offset);
 	temp_offset->id = NULL;
 	temp_offset->objScope = NULL;
 	temp_offset->next = NULL;
 	temp_offset->offset = 0;
+	temp_offset->memLoc = -1;
 
 	return temp_offset;
 
