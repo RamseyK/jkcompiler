@@ -671,6 +671,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr = mc_new_instr("addi");
 				if(tac->lhs->type == TAC_DATA_TYPE_VAR) {
 					lhs_loc->wb = true;
+					//instr->lhs_reg = lhs_loc->temp_reg;
 					instr->lhs_reg = lhs_loc->temp_reg;
 				} else if(tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
 					instr->lhs_reg = lhs_loc->loc.reg;
@@ -1155,8 +1156,8 @@ int mc_num_saved_regs_used() {
 // Backup preserved registers and allocate stack memory for each variable and emits the appropriate instructions
 // Called just before jumping into a new function
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	// Saved registers: s0-s7. Always preserved: fp, ra, v1
-	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*3;
+	// Saved registers: s0-s7 + Always preserved: fp, ra + Space for return value
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = 0;
@@ -1164,6 +1165,9 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	
 	// Save arguments on stack
 	
+	// Leave space for the return value
+	sp_pointer -= SIZE_WORD;
+		
 	// Backup $fp
 	instr = mc_new_instr("sw");
 	instr->lhs_reg = $fp;
@@ -1180,15 +1184,6 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer -= SIZE_WORD;
-	mc_emit_instr(cfg_instr_list, instr);
-	
-	// Backup $v1
-	instr = mc_new_instr("sw");
-	instr->lhs_reg = $v1;
-	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer += SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Backup registers $s0 - $s7 if in use
@@ -1224,8 +1219,8 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 
 // Restore preserved registers and deallocate stack memory
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	// Saved registers: s0-s7. Always preserved: fp, ra, v1
-	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*3;
+	// Saved registers: s0-s7 + Always preserved: fp, ra + Space for return value
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = -1 * (backup_size - SIZE_WORD);
@@ -1253,15 +1248,6 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 		mc_emit_instr(cfg_instr_list, instr);
 	}
 	
-	// Restore $v1
-	instr = mc_new_instr("lw");
-	instr->lhs_reg = $v1;
-	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer -= SIZE_WORD;
-	mc_emit_instr(cfg_instr_list, instr);
-	
 	// Restore $ra
 	instr = mc_new_instr("lw");
 	instr->lhs_reg = $ra;
@@ -1279,6 +1265,9 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer += SIZE_WORD;
 	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Space for the return value
+	sp_pointer += SIZE_WORD;
 }
 
 //TODO: FINISH

@@ -7,8 +7,7 @@ BEGIN
 FUNCTION testConsts;
 VAR aa, bb, cc, dd: integer;
 BEGIN
-   aa := 7;
-   PRINT aa
+   aa := 7
 END
 
 END
