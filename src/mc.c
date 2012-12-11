@@ -440,7 +440,6 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				sprintf(instr->comment, "%s = %s - %i", lhs_str, op1_str, tac->op2->d.val);
 			} else if(tac->op1->type == TAC_DATA_TYPE_INT && tac->op2->type == TAC_DATA_TYPE_VAR) {
 				// Int - Var (Imm - Reg)
-				// TODO: Don't think this instruction is right?  This does var - int again..
 				instr = mc_new_instr("addi");
 				instr->lhs_reg = mc_next_temp_reg();
 				instr->op1_reg = op2_loc->temp_reg;
