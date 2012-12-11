@@ -1127,13 +1127,13 @@ char *mc_gen_listing() {
 				break;
 			case P_TYPE: // Pseudo instructions dont follow a pattern, so each must have a finer tuned output
 				if(strcmp(instr->mips_op->name, "la") == 0) {
-					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], instr->addr_label);
+					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], instr->addr_label); // R[lhs] = addr_label
 				} else if(strcmp(instr->mips_op->name, "li") == 0) {
 					sprintf(buf, "%s%s, %i", buf, reg_names[instr->lhs_reg], instr->imm); // R[lhs] = imm
 				} else if(strcmp(instr->mips_op->name, "move") == 0) {
 					sprintf(buf, "%s%s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg]); // R[lhs], R[rs]
 				} else if(strcmp(instr->mips_op->name, "syscall") == 0) {
-				} else if(instr->addr_label != NULL) {
+				} else if(instr->addr_label != NULL) { // blt, bgt, ble, bge
 					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->op1_reg], reg_names[instr->op2_reg], instr->addr_label); // R[op1] op R[op2] addr
 				} else {
 					sprintf(buf, "%s%s, %s, %s", buf, reg_names[instr->lhs_reg], reg_names[instr->op1_reg], reg_names[instr->op2_reg]); // R[lhs], R[rs], R[rt]

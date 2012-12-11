@@ -110,18 +110,6 @@ struct cfg_list_t *cfg_create_func_cfg(struct scope_t *funcScope) {
 		GOTO_END_OF_LIST(cfg_it);
 		cfg_it->next = temp_cfg;
 	}
-	
-	// Find the bottom of this CFG and add a RETURN tac as the last statement
-	struct block_t *bottom = cfg_find_bottom(temp_cfg->entryBlock);
-	if(bottom->entry == NULL) {
-		bottom->entry = cfg_generate_return_tac();
-	} else {
-		struct three_address_t *end = bottom->entry;
-		while(end->next != NULL)
-			end = end->next;
-		
-		end->next = cfg_generate_return_tac();
-	}
 
 	return temp_cfg;
 }

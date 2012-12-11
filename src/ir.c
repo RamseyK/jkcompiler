@@ -607,6 +607,22 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	free(op);
 }
 
+// Find the bottom of this CFG and add a RETURN tac as the last statement
+void ir_add_cfg_return(struct block_t *entryBlock) {
+	struct block_t *bottom = cfg_find_bottom(entryBlock);
+	if(bottom != NULL) {
+		if(bottom->entry == NULL) {
+			bottom->entry = cfg_generate_return_tac();
+		} else {
+			struct three_address_t *end = bottom->entry;
+			while(end->next != NULL)
+				end = end->next;
+			
+			end->next = cfg_generate_return_tac();
+		}
+	}
+}
+
 // Add all compiler generated temporaries from the entire CFG to the scope
 void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block) {
 	struct three_address_t *tac = block->entry;
@@ -743,8 +759,15 @@ void ir_optimize() {
 	// Iterate through all of the CFGs and process them
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
+		// Add TAC IR to signal returns from functions
+		ir_add_cfg_return(cfg_it->entryBlock);
+		
+		// Value Numbering and Optimizations
 		ir_process_cfg(cfg_it->entryBlock);
+		
+		// Add generated temporaries to symbol table
 		ir_add_cfg_temps_to_scope(cfg_it->scope, cfg_it->entryBlock);
+		
 		cfg_it = cfg_it->next;
 	}
 
