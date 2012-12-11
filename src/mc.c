@@ -526,6 +526,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s != %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_LT:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("slt");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			instr->op1_reg = op1_loc->temp_reg;
@@ -533,6 +534,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s < %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_GT:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("sgt");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			instr->op1_reg = op1_loc->temp_reg;
@@ -540,6 +542,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s > %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_LE:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("sle");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			instr->op1_reg = op1_loc->temp_reg;
@@ -547,6 +550,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s <= %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_GE:
+			lhs_loc->wb = true;
 			instr = mc_new_instr("sge");
 			instr->lhs_reg = lhs_loc->temp_reg;
 			instr->op1_reg = op1_loc->temp_reg;
