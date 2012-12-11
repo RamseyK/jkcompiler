@@ -410,7 +410,7 @@ void ir_opt_dead_code_elim(struct block_t *block) {
 }
 
 // Start processing of IR and optimization on the entire cfg
-void ir_process_cfg(struct block_t *entryBlock) {
+void ir_process_cfg(struct scope_t *scope, struct block_t *entryBlock) {
 	// If the entryBlock was null then there weren't any real blocks for this cfg
 	// Needed this because it was crashing while trying to process functions
 	// That had no cfg's because we had not implemented them for all statements yet
@@ -424,7 +424,7 @@ void ir_process_cfg(struct block_t *entryBlock) {
 	struct block_list_t *it = workList;
 	while(it != NULL) {
 		// Process the current node in the workList
-		ir_block_pass(it->block, 0);
+		ir_block_pass(scope, it->block, 0);
 		
 		// Roll back numbering all the way to the start
 		cfg_vnt_hash_rollback(-1);
@@ -437,7 +437,7 @@ void ir_process_cfg(struct block_t *entryBlock) {
 }
 
 // Recursive worker function to perform a single processing / optimization pass of a basic block in the CFG
-void ir_block_pass(struct block_t *block, int block_level) {
+void ir_block_pass(struct scope_t *scope, struct block_t *block, int block_level) {
 	IRLOG(("Block pass: %s\n", block->label));
 	
 	// Initial optimization and value numbering
@@ -449,6 +449,14 @@ void ir_block_pass(struct block_t *block, int block_level) {
 		// Perform possible constant optimizations then value number the tac
 		struct three_address_t *tac = block->entry;
 		while(tac != NULL) {
+			// Resolve function return values being assigned
+			if(tac->op == OP_ASSIGN && tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_VAR
+			 && strcmp(tac->lhs->d.id, scope->fd->fh->id) == 0) {
+				// Translation: If the left hand side of a TAC is an assignment to the function name
+				// change the tac->lhs type to TAC_DATA_TYPE_FUNC_RET
+				tac->lhs->type = TAC_DATA_TYPE_FUNC_RET;
+			}
+		
 			if(tac->op != OP_BRANCH && tac->op != OP_GOTO
 					&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
 					&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT) {
@@ -487,7 +495,7 @@ void ir_block_pass(struct block_t *block, int block_level) {
 			cfg_vnt_hash_rollback(block_level);
 		} else {
 			// Process current child block recursively
-			ir_block_pass(child->block, block_level+1);
+			ir_block_pass(scope, child->block, block_level+1);
 		}
 		
 		child = child->next;
@@ -607,8 +615,9 @@ void ir_value_number_tac(struct three_address_t *tac, int block_level) {
 	free(op);
 }
 
-// Find the bottom of this CFG and add a RETURN tac as the last statement
+// Resolve function return value TACs and end of function returns
 void ir_add_cfg_return(struct block_t *entryBlock) {
+	// Find the bottom of this CFG and add a RETURN tac as the last statement
 	struct block_t *bottom = cfg_find_bottom(entryBlock);
 	if(bottom != NULL) {
 		if(bottom->entry == NULL) {
@@ -746,7 +755,7 @@ void ir_optimize() {
 	// Ensures target of jumps resolves properly
 	ir_resolve_label_aliases();
 	// Do fixups for parameterless func calls that were taken as identifiers
-	ir_resolve_func_calls_no_param();
+	//ir_resolve_func_calls_no_param();
 
     printf("\nTACs:\n");
 	cfg_print_tacs();
@@ -763,7 +772,7 @@ void ir_optimize() {
 		ir_add_cfg_return(cfg_it->entryBlock);
 		
 		// Value Numbering and Optimizations
-		ir_process_cfg(cfg_it->entryBlock);
+		ir_process_cfg(cfg_it->scope, cfg_it->entryBlock);
 		
 		// Add generated temporaries to symbol table
 		ir_add_cfg_temps_to_scope(cfg_it->scope, cfg_it->entryBlock);
@@ -811,7 +820,7 @@ void ir_resolve_label_aliases() {
 	}
 }
 
-void ir_resolve_func_calls_no_param() {
+/*void ir_resolve_func_calls_no_param() {
 	// Go through each tac node
 	struct three_address_list_t *tac_it = tacList;
 	while(tac_it != NULL) {
@@ -840,5 +849,5 @@ void ir_resolve_func_calls_no_param() {
 		tac_it = tac_it->next;
 	}
 
-}
+}*/
 

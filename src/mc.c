@@ -222,29 +222,31 @@ void mc_free_mem_loc(struct mem_loc_t *mem_loc) {
 // Process the master CFG list (functions) and generate machine code
 void mc_consume_cfg_list() {
 	struct cfg_list_t *cfg_it = cfgList;
-	struct instr_list_t *cfg_instr_list = mc_new_instr_list(cfg_it->entryBlock->label);
+	struct instr_list_t *cfg_instr_list = NULL;
 	// Loop through function cfgs
 	while(cfg_it != NULL) {
-		if(cfg_it->scope->attrId != SYM_ATTR_FUNC)
-			MCLOG(("Scope is NOT a func as expected..\n"));
-		
+		MCLOG(("Code Generation for Block: %s\n", cfg_it->entryBlock->label));
+	
 		// Process the function entry block and is children recursively
-		mc_process_block(cfg_instr_list, cfg_it->scope, cfg_it->entryBlock);
+		cfg_instr_list = mc_process_block(cfg_it->scope, cfg_it->entryBlock);
+		
+		// Add the cfg instruction listing to the text section instr lists
+		mc_append_instr_list(&(mc_text_section->instrs), cfg_instr_list);
 		
 		cfg_it = cfg_it->next;
 	}
-	
-	// Add the cfg instruction listing to the text section instr lists
-	mc_append_instr_list(&(mc_text_section->instrs), cfg_instr_list);
 }
 
 // Recursively process a block and its children by converting its TAC to Instructions
-void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct block_t *block) {
+struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t *block) {
 	// Add the block label to the mc_processed_labels set so this will be the only time this block is processed
 	if(mc_processed_labels == NULL)
 		mc_processed_labels = new_set(block->label);
 	else
 		set_add(mc_processed_labels, block->label);
+	
+	// Create an instruction listing for this block
+	struct instr_list_t *instr_list = mc_new_instr_list(block->label);
 
 	// Loop through TAC nodes
 	struct three_address_t *tac = block->entry;
@@ -257,9 +259,23 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 
 		if(tac->op == OP_NEW_OBJ) {
 			lhs_loc = mc_mem_alloc_heap(instr_list, cfg_scope, tac->lhs, tac->op1->d.id);
-		} else
-		// Depending on the operator for the tac, determine how to get the location for op2
-		if(tac->op == OP_MEM_ACCESS) {
+		} else if(tac->op == OP_FUNC_CALL) {
+			struct scope_t *class_scope = NULL, *func_scope = NULL;
+			char *class_name = NULL, *func_name = tac->op2->d.id;
+			if(tac->op1 != NULL) { // Method in another object
+				class_name = tac->op1->d.id;
+				class_scope = symtab_lookup_class(class_name);
+				func_scope = symtab_lookup_function(class_scope, func_name);
+				MCLOG(("Function call %s in class %s\n", func_name, class_name));
+			} else { // Method within current class
+				func_scope = symtab_lookup_function(cfg_scope->parent, func_name);
+				MCLOG(("Function call %s in same class\n", func_name));
+			}
+			
+			// Setup function call memory
+			op1_loc = mc_call_func(instr_list, func_scope);
+			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+		} else if(tac->op == OP_MEM_ACCESS) { // Depending on the operator for the tac, determine how to get the location for op2
 			MCLOG(("MEM ACCESS\n"));
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 			if(lhs_loc == NULL) MCLOG(("lhs_loc is null!\n"));
@@ -285,9 +301,8 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 				printf("Updating lhs objScope for %s\n", lhs_loc->id);
 				lhs_loc->objOffset->objScope = op2_loc->objOffset->objScope;
 			}
-		} else
-		{
-			MCLOG(("Not mem access or new\n"));
+		} else {
+			MCLOG(("Not mem access or new: %i\n", tac->op));
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 			op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
@@ -339,20 +354,23 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 		}
 	
 		// Create an instruction listing for this block
-		struct instr_list_t *block_instr_list = mc_new_instr_list(child->block->label);
+		struct instr_list_t *block_instr_list = NULL;
 		
 		// Process the child block	
-		mc_process_block(block_instr_list, cfg_scope, child->block);
+		block_instr_list = mc_process_block(cfg_scope, child->block);
 		
 		// Add the completed child instruction listing
 		mc_append_instr_list(&instr_list, block_instr_list);
 		
 		child = child->next;
 	}
+	
+	return instr_list;
 }
 
 // Convert three address code to corresponding instructions with registers/memory
 struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *lhs_loc, struct mem_loc_t *op1_loc, struct mem_loc_t *op2_loc) {
+	MCLOG(("Converting tac of type %i to an instr\n", tac->op));
 	// Get string representations of lhs, op1 and op2
 	char *lhs_str = cfg_tac_data_to_str(tac->lhs);
 	char *op1_str = cfg_tac_data_to_str(tac->op1);
@@ -558,9 +576,19 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s >= %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
-			lhs_loc->wb = true;
 			instr = mc_new_instr("addi");
-			instr->lhs_reg = lhs_loc->temp_reg;
+			if(tac->lhs->type == TAC_DATA_TYPE_VAR) {
+				lhs_loc->wb = true;
+				instr->lhs_reg = lhs_loc->temp_reg;
+			} else if(tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
+				instr->lhs_reg = lhs_loc->loc.reg;
+			} else {
+				MCLOG(("Invalid LHS tac data type for ASSIGN\n"));
+				mc_free_instr(instr);
+				return NULL;
+			}
+			
+			// Setup the value to assign to the left hand side
 			if(tac->op1->type == TAC_DATA_TYPE_VAR) {
 				instr->op1_reg = op1_loc->temp_reg;
 				instr->op2_reg = $0;			
@@ -569,7 +597,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				instr->op1_reg = $0;
 				instr->imm = tac->op1->d.val;
 				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);	
-			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
+			} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
 				instr->op1_reg = $0;
 				instr->imm = (int)tac->op1->d.b;
 				sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));	
@@ -601,6 +629,12 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_PARAM_ASSIGN:
 			break;
 		case OP_FUNC_CALL:
+			// Copy the function return value back into the lhs
+			instr = mc_new_instr("addi");
+			lhs_loc->wb = true;
+			instr->lhs_reg = lhs_loc->temp_reg;
+			instr->op1_reg = op1_loc->loc.reg;
+			instr->op2_reg = $0;
 			break;
 		case OP_FUNC_RETURN:
 			// Jump to the return address
@@ -667,7 +701,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 // Generate instructions to control Transfer into and out of a function
 // Setup the stack and jump and link into the entry block, then destroy the stack
-void mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
+struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
 	// Look through the master cfg list and find the cfg_list node
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
@@ -679,8 +713,14 @@ void mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
 	// Set the entry block label for the function
 	if(cfg_it->entryBlock->label == NULL) {
 		MCLOG(("Unable to find entry block label for function call\n"));
-		return;
+		return NULL;
 	}
+	
+	// Setup a memory location for the return value ($v1)
+	struct mem_loc_t *retLoc = mc_new_mem_loc(funcScope->fd->fh->id);
+	retLoc->type = MEM_REG;
+	retLoc->loc.reg = $v1;
+	mc_used_regs[$v1] = true;
 
 	// Allocate variables on the stack and backup register values
 	mc_alloc_stack(instr_list, funcScope);
@@ -692,16 +732,27 @@ void mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
 	
 	// Deallocate stack and restore register values
 	mc_dealloc_stack(instr_list, funcScope);
+	
+	return retLoc;
 }
 
 // Generate instructions and allocate temporary registers to access identifiers in memory
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td) {
-	if(td == NULL || td->type != TAC_DATA_TYPE_VAR)
+	if(td == NULL || (td->type != TAC_DATA_TYPE_VAR && td->type != TAC_DATA_TYPE_FUNC_RET))
 		return NULL;
 
 	struct mem_loc_t *mem_loc = NULL;
 	struct scope_t *scope = NULL;
 	
+	// Return variables always get the $v1 register
+	if(td->type == TAC_DATA_TYPE_FUNC_RET) {
+		mem_loc = mc_new_mem_loc(cfg_scope->fd->fh->id);
+		mem_loc->type = MEM_REG;
+		mem_loc->loc.reg = $v1;
+		mc_used_regs[$v1] = true; // Mark $v1 as used
+		return mem_loc;
+	}
+		
 	// Get scope for the variable in the TAC
 	MCLOG(("Looking for scope for %s\n",td->d.id));
 	scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
@@ -873,8 +924,8 @@ int mc_num_saved_regs_used() {
 // Backup preserved registers and allocate stack memory for each variable and emits the appropriate instructions
 // Called just before jumping into a new function
 void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	// Saved registers: s0-s7. Always preserved: fp, ra
-	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2;
+	// Saved registers: s0-s7. Always preserved: fp, ra, v1
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*3;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = 0;
@@ -894,6 +945,15 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	// Backup $ra
 	instr = mc_new_instr("sw");
 	instr->lhs_reg = $ra;
+	instr->op1_reg = $sp;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer += SIZE_WORD;
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Backup $v1
+	instr = mc_new_instr("sw");
+	instr->lhs_reg = $v1;
 	instr->op1_reg = $sp;
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
@@ -933,8 +993,8 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 
 // Restore preserved registers and deallocate stack memory
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
-	// Saved registers: s0-s7. Always preserved: fp, ra
-	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2;
+	// Saved registers: s0-s7. Always preserved: fp, ra, v1
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*3;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = backup_size-SIZE_WORD;
@@ -961,6 +1021,15 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 		sp_pointer -= SIZE_WORD;
 		mc_emit_instr(cfg_instr_list, instr);
 	}
+	
+	// Restore $v1
+	instr = mc_new_instr("lw");
+	instr->lhs_reg = $v1;
+	instr->op1_reg = $sp;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
+	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Restore $ra
 	instr = mc_new_instr("lw");
@@ -1267,6 +1336,8 @@ void mc_write_listing(const char *filename) {
 	
 	fprintf(fp, "# jkcompiler assembly output\n# File: %s\n\n", filename);
 	fprintf(fp, "%s", listing);
+	
+	printf("Wrote assembly listing to %s\n", filename);
 	
 	fclose(fp);
 	free(listing);
