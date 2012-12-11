@@ -219,7 +219,7 @@ struct section_t {
 struct mem_loc_t {
 	char *id;
 	int temp_reg; // Temporary reg to assign the var for a single operation
-	struct offset_list_t *objOffset; // Stores the offset entry for a var, used to carry around objScope
+	struct symbol_list_t *objSymbol; // Stores the offset entry for a var, used to carry around objScope
 	bool wb; // Writeback flag. Set to true if the temp_reg value should be copied back into the memory location
 	int type; // MEM_*
 	union {
