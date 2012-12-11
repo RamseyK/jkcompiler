@@ -259,21 +259,20 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 			lhs_loc->wb = true;
 
-			// Get the offset list from cfg_scope for this variable
-			//struct symbol_list_t *lhs_offset = symtab_get_variable_symbol(cfg_scope, td->d.id);
+			// If the lhs represents an address on the heap in memory, change this type to
+			// heap so that writeback is done correctly.
+			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+				MCLOG(("Heap addr on lhs!\n"));
+				lhs_loc->type = MEM_HEAP;
+			}
 
-			// If the passed in td is temporary, update its offset->objScope
-			//if(tac->lhs->temporary) {
-				//lhs_loc->objOffset->objScope = scope;
-			//}
-
-			//lhs_loc = mc_mem_alloc_heap(instr_list, cfg_scope, tac->lhs, tac->op1->d.id);
 			op1_loc = mc_mem_alloc_heap(instr_list, cfg_scope, tac->op1);
 		} else
 		// Depending on the operator for the tac, determine how to get the location for op2
 		if(tac->op == OP_MEM_ACCESS) {
-			MCLOG(("MEM ACCESS\n"));
+			//MCLOG(("MEM ACCESS\n"));
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
+
 			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 
 			// Look up the offset of op1
@@ -281,24 +280,23 @@ void mc_process_block(struct instr_list_t *instr_list, struct scope_t *cfg_scope
 			// Use the objScope from op1's Offset to calculate the offset for the field in op2
 			op2_loc = mc_new_mem_loc(tac->op2->d.id);
 			op2_loc->type = MEM_HEAP;
-			struct symbol_list_t *offset = symtab_get_variable_symbol(op1Offset->objScope, tac->op2->d.id);
-			if(offset != NULL) {
+			struct symbol_list_t *symbol = symtab_get_variable_symbol(op1Offset->objScope, tac->op2->d.id);
+			if(symbol != NULL) {
 				// Found the variable in the offset list
-				op2_loc->loc.offset = offset->offset;
-				op2_loc->objSymbol = offset;
+				op2_loc->loc.offset = symbol->offset;
+				op2_loc->objSymbol = symbol;
 			}
-
-
-			//lhs_loc->wb = true;
 
 			// If the lhs tacData is a temp, update its objScope to that of op2_loc
 			if(tac->lhs->temporary == true) {
 				printf("Updating lhs objScope for %s\n", lhs_loc->id);
 				lhs_loc->objSymbol->objScope = op2_loc->objSymbol->objScope;
 			}
+
+			lhs_loc->objSymbol->memLoc = MEM_HEAP;
 		} else
 		{
-			MCLOG(("Not mem access or new\n"));
+			//MCLOG(("Not mem access or new\n"));
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
 			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
 			op2_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op2);
@@ -569,23 +567,57 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			sprintf(instr->comment, "%s = %s >= %s", lhs_str, op1_str, op2_str);
 			break;
 		case OP_ASSIGN: // Move (avoids generating pseudo move or li instructions)
-			lhs_loc->wb = true;
-			instr = mc_new_instr("addi");
-			instr->lhs_reg = lhs_loc->temp_reg;
-			if(tac->op1->type == TAC_DATA_TYPE_VAR) {
-				instr->op1_reg = op1_loc->temp_reg;
-				instr->op2_reg = $0;			
-				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);	
-			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
-				instr->op1_reg = $0;
-				instr->imm = tac->op1->d.val;
-				sprintf(instr->comment, "%s = %s", lhs_str, op1_str);	
-			} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
-				instr->op1_reg = $0;
-				instr->imm = (int)tac->op1->d.b;
-				sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));	
+
+			// If the lhs represents an object on the heap then store the value directly to that addr
+			// and don't perform a writeback (would overwrite the addr with the value - bad)
+			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+				// First move the value being assigned to a register
+				instr = mc_new_instr("addi");
+				instr->lhs_reg = mc_next_temp_reg();
+				if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+					instr->op1_reg = op1_loc->temp_reg;
+					instr->op2_reg = $0;
+					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+				} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
+					instr->op1_reg = $0;
+					instr->imm = tac->op1->d.val;
+					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+				} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
+					instr->op1_reg = $0;
+					instr->imm = (int)tac->op1->d.b;
+					sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));
+				}
+
+				// Now store the value
+				instr2 = mc_new_instr("sw");
+				instr2->lhs_reg = instr->lhs_reg;
+				instr2->op1_reg = lhs_loc->temp_reg;
+				instr2->op1_has_offset = true;
+				instr2->op1_reg_offset = 0;
+				sprintf(instr2->comment, "Store %s", lhs_loc->id);
+
+				instr->next = instr2;
+
 			} else {
-				MCLOG(("Error: Unknown assign operation"));
+
+				lhs_loc->wb = true;
+				instr = mc_new_instr("addi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				if(tac->op1->type == TAC_DATA_TYPE_VAR) {
+					instr->op1_reg = op1_loc->temp_reg;
+					instr->op2_reg = $0;
+					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+				} else if(tac->op1->type == TAC_DATA_TYPE_INT) {
+					instr->op1_reg = $0;
+					instr->imm = tac->op1->d.val;
+					sprintf(instr->comment, "%s = %s", lhs_str, op1_str);
+				} else if(tac->op1->type == TAC_DATA_TYPE_BOOL) {
+					instr->op1_reg = $0;
+					instr->imm = (int)tac->op1->d.b;
+					sprintf(instr->comment, "%s = %s", lhs_str, (tac->op1->d.b ? "TRUE" : "FALSE"));
+				} else {
+					MCLOG(("Error: Unknown assign operation"));
+				}
 			}
 			break;
 		case OP_BRANCH:
@@ -625,9 +657,6 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			// op1_loc is a reg that contains the address of the object on the heap
 			// op2_loc contains the offset for the field being accessed
 
-			// This doesnt work because the value being loaded contains nothing.  What we want to do is calculate
-			// The address by adding the offset form op2 to the addr from op1, then load that into lhs.
-
 			instr = mc_new_instr("addi");
 			instr->lhs_reg = mc_next_temp_reg();
 			instr->op1_reg = op1_loc->temp_reg;
@@ -643,31 +672,38 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 			instr->next = instr2;
 
-			/*instr = mc_new_instr("lw");
-			instr->lhs_reg = lhs_loc->temp_reg;
-			instr->op1_reg = op1_loc->temp_reg;
-			instr->op1_has_offset = true;
-			instr->op1_reg_offset = op2_loc->loc.offset;
-			sprintf(instr->comment, "%s=%s.%s", lhs_loc->id, op1_loc->id, op2_loc->id);
-			*/
-
 			break;
 		case OP_NEW_OBJ:
 			// lhs_loc is a reg that has the addr where the result goes
 			// op1_loc contains the address from the heap that we want to store
 
-			/*instr = mc_new_instr("sw");
-			instr->op1_reg = lhs_loc->temp_reg;
-			instr->lhs_reg = op1_loc->temp_reg;
-			instr->op1_has_offset = true;
-			instr->op1_reg_offset = 0;
-			sprintf(instr->comment, "%s = new %s", lhs_loc->id, op1_loc->id);*/
+			// If the lhs represents something on the heap, then we have to store on the heap before writing back
+			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+				instr = mc_new_instr("sw");
+				instr->op1_reg = lhs_loc->temp_reg;
+				instr->lhs_reg = op1_loc->temp_reg;
+				instr->op1_has_offset = true;
+				instr->op1_reg_offset = 0;
+				sprintf(instr->comment, "%s = new %s (to heap)", lhs_loc->id, op1_loc->id);
 
-			instr = mc_new_instr("addi");
-			instr->lhs_reg = lhs_loc->temp_reg;
-			instr->op1_reg = op1_loc->temp_reg;
-			instr->imm = 0;
-			sprintf(instr->comment, "%s = new %s", lhs_loc->id, op1_loc->id);
+				// Move the addr so it can be written back to the stack
+				instr2 = mc_new_instr("addi");
+				instr2->lhs_reg = lhs_loc->temp_reg;
+				instr2->op1_reg = op1_loc->temp_reg;
+				instr2->imm = 0;
+				sprintf(instr2->comment, "%s = new %s (to stack)", lhs_loc->id, op1_loc->id);
+
+				lhs_loc->type = MEM_STACK; // So that wb will occur
+
+				instr->next = instr2;
+			} else {
+				// Move the addr so it can be written back to the stack
+				instr = mc_new_instr("addi");
+				instr->lhs_reg = lhs_loc->temp_reg;
+				instr->op1_reg = op1_loc->temp_reg;
+				instr->imm = 0;
+				sprintf(instr->comment, "%s = new %s", lhs_loc->id, op1_loc->id);
+			}
 
 			break;
 		case OP_PRINT:
@@ -766,12 +802,12 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 		mem_loc->type = MEM_STACK;
 		
 		// Emit instruction to load stack value into a temp regs
-		struct symbol_list_t *offset = symtab_get_variable_symbol(scope, td->d.id);
-		if(offset != NULL) {
+		struct symbol_list_t *symbol = symtab_get_variable_symbol(scope, td->d.id);
+		if(symbol != NULL) {
 			// Found the variable in the offset list
 			mem_loc->temp_reg = mc_next_temp_reg();
-			mem_loc->loc.offset = offset->offset;
-			mem_loc->objSymbol = offset;
+			mem_loc->loc.offset = symbol->offset;
+			mem_loc->objSymbol = symbol;
 			
 			struct instr_t *instr = mc_new_instr("lw");
 			instr->lhs_reg = mem_loc->temp_reg;
@@ -780,7 +816,7 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 			instr->op1_reg_offset = -1 * mem_loc->loc.offset;
 			sprintf(instr->comment, "Load %s", td->d.id);
 			mc_emit_instr(instr_list, instr);
-			printf("In mem_acces_var emitted instr for %s\n", mem_loc->id);
+			//printf("In mem_acces_var emitted instr for %s\n", mem_loc->id);
 		} else {
 			MCLOG(("Could not find the offset for variable %s\n",td->d.id));
 		}
@@ -875,12 +911,12 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 		mem_loc->type = MEM_STACK;
 
 		// Emit instruction to load stack value into a temp regs
-		struct symbol_list_t *offset = symtab_get_variable_symbol(scope, td->d.id);
-		if(offset != NULL) {
+		struct symbol_list_t *symbol = symtab_get_variable_symbol(scope, td->d.id);
+		if(symbol != NULL) {
 			// Found the variable in the offset list
 			mem_loc->temp_reg = mc_next_temp_reg();
-			mem_loc->loc.offset = offset->offset;
-			mem_loc->objSymbol = offset;
+			mem_loc->loc.offset = symbol->offset;
+			mem_loc->objSymbol = symbol;
 
 			struct instr_t *instr = mc_new_instr("addi");
 			instr->lhs_reg = mem_loc->temp_reg;
@@ -888,7 +924,7 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 			instr->imm = -1 * mem_loc->loc.offset;
 			sprintf(instr->comment, "Load addr %s", td->d.id);
 			mc_emit_instr(instr_list, instr);
-			printf("In mem_acces_var emitted instr for %s\n", mem_loc->id);
+			//printf("In mem_acces_var emitted instr for %s\n", mem_loc->id);
 		} else {
 			MCLOG(("Could not find the offset for variable %s\n",td->d.id));
 		}
@@ -897,12 +933,12 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 		mem_loc->type = MEM_HEAP;
 
 		// Emit instruction to load the heap offset value into a temp reg
-		struct symbol_list_t *offset = symtab_get_variable_symbol(scope, td->d.id);
-		if(offset != NULL) {
-			// Found the variable in the offset list
+		struct symbol_list_t *symbol = symtab_get_variable_symbol(scope, td->d.id);
+		if(symbol != NULL) {
+			// Found the variable in the symbol list
 			//mem_loc->temp_reg = mc_next_temp_reg();
-			mem_loc->loc.offset = offset->offset;
-			mem_loc->objSymbol = offset;
+			mem_loc->loc.offset = symbol->offset;
+			mem_loc->objSymbol = symbol;
 
 			/*struct instr_t *instr = mc_new_instr("lw");
 			instr->lhs_reg = mem_loc->temp_reg;
@@ -1333,7 +1369,7 @@ char *mc_gen_listing() {
 			
 			// Optional Comment
 			if(instr->comment != NULL && strlen(instr->comment) > 0)
-				sprintf(buf, "%s # %s", buf, instr->comment);
+				sprintf(buf, "%s  \t# %s", buf, instr->comment);
 			
 			sprintf(buf, "%s\n", buf);
 			
