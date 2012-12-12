@@ -972,7 +972,7 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 	retLoc->loc.offset = (backup_size-SIZE_WORD)*-1;
 
 	// Allocate variables on the stack and backup register values
-	mc_alloc_stack(instr_list, funcScope);
+	mc_alloc_stack(instr_list, funcScope, param_tac);
 	
 	// Jump into entry block
 	struct instr_t *instr = mc_new_instr("jal");
@@ -1271,15 +1271,13 @@ int mc_num_saved_regs_used() {
 
 // Backup preserved registers and allocate stack memory for each variable and emits the appropriate instructions
 // Called just before jumping into a new function
-void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
+void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, struct three_address_t *param_tac) {
 	// Saved registers: s0-s7 + Always preserved: fp, ra + Space for return value
 	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = 0;
 	struct instr_t *instr = NULL;
-	
-	// Save arguments on stack
 		
 	// Backup $fp
 	instr = mc_new_instr("sw");
@@ -1330,6 +1328,46 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->imm = 0-sp_size;
 	sprintf(instr->comment, "Move Stack Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Save parameters on the frame
+	int param_off = 0;
+	struct mem_loc_t *param_loc = NULL;
+	while(param_tac != NULL && param_tac->op == OP_PARAM_ASSIGN) {
+		switch(param_tac->op1->type) {
+		case TAC_DATA_TYPE_VAR:
+			MCLOG(("Saving parameter %s on the frame\n", param_tac->op1->d.id));
+			
+			param_loc = mc_mem_access_var(cfg_instr_list, scope, param_tac->op1);
+			break;
+		case TAC_DATA_TYPE_INT:
+			MCLOG(("Saving parameter %i on the frame\n", param_tac->op1->d.val));
+			
+			param_loc = mc_mem_access_const(cfg_instr_list, param_tac->op1);
+			break;
+		case TAC_DATA_TYPE_BOOL:
+			MCLOG(("Saving parameter %s on the frame\n", (param_tac->op1->d.b ? "TRUE" : "FALSE")));
+			
+			param_loc = mc_mem_access_const(cfg_instr_list, param_tac->op1);
+			break;
+		default:
+			MCLOG(("mc_alloc_stack: Unknown parameter type\n"));
+			break;
+		}
+		
+		// Store the parameters value to the frame
+		if(param_loc != NULL) {
+			instr = mc_new_instr("sw");
+			instr->lhs_reg = param_loc->temp_reg;
+			instr->op1_reg = $fp;
+			instr->op1_has_offset = true;
+			instr->op1_reg_offset = param_off;
+			param_off -= SIZE_WORD;
+			sp_pointer -= SIZE_WORD;
+			mc_emit_instr(cfg_instr_list, instr);
+		}
+		
+		param_tac = param_tac->next;
+	}
 }
 
 // Restore preserved registers and deallocate stack memory
