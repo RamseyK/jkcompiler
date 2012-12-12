@@ -19,7 +19,8 @@ FUNCTION ObjMethodCallNoParam;
 BEGIN
 	obj := NEW Object;
 	obj.value := 5;
-	num := obj.GetValue
+	num := obj.GetValue;
+	PRINT num
 END
 
 END

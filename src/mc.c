@@ -289,8 +289,8 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			struct scope_t *class_scope = NULL, *func_scope = NULL;
 			char *class_name = NULL, *func_name = tac->op2->d.id;
 			if(tac->op1 != NULL) { // Method in another object
-				class_name = tac->op1->d.id;
-				class_scope = symtab_lookup_class(class_name);
+				struct symbol_list_t *callerSymbol = symtab_get_variable_symbol(cfg_scope, tac->op1->d.id);
+				class_scope = callerSymbol->objScope;
 				func_scope = symtab_lookup_function(class_scope, func_name);
 				MCLOG(("Function call %s in class %s\n", func_name, class_name));
 			} else { // Method within current class
@@ -718,7 +718,8 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			}
 
 			// If the lhs is MEM_HEAP, load its value into itself so writeback is done correctly
-			if(lhs_loc->objSymbol != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+			// Don't do this if the lhs is a return tac data
+			if(tac->lhs->type != TAC_DATA_TYPE_FUNC_RET && lhs_loc->objSymbol != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
 				instr2 = mc_new_instr("lw");
 				instr2->lhs_reg = lhs_loc->temp_reg;
 				instr2->op1_reg = lhs_loc->temp_reg;
@@ -767,6 +768,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			instr->op1_reg_offset = op1_loc->loc.offset;
 			sprintf(instr->comment, "Load Return value %s from stack", op1_loc->id);
 			
+			conv1 = false;
+			conv2 = false;
+
 			// Write back the return value
 			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
 			instr->next = wbInstr;
@@ -1053,6 +1057,7 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 			mem_loc->temp_reg = mc_next_temp_reg();
 			mem_loc->loc.offset = symbol->offset;
 			mem_loc->objSymbol = symbol;
+			symbol->memLoc = MEM_HEAP;
 
 			struct instr_t *instr = mc_new_instr("lw");
 			instr->lhs_reg = mem_loc->temp_reg;
