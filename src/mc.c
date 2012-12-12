@@ -332,7 +332,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 		}
 
 		// Check if the lhs should be flagged as a heap value (for ASSIGN and NEW)
-		if(lhs_loc != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+		if(lhs_loc != NULL && lhs_loc->objSymbol != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
 			MCLOG(("Heap addr on lhs!\n"));
 			lhs_loc->type = MEM_HEAP;
 		}
@@ -708,7 +708,8 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			}
 
 			// If the lhs is MEM_HEAP, load its value into itself so writeback is done correctly
-			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+			// Don't do this if the lhs is a return tac data
+			if(tac->lhs->type != TAC_DATA_TYPE_FUNC_RET && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
 				instr2 = mc_new_instr("lw");
 				instr2->lhs_reg = lhs_loc->temp_reg;
 				instr2->op1_reg = lhs_loc->temp_reg;
