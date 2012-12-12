@@ -18,7 +18,7 @@ END
 FUNCTION FunctionCallFactorial;
 VAR num : integer;
 BEGIN
-    num := Factorial(3);
+    num := Factorial(5);
 	PRINT num
 END
 
