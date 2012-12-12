@@ -1319,25 +1319,10 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, 
 		mc_emit_instr(cfg_instr_list, instr);
 	}
 	
-	// Set new Frame Pointer to start of local variables
-	instr = mc_new_instr("addi");
-	instr->lhs_reg = $fp;
-	instr->op1_reg = $sp;
-	instr->imm = 0-backup_size;
-	sprintf(instr->comment, "Move Frame Pointer");
-	mc_emit_instr(cfg_instr_list, instr);
-	
-	// Move the stack pointer addi $sp, $sp, -sp_size
-	instr = mc_new_instr("addi");
-	instr->lhs_reg = $sp;
-	instr->op1_reg = $sp;
-	instr->imm = 0-sp_size;
-	sprintf(instr->comment, "Move Stack Pointer");
-	mc_emit_instr(cfg_instr_list, instr);
-	
 	// Save parameters on the frame
 	int param_off = 0;
 	struct mem_loc_t *param_loc = NULL;
+	struct instr_t *param_instr = NULL;
 	while(param_tac != NULL && param_tac->op == OP_PARAM_ASSIGN) {
 		switch(param_tac->op1->type) {
 		case TAC_DATA_TYPE_VAR:
@@ -1360,7 +1345,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, 
 			break;
 		}
 		
-		// Store the parameters value to the frame
+		// Generate store the parameters value to the frame
 		if(param_loc != NULL) {
 			instr = mc_new_instr("sw");
 			instr->lhs_reg = param_loc->temp_reg;
@@ -1370,11 +1355,35 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, 
 			param_off -= SIZE_WORD;
 			sp_pointer -= SIZE_WORD;
 			sprintf(instr->comment, "Argument %i", (param_off/-4));
-			mc_emit_instr(cfg_instr_list, instr);
+			if(param_instr == NULL) {
+				param_instr = instr;
+			} else {
+				GOTO_END_OF_LIST(param_instr);
+				param_instr->next = instr;
+			}
 		}
 		
 		param_tac = param_tac->next;
 	}
+	
+	// Set new Frame Pointer to start of local variables
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $fp;
+	instr->op1_reg = $sp;
+	instr->imm = 0-backup_size;
+	sprintf(instr->comment, "Move Frame Pointer");
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Move the stack pointer addi $sp, $sp, -sp_size
+	instr = mc_new_instr("addi");
+	instr->lhs_reg = $sp;
+	instr->op1_reg = $sp;
+	instr->imm = 0-sp_size;
+	sprintf(instr->comment, "Move Stack Pointer");
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Emit param store instructions
+	mc_emit_instr(cfg_instr_list, param_instr);
 }
 
 // Restore preserved registers and deallocate stack memory
