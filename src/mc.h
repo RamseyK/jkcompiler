@@ -52,7 +52,7 @@
 #define $s3 19
 #define $s4 20
 #define $s5 21
-#define $s6 22
+#define $s6 22 // Stores the current object
 #define $s7 23 // Heap pointer
 #define $t8 24
 #define $t9 25
