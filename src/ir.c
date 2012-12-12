@@ -645,7 +645,6 @@ void ir_resolve_cfg_temps_to_scope(struct set_t **visited, struct scope_t *scope
 	struct three_address_t *tac = block->entry;
 	while(tac != NULL) {
 		if(tac->op != OP_BRANCH && tac->op != OP_GOTO
-			&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
 			&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT) {
 			
 			if(tac->lhs != NULL && tac->lhs->temporary) {

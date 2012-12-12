@@ -254,13 +254,23 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 	struct instr_list_t *instr_list = mc_new_instr_list(block->label);
 
 	// Loop through TAC nodes
-	struct three_address_t *tac = block->entry;
+	struct three_address_t *tac = block->entry, *param_tac = NULL;
 	struct instr_t *instr = NULL;
 	struct mem_loc_t *lhs_loc = NULL, *op1_loc = NULL, *op2_loc = NULL;
 	
 	while(tac != NULL) {
 		// Load variables/compiler temps into registers
 		mc_reset_temp_regs();
+		
+		// Fast-forward through parameters, only tracking the first (if any)
+		param_tac = NULL;
+		if(tac->op == OP_PARAM_ASSIGN) {
+			param_tac = tac;
+			while(tac != NULL && tac->op == OP_PARAM_ASSIGN)
+				tac = tac->next;
+			if(tac == NULL)
+				break;
+		}
 		
 		if(tac->op == OP_NEW_OBJ) {
 			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
@@ -280,7 +290,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			}
 			
 			// Setup function call memory
-			op1_loc = mc_call_func(instr_list, func_scope);
+			op1_loc = mc_call_func(instr_list, func_scope, param_tac);
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 		} else if(tac->op == OP_MEM_ACCESS) { // Depending on the operator for the tac, determine how to get the location for op2
 			//MCLOG(("MEM ACCESS\n"));
@@ -308,7 +318,6 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 
 			lhs_loc->objSymbol->memLoc = MEM_HEAP;
 		} else if(tac->op == OP_ASSIGN && tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
-			MCLOG(("Found return being set\n"));
 			lhs_loc = mc_new_mem_loc(cfg_scope->fd->fh->id);
 			lhs_loc->type = MEM_STACK;
 			lhs_loc->loc.offset = SIZE_WORD;
@@ -736,6 +745,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_CALLER_ASSIGN:
 			break;
 		case OP_PARAM_ASSIGN:
+			// Constant: lw
+			
+			// Variable: addi address
 			break;
 		case OP_FUNC_CALL:			
 			// Load from the stack
@@ -916,7 +928,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 // Generate instructions to control Transfer into and out of a function
 // Setup the stack and jump and link into the entry block, then destroy the stack
-struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
+struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope, struct three_address_t *param_tac) {
 	// Look through the master cfg list and find the cfg_list node
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
@@ -965,12 +977,19 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 	MCLOG(("Looking for scope for %s\n",td->d.id));
 	scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
 	if(scope == NULL) {
-		// Could not find scope, so it might be a temporary
-		if(set_contains(cfg_scope->temps, td->d.id)) { // Temporaries should exist in the function scopes temps set
+		// Or check if its a parameter in the current CFG
+		if(symtab_lookup_function_param(cfg_scope, td->d.id) != NULL)
 			scope = cfg_scope;
-		} else {
-			MCLOG(("Could not find temporary %s in the scopes temps set\n", td->d.id));
-			return mem_loc;
+		
+		// Still NULL? Last resort is to check the temporaries set
+		if(scope == NULL) {
+			// Could not find scope, so it might be a temporary
+			if(set_contains(cfg_scope->temps, td->d.id)) { // Temporaries should exist in the function scopes temps set
+				scope = cfg_scope;
+			} else {
+				MCLOG(("Could not find temporary %s in the scopes temps set\n", td->d.id));
+				return mem_loc;
+			}
 		}
 	}
 
@@ -1392,7 +1411,7 @@ void mc_add_bootstrap(char *program_name) {
 	// Call the actual entry function
 	struct scope_t *classScope = symtab_lookup_class(program_name);
 	struct scope_t *funcScope = symtab_lookup_function(classScope, program_name);
-	mc_call_func(instr_list, funcScope); // Need to actually determine entry block
+	mc_call_func(instr_list, funcScope, NULL); // Need to actually determine entry block
 	
 	// Syscall to terminate the program properly
 	instr = mc_new_instr("addi");
