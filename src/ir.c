@@ -459,7 +459,8 @@ void ir_block_pass(struct scope_t *scope, struct block_t *block, int block_level
 		
 			if(tac->op != OP_BRANCH && tac->op != OP_GOTO
 					&& tac->op != OP_NEW_OBJ && tac->op != OP_FUNC_CALL
-					&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT) {
+					&& tac->op != OP_FUNC_RETURN && tac->op != OP_PRINT
+					&& tac->op != OP_MEM_ACCESS) {
 				// Constant Optimizations/Eval
 				ir_opt_const_propagation(tac);
 				ir_opt_const_folding(tac);
@@ -764,13 +765,7 @@ void ir_optimize() {
 	// Do fixups for parameterless func calls that were taken as identifiers
 	//ir_resolve_func_calls_no_param();
 
-    printf("\nTACs:\n");
-	cfg_print_tacs();
-	printf("\n");
 
-	printf("\nPrint Blocks:\n");
-	cfg_print_blocks();
-	printf("\n");
 	
 	// Iterate through all of the CFGs and process them
 	struct cfg_list_t *cfg_it = cfgList;
@@ -789,20 +784,6 @@ void ir_optimize() {
 		cfg_it = cfg_it->next;
 	}
 
-	/*printf("\nPrint value numbering:\n");
-	printf("%s", ir_vnt_out_buffer);
-	printf("\n");*/
-	
-	/*printf("\nPrint constant expression optimizations:\n");
-	printf("%s", ir_opt_const_out_buffer);
-	printf("\n");*/
-	
-	/*printf("\nPrint Blocks (after dead code elim):\n");
-	cfg_print_blocks();
-	printf("\n");*/
-
-	printf("\nTAC after extended value numbering\n");
-	cfg_print_tacs();
 }
 
 // Changes the target for any jump/branch tac nodes to a single block

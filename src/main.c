@@ -149,6 +149,31 @@ int main(int argc, char **argv) {
         printf("SYMBOL TABLE:\n");
         printf("-------------\n");
         symtab_print(0);
+
+        printf("\nTACs:\n");
+        printf("-------\n");
+       	cfg_print_tacs();
+       	printf("\n");
+
+       	printf("\nPrint Blocks:\n");
+       	printf("---------------\n");
+       	cfg_print_blocks();
+       	printf("\n");
+
+       	printf("\nPrint value numbering:\n");
+		printf("%s", ir_vnt_out_buffer);
+		printf("\n");
+
+		printf("\nPrint constant expression optimizations:\n");
+		printf("%s", ir_opt_const_out_buffer);
+		printf("\n");
+
+		printf("\nPrint Blocks (after dead code elim):\n");
+		cfg_print_blocks();
+		printf("\n");
+
+		printf("\nTAC after extended value numbering\n");
+		cfg_print_tacs();
     }
     
     // Generate Code
