@@ -418,12 +418,12 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	struct instr_t *conv1Instr = NULL, *conv2Instr = NULL;
 	bool conv1, conv2;
 	// Assume we will convert for most instructions
-	if(op1_loc != NULL && tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR && op1_loc->objSymbol->memLoc == MEM_HEAP)
+	if(op1_loc != NULL && tac->op1 != NULL && tac->op1->type == TAC_DATA_TYPE_VAR && op1_loc->objSymbol != NULL && op1_loc->objSymbol->memLoc == MEM_HEAP)
 		conv1 = true;
 	else
 		conv1 = false;
 
-	if(op2_loc != NULL && tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR && op2_loc->objSymbol->memLoc == MEM_HEAP)
+	if(op2_loc != NULL && tac->op2 != NULL && tac->op2->type == TAC_DATA_TYPE_VAR && op2_loc->objSymbol != NULL && op2_loc->objSymbol->memLoc == MEM_HEAP)
 		conv2 = true;
 	else
 		conv2 = false;
@@ -1057,7 +1057,12 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 			mem_loc->temp_reg = mc_next_temp_reg();
 			mem_loc->loc.offset = symbol->offset;
 			mem_loc->objSymbol = symbol;
-			symbol->memLoc = MEM_HEAP;
+			//symbol->memLoc = MEM_HEAP;
+			if(symbol->objScope == NULL) {
+				symbol->memLoc = MEM_STACK;
+			} else {
+				symbol->memLoc = MEM_HEAP;
+			}
 
 			struct instr_t *instr = mc_new_instr("lw");
 			instr->lhs_reg = mem_loc->temp_reg;
@@ -1166,8 +1171,9 @@ struct mem_loc_t *mc_mem_access_addr(struct instr_list_t *instr_list, struct sco
 			// Check if the symbols objScope is null
 			// If it isn't null then its not a primitive type and we should load the address-value stored
 			// At this location instead of the address of the actual location
-			if(symbol->objScope != NULL) {
-				//return mc_mem_access_var(instr_list, cfg_scope, td);
+			if(symbol->objScope == NULL) {
+				MCLOG(("%s's symbol's objScope is null, so changing its memLoc to stack\n", mem_loc->id));
+				symbol->memLoc = MEM_STACK;
 			}
 
 			// Found the variable in the symbol list
