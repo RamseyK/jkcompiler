@@ -18,6 +18,7 @@ int error_flag = 0;
 
 /* Holds the command-line arguments */
 struct args_t cmdArgs;
+char *outputFile = NULL; // The file name used for output
 
 /* This is the data structure we are left with (the parse tree) after
    yyparse() is done . */
@@ -31,7 +32,7 @@ extern void yyparse();
  * -----------------------------------------------------------------------
  */
 void print_usage() {
-    printf("%s: Usage: %s [-v] [-exitsem] [-O] [-ir] [-free] [-fcf] [-fvn] [-fgre] [--help]\n",
+    printf("%s: Usage: %s [-v] [-o <file>] [-exitsem] [-O] [-ir] [-free] [-fcf] [-fvn] [-fgre] [--help]\n",
            PROGRAMNAME, PROGRAMNAME);
 }
 
@@ -53,6 +54,14 @@ void parse_command_line_arguments(int argc, char **argv, struct args_t *args) {
     while (i < argc) {
         if (strcmp(argv[i], "-v") == 0 ) {
             args->verbose = 1;
+        } else if (strcmp(argv[i], "-o") == 0) {
+        	// Make sure the following argument is a file name
+        	if((i+1) < argc && argv[i+1][0] != '-') {
+        		outputFile = argv[i+1];
+        		i++;
+        	} else {
+        		fprintf(stderr, "Invalid argument '%s'\n", argv[i]);
+        	}
         } else if (strcmp(argv[i], "--help") == 0 ||
                    strcmp(argv[i], "-h") == 0 ) {
             print_usage();
@@ -147,7 +156,9 @@ int main(int argc, char **argv) {
     mc_consume_cfg_list();
     mc_add_bootstrap(program->ph->id);
     mc_print_listing();
-	mc_write_listing("/Users/ramseykant/Desktop/test.s");
+    if(outputFile != NULL) {
+    	mc_write_listing(outputFile);
+    }
     mc_destroy();
     
     // Free memory
