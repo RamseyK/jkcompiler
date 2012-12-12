@@ -50,8 +50,10 @@ b_1:
 	lw $fp, 0($sp)  	# Restore Frame Pointer
 	lw $ra, -4($sp)  	# Restore Return Address
 	addi $t0, $fp, -4  	# Load addr t_1 (from stack)
-	lw $t1, -8($sp)  	# Load Return value GetValue from stack
-	sw $t1, 0($t0)  	# Writeback
+	lw $t1, 0($s6)  	# Get the obj value to save
+	addi $s6, $t1, 0  	# Set caller to obj
+	lw $t2, -8($sp)  	# Load Return value GetValue from stack
+	sw $t2, 0($t0)  	# Writeback
 	addi $t0, $s6, 4  	# Load addr num (from heap)
 	lw $t1, -4($fp)  	# Load t_1 (from stack)
 	addi $t2, $t1, 0  	# num = t_1

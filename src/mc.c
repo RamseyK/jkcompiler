@@ -288,10 +288,12 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 		} else if(tac->op == OP_FUNC_CALL) {
 			struct scope_t *class_scope = NULL, *func_scope = NULL;
 			char *class_name = NULL, *func_name = tac->op2->d.id;
+			struct symbol_list_t *callerSymbol = NULL;
 			if(tac->op1 != NULL) { // Method in another object
-				struct symbol_list_t *callerSymbol = symtab_get_variable_symbol(cfg_scope, tac->op1->d.id);
+				callerSymbol = symtab_get_variable_symbol(cfg_scope, tac->op1->d.id);
 				class_scope = callerSymbol->objScope;
 				func_scope = symtab_lookup_function(class_scope, func_name);
+
 				MCLOG(("Function call %s in class %s\n", func_name, class_name));
 			} else { // Method within current class
 				func_scope = symtab_lookup_function(cfg_scope->parent, func_name);
@@ -299,8 +301,34 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			}
 			
 			// Setup function call memory
-			op1_loc = mc_call_func(instr_list, func_scope, param_tac);
+			op1_loc = mc_call_func(instr_list, func_scope, param_tac, tac->op1);
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
+
+			if(tac->op1 != NULL) {
+				//struct mem_loc_t *callerLoc = mc_mem_access_var(instr_list, callerSymbol->objScope, tac->op1);
+
+				struct instr_t *callerVal = mc_new_instr("lw");
+				callerVal->lhs_reg = mc_next_temp_reg();
+				if(callerSymbol->objScope->attrId == SYM_ATTR_CLASS) {
+					callerVal->op1_reg = $s6;
+					callerVal->op1_reg_offset = callerSymbol->offset;
+				} else if(callerSymbol->objScope->attrId == SYM_ATTR_FUNC) {
+					callerVal->op1_reg = $fp;
+					callerVal->op1_reg_offset = -1 * callerSymbol->offset;
+				} else {
+					MCLOG(("Wrong scope?!\n"));
+				}
+				callerVal->op1_has_offset = true;
+				sprintf(callerVal->comment, "Get the obj value to save");
+				mc_emit_instr(instr_list, callerVal);
+
+				struct instr_t *caller_instr = mc_new_instr("addi");
+				caller_instr->lhs_reg = $s6;
+				caller_instr->op1_reg = callerVal->lhs_reg;
+				caller_instr->imm = 0;
+				sprintf(caller_instr->comment, "Set caller to %s", callerSymbol->id);
+				mc_emit_instr(instr_list, caller_instr);
+			}
 		} else if(tac->op == OP_MEM_ACCESS) { // Depending on the operator for the tac, determine how to get the location for op2
 			//MCLOG(("MEM ACCESS\n"));
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
@@ -954,7 +982,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 // Generate instructions to control Transfer into and out of a function
 // Setup the stack and jump and link into the entry block, then destroy the stack
-struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope, struct three_address_t *param_tac) {
+struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope, struct three_address_t *param_tac, struct tac_data_t *callerTac) {
 	// Look through the master cfg list and find the cfg_list node
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
@@ -978,7 +1006,7 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 
 	// Allocate variables on the stack and backup register values
 	mc_alloc_stack(instr_list, funcScope, param_tac);
-	
+
 	// Jump into entry block
 	struct instr_t *instr = mc_new_instr("jal");
 	instr->addr_label = new_identifier(cfg_it->entryBlock->label);
@@ -1521,7 +1549,7 @@ void mc_add_bootstrap(char *program_name) {
 	// Call the actual entry function
 	struct scope_t *classScope = symtab_lookup_class(program_name);
 	struct scope_t *funcScope = symtab_lookup_function(classScope, program_name);
-	mc_call_func(instr_list, funcScope, NULL); // Need to actually determine entry block
+	mc_call_func(instr_list, funcScope, NULL, NULL); // Need to actually determine entry block
 	
 	// Syscall to terminate the program properly
 	instr = mc_new_instr("addi");
