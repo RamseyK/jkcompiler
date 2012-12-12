@@ -349,7 +349,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 
 			// If the lhs tacData is a temp, update its objScope to that of op2_loc
 			if(tac->lhs->temporary == true) {
-				printf("Updating lhs objScope for %s\n", lhs_loc->id);
+				MCLOG(("Updating lhs objScope for %s\n", lhs_loc->id));
 				lhs_loc->objSymbol->objScope = op2_loc->objSymbol->objScope;
 			}
 
@@ -1749,6 +1749,7 @@ char *mc_gen_listing() {
 // Generate and Print current listing
 void mc_print_listing() {
 	char *listing = mc_gen_listing();
+	printf("\n\n");
 	if(listing != NULL) {
 		printf("# jkcompiler assembly output\n\n%s\n", listing);
 		free(listing);

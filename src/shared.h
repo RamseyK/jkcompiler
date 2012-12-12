@@ -88,7 +88,7 @@
 /*
  * Macro for semantic logging
  */
-#if 1
+#if 0
 	#define SLOG(x) printf x
 #else
 	#define SLOG(x) (void)0
@@ -97,7 +97,7 @@
 /*
  * Macro for IR/optimization/CFG/TAC logging
  */
-#if 1
+#if 0
 	#define IRLOG(x) printf x
 #else
 	#define IRLOG(x) (void)0
@@ -106,7 +106,7 @@
 /*
  * Macro for Machine Code Generation
  */
-#if 1
+#if 0
 	#define MCLOG(x) printf x
 #else
 	#define MCLOG(x) (void)0
