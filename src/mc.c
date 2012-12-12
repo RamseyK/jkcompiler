@@ -20,10 +20,15 @@ void mc_init() {
 	struct directive_t *heapDir = mc_new_directive("heap", "space");
 	heapDir->val = HEAP_SIZE;
 	
+	// Setup newline ascii string
+	struct directive_t *nlDir = mc_new_directive("newline", "asciiz");
+	nlDir->val_str = new_identifier("\"\\n\"");
+	
 	// Emit data section directives
 	mc_emit_directive(mc_data_section, dataDir);
 	mc_emit_directive(mc_data_section, alignDir);
 	mc_emit_directive(mc_data_section, heapDir);
+	mc_emit_directive(mc_data_section, nlDir);
 	
 	// Text Section
 	mc_text_section = mc_new_section();
@@ -276,7 +281,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			
 			// Setup function call memory
 			op1_loc = mc_call_func(instr_list, func_scope);
-			lhs_loc = mc_mem_access_var(instr_list, cfg_scope, tac->lhs);
+			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 		} else if(tac->op == OP_MEM_ACCESS) { // Depending on the operator for the tac, determine how to get the location for op2
 			//MCLOG(("MEM ACCESS\n"));
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
@@ -302,8 +307,16 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			}
 
 			lhs_loc->objSymbol->memLoc = MEM_HEAP;
-		} else
-		{
+		} else if(tac->op == OP_ASSIGN && tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
+			MCLOG(("Found return being set\n"));
+			lhs_loc = mc_new_mem_loc(cfg_scope->fd->fh->id);
+			lhs_loc->type = MEM_STACK;
+			lhs_loc->loc.offset = SIZE_WORD;
+
+			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
+			if(op1_loc == NULL)
+				op1_loc = mc_mem_access_const(instr_list, tac->op1);
+		} else {
 			//MCLOG(("Not mem access or new\n"));
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 			op1_loc = mc_mem_access_var(instr_list, cfg_scope, tac->op1);
@@ -384,8 +397,6 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 	char *op2_str = cfg_tac_data_to_str(tac->op2);
 
 	// Instructions for converting rvalues from addr to val if needed
-	// I will finish the stuff for these later so that we can convert addr on the rhs to proper vals.
-	// Don't worry about it !
 	struct instr_t *conv1Instr = NULL, *conv2Instr = NULL;
 	bool conv1, conv2;
 	// Assume we will convert for most instructions
@@ -675,8 +686,13 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 				wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
 				instr->next = wbInstr;
 			} else if(tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
-				wbInstr = mc_mem_writeback(lhs_loc->loc.reg, instr->lhs_reg);
-				instr->next = wbInstr;
+				// Write back to the stack
+				instr = mc_new_instr("sw");
+				instr->lhs_reg = op1_loc->temp_reg;
+				instr->op1_reg = $fp;
+				instr->op1_has_offset = true;
+				instr->op1_reg_offset = lhs_loc->loc.offset;
+				sprintf(instr->comment, "Setting return value to %s (on stack)", lhs_loc->id);
 			} else {
 				MCLOG(("Invalid LHS tac data type for ASSIGN\n"));
 				mc_free_instr(instr);
@@ -721,13 +737,18 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			break;
 		case OP_PARAM_ASSIGN:
 			break;
-		case OP_FUNC_CALL:
-			// Copy the function return value back into the lhs
-			instr = mc_new_instr("addi");
-			lhs_loc->wb = true;
-			instr->lhs_reg = lhs_loc->temp_reg;
-			instr->op1_reg = op1_loc->loc.reg;
-			instr->op2_reg = $0;
+		case OP_FUNC_CALL:			
+			// Load from the stack
+			instr = mc_new_instr("lw");
+			instr->lhs_reg = mc_next_temp_reg();
+			instr->op1_reg = $sp;
+			instr->op1_has_offset = true;
+			instr->op1_reg_offset = op1_loc->loc.offset;
+			sprintf(instr->comment, "Load Return value %s from stack", op1_loc->id);
+			
+			// Write back the return value
+			wbInstr = mc_mem_writeback(lhs_loc->temp_reg, instr->lhs_reg);
+			instr->next = wbInstr;
 			break;
 		case OP_FUNC_RETURN:
 			// Jump to the return address
@@ -825,9 +846,27 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			instr3 = mc_new_instr("syscall");
 			sprintf(instr3->comment, "print_int");
 
+			// Set syscall service number for print_string
+			struct instr_t *instr4 = mc_new_instr("addi");
+			instr4->lhs_reg = $v0;
+			instr4->op1_reg = $0;
+			instr4->imm = 4;
+
+			// Set string address to print
+			struct instr_t *instr5 = mc_new_instr("la");
+			instr5->lhs_reg = $a0;
+			instr5->addr_label = new_identifier("newline");
+
+			// Execute the syscall
+			struct instr_t *instr6 = mc_new_instr("syscall");
+			sprintf(instr6->comment, "print_string (newline)");
+
 			// Link instructions in order
 			instr->next = instr2;
 			instr2->next = instr3;
+			instr3->next = instr4;
+			instr4->next = instr5;
+			instr5->next = instr6;
 			break;
 		default:
 			MCLOG(("Could not convert tac to instr: %s\n", cfg_tac_data_to_str(tac->lhs)));
@@ -892,11 +931,12 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 		return NULL;
 	}
 	
-	// Setup a memory location for the return value ($v1)
+	// Setup a memory location for the return value
+	// Saved registers: s0-s7 + Always preserved: fp, ra + Space for return value
+	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	struct mem_loc_t *retLoc = mc_new_mem_loc(funcScope->fd->fh->id);
-	retLoc->type = MEM_REG;
-	retLoc->loc.reg = $v1;
-	mc_used_regs[$v1] = true;
+	retLoc->type = MEM_STACK;
+	retLoc->loc.offset = (backup_size-SIZE_WORD)*-1;
 
 	// Allocate variables on the stack and backup register values
 	mc_alloc_stack(instr_list, funcScope);
@@ -904,6 +944,7 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 	// Jump into entry block
 	struct instr_t *instr = mc_new_instr("jal");
 	instr->addr_label = new_identifier(cfg_it->entryBlock->label);
+	sprintf(instr->comment, "%s", funcScope->fd->fh->id);
 	mc_emit_instr(instr_list, instr);
 	
 	// Deallocate stack and restore register values
@@ -914,20 +955,11 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 
 // Generate instructions and allocate temporary registers to access identifiers in memory
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td) {
-	if(td == NULL || (td->type != TAC_DATA_TYPE_VAR && td->type != TAC_DATA_TYPE_FUNC_RET))
+	if(td == NULL || td->type != TAC_DATA_TYPE_VAR)
 		return NULL;
 
 	struct mem_loc_t *mem_loc = NULL;
 	struct scope_t *scope = NULL;
-	
-	// Return variables always get the $v1 register
-	if(td->type == TAC_DATA_TYPE_FUNC_RET) {
-		mem_loc = mc_new_mem_loc(cfg_scope->fd->fh->id);
-		mem_loc->type = MEM_REG;
-		mem_loc->loc.reg = $v1;
-		mc_used_regs[$v1] = true; // Mark $v1 as used
-		return mem_loc;
-	}
 	
 	// Get scope for the variable in the TAC
 	MCLOG(("Looking for scope for %s\n",td->d.id));
@@ -1202,9 +1234,6 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	struct instr_t *instr = NULL;
 	
 	// Save arguments on stack
-	
-	// Leave space for the return value
-	sp_pointer -= SIZE_WORD;
 		
 	// Backup $fp
 	instr = mc_new_instr("sw");
@@ -1213,6 +1242,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer -= SIZE_WORD;
+	sprintf(instr->comment, "Save Stack Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Backup $ra
@@ -1222,6 +1252,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer -= SIZE_WORD;
+	sprintf(instr->comment, "Save Return Address");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Backup registers $s0 - $s7 if in use
@@ -1242,8 +1273,8 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr = mc_new_instr("addi");
 	instr->lhs_reg = $fp;
 	instr->op1_reg = $sp;
-	instr->imm = backup_size;
-	sprintf(instr->comment, "Start of frame");
+	instr->imm = 0-backup_size;
+	sprintf(instr->comment, "Move Frame Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Move the stack pointer addi $sp, $sp, -sp_size
@@ -1251,7 +1282,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->lhs_reg = $sp;
 	instr->op1_reg = $sp;
 	instr->imm = 0-sp_size;
-	sprintf(instr->comment, "Move stack pointer");
+	sprintf(instr->comment, "Move Stack Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 }
 
@@ -1261,7 +1292,7 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
-	int sp_pointer = -1 * (backup_size - SIZE_WORD);
+	int sp_pointer = 0;
 	struct instr_t *instr = NULL;
 	
 	// Deallocate space on the stack addi $sp, $sp, sp_size
@@ -1270,6 +1301,26 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr->op1_reg = $sp;
 	instr->imm = sp_size;
 	sprintf(instr->comment, "Deallocate stack");
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Restore $fp
+	instr = mc_new_instr("lw");
+	instr->lhs_reg = $fp;
+	instr->op1_reg = $sp;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
+	sprintf(instr->comment, "Restore Stack Pointer");
+	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Restore $ra
+	instr = mc_new_instr("lw");
+	instr->lhs_reg = $ra;
+	instr->op1_reg = $sp;
+	instr->op1_has_offset = true;
+	instr->op1_reg_offset = sp_pointer;
+	sp_pointer -= SIZE_WORD;
+	sprintf(instr->comment, "Restore Return Address");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Restore registers $s7 - $s0 if used
@@ -1282,30 +1333,9 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 		instr->op1_reg = $sp;
 		instr->op1_has_offset = true;
 		instr->op1_reg_offset = sp_pointer;
-		sp_pointer += SIZE_WORD;
+		sp_pointer -= SIZE_WORD;
 		mc_emit_instr(cfg_instr_list, instr);
 	}
-	
-	// Restore $ra
-	instr = mc_new_instr("lw");
-	instr->lhs_reg = $ra;
-	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer += SIZE_WORD;
-	mc_emit_instr(cfg_instr_list, instr);
-	
-	// Restore $fp
-	instr = mc_new_instr("lw");
-	instr->lhs_reg = $fp;
-	instr->op1_reg = $sp;
-	instr->op1_has_offset = true;
-	instr->op1_reg_offset = sp_pointer;
-	sp_pointer += SIZE_WORD;
-	mc_emit_instr(cfg_instr_list, instr);
-	
-	// Space for the return value
-	sp_pointer += SIZE_WORD;
 }
 
 //TODO: FINISH
@@ -1429,7 +1459,7 @@ char *mc_gen_listing() {
 	while(dir != NULL) {
 		// label:
 		if(dir->label != NULL)
-			sprintf(buf, "%s%s:\n", buf, dir->label);
+			sprintf(buf, "%s%s: ", buf, dir->label);
 		
 		// .name
 		sprintf(buf, "%s.%s ", buf, dir->name);
@@ -1458,7 +1488,7 @@ char *mc_gen_listing() {
 	while(dir != NULL) {
 		// label:
 		if(dir->label != NULL)
-			sprintf(buf, "%s%s:\n", buf, dir->label);
+			sprintf(buf, "%s%s: ", buf, dir->label);
 		
 		// .name
 		sprintf(buf, "%s.%s ", buf, dir->name);
@@ -1563,10 +1593,10 @@ char *mc_gen_listing() {
 void mc_print_listing() {
 	char *listing = mc_gen_listing();
 	if(listing != NULL) {
-		MCLOG(("%s\n", listing));
+		printf("# jkcompiler assembly output\n\n%s\n", listing);
 		free(listing);
 	} else {
-		MCLOG(("No listing to print\n"));
+		printf("No listing to print\n");
 	}
 }
 
@@ -1574,7 +1604,7 @@ void mc_print_listing() {
 void mc_write_listing(const char *filename) {
 	char *listing = mc_gen_listing();
 	if(listing == NULL) {
-		MCLOG(("No listing to write\n"));
+		printf("No listing to write\n");
 		return;
 	}
 
