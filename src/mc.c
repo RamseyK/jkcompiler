@@ -205,6 +205,7 @@ struct mem_loc_t *mc_new_mem_loc(const char *id) {
 		return NULL;
 	
 	mem_loc->id = new_identifier(id);
+	mem_loc->objSymbol = NULL;
 	mem_loc->temp_reg = -1;
 	mem_loc->wb = false;
 	mem_loc->type = 0;
@@ -341,7 +342,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 		}
 
 		// Check if the lhs should be flagged as a heap value (for ASSIGN and NEW)
-		if(lhs_loc != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+		if(lhs_loc != NULL && lhs_loc->objSymbol != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
 			MCLOG(("Heap addr on lhs!\n"));
 			lhs_loc->type = MEM_HEAP;
 		}
@@ -349,7 +350,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 
 		// Load constants into registers for instructions that do not have I_TYPE equivalents
 		if(tac->op == OP_STAR || tac->op == OP_SLASH || tac->op == OP_MOD
-			|| tac->op == OP_LT || tac->op == GT || tac->op == LE || tac->op == GE
+			|| tac->op == OP_LT || tac->op == OP_GT || tac->op == OP_LE || tac->op == OP_GE
 			|| tac->op == OP_EQUAL || tac->op == OP_NOTEQUAL) {
 			if(op1_loc == NULL)
 				op1_loc = mc_mem_access_const(instr_list, tac->op1);
@@ -717,7 +718,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 			}
 
 			// If the lhs is MEM_HEAP, load its value into itself so writeback is done correctly
-			if(lhs_loc->objSymbol->memLoc == MEM_HEAP) {
+			if(lhs_loc->objSymbol != NULL && lhs_loc->objSymbol->memLoc == MEM_HEAP) {
 				instr2 = mc_new_instr("lw");
 				instr2->lhs_reg = lhs_loc->temp_reg;
 				instr2->op1_reg = lhs_loc->temp_reg;
@@ -1286,7 +1287,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, 
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer -= SIZE_WORD;
-	sprintf(instr->comment, "Save Stack Pointer");
+	sprintf(instr->comment, "Save Frame Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Backup $ra
@@ -1363,6 +1364,7 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, 
 			instr->op1_reg_offset = param_off;
 			param_off -= SIZE_WORD;
 			sp_pointer -= SIZE_WORD;
+			sprintf(instr->comment, "Argument %i", (param_off/-4));
 			mc_emit_instr(cfg_instr_list, instr);
 		}
 		
@@ -1394,7 +1396,7 @@ void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope
 	instr->op1_has_offset = true;
 	instr->op1_reg_offset = sp_pointer;
 	sp_pointer -= SIZE_WORD;
-	sprintf(instr->comment, "Restore Stack Pointer");
+	sprintf(instr->comment, "Restore Frame Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
 	
 	// Restore $ra

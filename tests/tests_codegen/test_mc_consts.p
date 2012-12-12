@@ -10,7 +10,7 @@ BEGIN
    aa := 7;
    bb := 8;
    cc := 9;
-   dd := dd + 1;
+   dd := aa+bb;
    PRINT aa
 END
 
