@@ -510,7 +510,19 @@ int symtab_calc_scope_size(struct scope_t *scope) {
 			size += symtab_calc_scope_size(parent);
 		}
 	} else if(scope->attrId == SYM_ATTR_FUNC) {
-		// TODO: Need to include function parameters
+		struct formal_parameter_section_list_t *fp_it = scope->fd->fh->fpsl;
+		while(fp_it != NULL) {
+			int fp_size = symtab_calc_td_size(usrdef_lookup_name(fp_it->fps->id));
+			
+			struct identifier_list_t *id_it = fp_it->fps->il;
+			while(id_it != NULL) {
+				size += fp_size;
+				id_it = id_it->next;
+			}
+		
+			fp_it = fp_it->next;
+		}
+		
 		struct variable_declaration_list_t *vd_it = scope->fd->fb->vdl;
 		while(vd_it != NULL) {
 			// Get the size for the type being declared
@@ -522,12 +534,12 @@ int symtab_calc_scope_size(struct scope_t *scope) {
 				size += vd_size;
 				id_it = id_it->next;
 			}
-			
-			// Compiler generated temporaries for the function are always WORDs
-			size += SIZE_WORD * set_size(scope->temps);
 
 			vd_it = vd_it->next;
 		}
+		
+		// Compiler generated temporaries for the function are always WORDs
+		size += SIZE_WORD * set_size(scope->temps);
 	}
 
 	return size;
@@ -638,6 +650,31 @@ int symtab_calc_scope_offsets(struct scope_t *scope) {
 			// Iterate through every variable declared
 			vdl_it = scope->cl->cb->vdl;
 		} else if(scope->attrId == SYM_ATTR_FUNC) {
+			// Calculate offsets for parameters first
+			struct formal_parameter_section_list_t *fp_it = scope->fd->fh->fpsl;
+			while(fp_it != NULL) {
+				int size = symtab_calc_td_size(usrdef_lookup_name(fp_it->fps->id));
+				
+				// The scope for the type of the declared variable (for objects)
+				struct scope_t *objScope = symtab_lookup_class(fp_it->fps->id);
+				
+				struct identifier_list_t *id_it = fp_it->fps->il;
+				while(id_it != NULL) {
+					// Add to the offset list
+					struct symbol_list_t *addedOffset = add_to_symbol_list(&scope->symbol_list, id_it->id, off);
+					// If the scope found above was not null ( meaning it is a pointer ) set the objScope
+					if(objScope != NULL) {
+						addedOffset->objScope = objScope;
+					}
+	
+					off += size; // Update the offset by the size
+	
+					id_it = id_it->next;
+				}
+			
+				fp_it = fp_it->next;
+			}
+		
 			vdl_it = scope->fd->fb->vdl;
 		}
 

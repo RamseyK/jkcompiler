@@ -274,7 +274,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *lhs_loc, struct mem_loc_t *op1_loc, struct mem_loc_t *op2_loc);
 
 // Control Transfer between functions
-struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope);
+struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope, struct three_address_t *param_tac);
 
 // Memory and Register Allocation
 struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
@@ -286,7 +286,7 @@ void mc_reset_temp_regs();
 int mc_next_temp_reg();
 int mc_next_saved_reg();
 int mc_num_saved_regs_used();
-void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
+void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, struct three_address_t *param_tac);
 void mc_dealloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope);
 struct mem_loc_t *mc_mem_alloc_heap(struct instr_list_t *instr_list, struct scope_t *cfg_scope, struct tac_data_t *td);
 

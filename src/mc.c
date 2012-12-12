@@ -254,13 +254,23 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 	struct instr_list_t *instr_list = mc_new_instr_list(block->label);
 
 	// Loop through TAC nodes
-	struct three_address_t *tac = block->entry;
+	struct three_address_t *tac = block->entry, *param_tac = NULL;
 	struct instr_t *instr = NULL;
 	struct mem_loc_t *lhs_loc = NULL, *op1_loc = NULL, *op2_loc = NULL;
 	
 	while(tac != NULL) {
 		// Load variables/compiler temps into registers
 		mc_reset_temp_regs();
+		
+		// Fast-forward through parameters, only tracking the first (if any)
+		param_tac = NULL;
+		if(tac->op == OP_PARAM_ASSIGN) {
+			param_tac = tac;
+			while(tac != NULL && tac->op == OP_PARAM_ASSIGN)
+				tac = tac->next;
+			if(tac == NULL)
+				break;
+		}
 		
 		if(tac->op == OP_NEW_OBJ) {
 
@@ -288,7 +298,7 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 			}
 			
 			// Setup function call memory
-			op1_loc = mc_call_func(instr_list, func_scope);
+			op1_loc = mc_call_func(instr_list, func_scope, param_tac);
 			lhs_loc = mc_mem_access_addr(instr_list, cfg_scope, tac->lhs);
 		} else if(tac->op == OP_MEM_ACCESS) { // Depending on the operator for the tac, determine how to get the location for op2
 			//MCLOG(("MEM ACCESS\n"));
@@ -316,7 +326,6 @@ struct instr_list_t *mc_process_block(struct scope_t *cfg_scope, struct block_t 
 
 			lhs_loc->objSymbol->memLoc = MEM_HEAP;
 		} else if(tac->op == OP_ASSIGN && tac->lhs != NULL && tac->lhs->type == TAC_DATA_TYPE_FUNC_RET) {
-			MCLOG(("Found return being set\n"));
 			lhs_loc = mc_new_mem_loc(cfg_scope->fd->fh->id);
 			lhs_loc->type = MEM_STACK;
 			lhs_loc->loc.offset = SIZE_WORD;
@@ -745,6 +754,9 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 		case OP_CALLER_ASSIGN:
 			break;
 		case OP_PARAM_ASSIGN:
+			// Constant: lw
+			
+			// Variable: addi address
 			break;
 		case OP_FUNC_CALL:			
 			// Load from the stack
@@ -938,7 +950,7 @@ struct instr_t *mc_tac_to_instr(struct three_address_t *tac, struct mem_loc_t *l
 
 // Generate instructions to control Transfer into and out of a function
 // Setup the stack and jump and link into the entry block, then destroy the stack
-struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope) {
+struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *funcScope, struct three_address_t *param_tac) {
 	// Look through the master cfg list and find the cfg_list node
 	struct cfg_list_t *cfg_it = cfgList;
 	while(cfg_it != NULL) {
@@ -961,7 +973,7 @@ struct mem_loc_t *mc_call_func(struct instr_list_t *instr_list, struct scope_t *
 	retLoc->loc.offset = (backup_size-SIZE_WORD)*-1;
 
 	// Allocate variables on the stack and backup register values
-	mc_alloc_stack(instr_list, funcScope);
+	mc_alloc_stack(instr_list, funcScope, param_tac);
 	
 	// Jump into entry block
 	struct instr_t *instr = mc_new_instr("jal");
@@ -987,12 +999,19 @@ struct mem_loc_t *mc_mem_access_var(struct instr_list_t *instr_list, struct scop
 	MCLOG(("Looking for scope for %s\n",td->d.id));
 	scope = symtab_lookup_variable_scope(cfg_scope, td->d.id);
 	if(scope == NULL) {
-		// Could not find scope, so it might be a temporary
-		if(set_contains(cfg_scope->temps, td->d.id)) { // Temporaries should exist in the function scopes temps set
+		// Or check if its a parameter in the current CFG
+		if(symtab_lookup_function_param(cfg_scope, td->d.id) != NULL)
 			scope = cfg_scope;
-		} else {
-			MCLOG(("Could not find temporary %s in the scopes temps set\n", td->d.id));
-			return mem_loc;
+		
+		// Still NULL? Last resort is to check the temporaries set
+		if(scope == NULL) {
+			// Could not find scope, so it might be a temporary
+			if(set_contains(cfg_scope->temps, td->d.id)) { // Temporaries should exist in the function scopes temps set
+				scope = cfg_scope;
+			} else {
+				MCLOG(("Could not find temporary %s in the scopes temps set\n", td->d.id));
+				return mem_loc;
+			}
 		}
 	}
 
@@ -1253,15 +1272,13 @@ int mc_num_saved_regs_used() {
 
 // Backup preserved registers and allocate stack memory for each variable and emits the appropriate instructions
 // Called just before jumping into a new function
-void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) {
+void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope, struct three_address_t *param_tac) {
 	// Saved registers: s0-s7 + Always preserved: fp, ra + Space for return value
 	int backup_size = SIZE_WORD*mc_num_saved_regs_used() + SIZE_WORD*2 + SIZE_WORD;
 	int frame_size = symtab_calc_scope_size(scope);
 	int sp_size = frame_size+backup_size;
 	int sp_pointer = 0;
 	struct instr_t *instr = NULL;
-	
-	// Save arguments on stack
 		
 	// Backup $fp
 	instr = mc_new_instr("sw");
@@ -1312,6 +1329,46 @@ void mc_alloc_stack(struct instr_list_t *cfg_instr_list, struct scope_t *scope) 
 	instr->imm = 0-sp_size;
 	sprintf(instr->comment, "Move Stack Pointer");
 	mc_emit_instr(cfg_instr_list, instr);
+	
+	// Save parameters on the frame
+	int param_off = 0;
+	struct mem_loc_t *param_loc = NULL;
+	while(param_tac != NULL && param_tac->op == OP_PARAM_ASSIGN) {
+		switch(param_tac->op1->type) {
+		case TAC_DATA_TYPE_VAR:
+			MCLOG(("Saving parameter %s on the frame\n", param_tac->op1->d.id));
+			
+			param_loc = mc_mem_access_var(cfg_instr_list, scope, param_tac->op1);
+			break;
+		case TAC_DATA_TYPE_INT:
+			MCLOG(("Saving parameter %i on the frame\n", param_tac->op1->d.val));
+			
+			param_loc = mc_mem_access_const(cfg_instr_list, param_tac->op1);
+			break;
+		case TAC_DATA_TYPE_BOOL:
+			MCLOG(("Saving parameter %s on the frame\n", (param_tac->op1->d.b ? "TRUE" : "FALSE")));
+			
+			param_loc = mc_mem_access_const(cfg_instr_list, param_tac->op1);
+			break;
+		default:
+			MCLOG(("mc_alloc_stack: Unknown parameter type\n"));
+			break;
+		}
+		
+		// Store the parameters value to the frame
+		if(param_loc != NULL) {
+			instr = mc_new_instr("sw");
+			instr->lhs_reg = param_loc->temp_reg;
+			instr->op1_reg = $fp;
+			instr->op1_has_offset = true;
+			instr->op1_reg_offset = param_off;
+			param_off -= SIZE_WORD;
+			sp_pointer -= SIZE_WORD;
+			mc_emit_instr(cfg_instr_list, instr);
+		}
+		
+		param_tac = param_tac->next;
+	}
 }
 
 // Restore preserved registers and deallocate stack memory
@@ -1443,7 +1500,7 @@ void mc_add_bootstrap(char *program_name) {
 	// Call the actual entry function
 	struct scope_t *classScope = symtab_lookup_class(program_name);
 	struct scope_t *funcScope = symtab_lookup_function(classScope, program_name);
-	mc_call_func(instr_list, funcScope); // Need to actually determine entry block
+	mc_call_func(instr_list, funcScope, NULL); // Need to actually determine entry block
 	
 	// Syscall to terminate the program properly
 	instr = mc_new_instr("addi");
