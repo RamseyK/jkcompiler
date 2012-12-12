@@ -633,7 +633,15 @@ void ir_add_cfg_return(struct block_t *entryBlock) {
 }
 
 // Add all compiler generated temporaries from the entire CFG to the scope
-void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block) {
+void ir_resolve_cfg_temps_to_scope(struct set_t **visited, struct scope_t *scope, struct block_t *block) {
+	if(set_contains(*visited, block->label))
+		return;
+	
+	if(*visited == NULL)
+		*visited = new_set(block->label);
+	else
+		set_add(*visited, block->label);
+
 	struct three_address_t *tac = block->entry;
 	while(tac != NULL) {
 		if(tac->op != OP_BRANCH && tac->op != OP_GOTO
@@ -654,7 +662,7 @@ void ir_add_cfg_temps_to_scope(struct scope_t *scope, struct block_t *block) {
 	
 	struct block_list_t *child = block->children;
 	while(child != NULL) {
-		ir_add_cfg_temps_to_scope(scope, child->block);
+		ir_resolve_cfg_temps_to_scope(visited, scope, child->block);
 	
 		child = child->next;
 	}
@@ -775,7 +783,9 @@ void ir_optimize() {
 		ir_process_cfg(cfg_it->scope, cfg_it->entryBlock);
 		
 		// Add generated temporaries to symbol table
-		ir_add_cfg_temps_to_scope(cfg_it->scope, cfg_it->entryBlock);
+		struct set_t *visited = NULL;
+		ir_resolve_cfg_temps_to_scope(&visited, cfg_it->scope, cfg_it->entryBlock);
+		free_set(visited);
 		
 		cfg_it = cfg_it->next;
 	}
