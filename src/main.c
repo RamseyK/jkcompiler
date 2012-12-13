@@ -130,6 +130,27 @@ int main(int argc, char **argv) {
     if (cmdArgs.exit_after_sem == 1) {
         exit(0);
     }
+    
+    if(cmdArgs.verbose == 1) {
+        printf("USER DEFINED DATA TYPES:\n");
+        printf("------------------------\n");
+        usrdef_print();
+
+        printf("\n\n");
+        printf("SYMBOL TABLE:\n");
+        printf("-------------\n");
+        symtab_print(0);
+
+        printf("\nTACs (before optimization):\n");
+        printf("-------\n");
+       	cfg_print_tacs();
+       	printf("\n");
+
+       	printf("\nPrint Blocks (before optimization):\n");
+       	printf("---------------\n");
+       	cfg_print_blocks();
+       	printf("\n");
+    }
 
     // Perform Intermediate Representation
     ir_init();
@@ -141,24 +162,15 @@ int main(int argc, char **argv) {
     symtab_calc_offsets();
 
     if (cmdArgs.verbose == 1) {
-        printf("USER DEFINED DATA TYPES:\n");
-        printf("------------------------\n");
-        usrdef_print();
-
-        printf("\n\n");
-        printf("SYMBOL TABLE:\n");
-        printf("-------------\n");
-        symtab_print(0);
-
-        printf("\nTACs:\n");
+        printf("\nTACs (after optimization):\n");
         printf("-------\n");
        	cfg_print_tacs();
        	printf("\n");
 
-       	printf("\nPrint Blocks:\n");
+       	printf("\nPrint Blocks (after optimization):\n");
        	printf("---------------\n");
        	cfg_print_blocks();
-       	printf("\n");
+       	printf("\n");    
 
        	printf("\nPrint value numbering:\n");
 		printf("%s", ir_vnt_out_buffer);

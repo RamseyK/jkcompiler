@@ -5,7 +5,6 @@ BEGIN
 
 FUNCTION Factorial(val : integer): integer;
 BEGIN
-	PRINT val;
 	IF val <= 1 THEN
 		Factorial := 1
 	ELSE

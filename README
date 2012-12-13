@@ -12,7 +12,9 @@ Features:
 -Symbol Table
 -Intermediate Representation as Three Address Code
 -Control Flow Graph
--Optimizations: Value Numbering (Identities, Folding, Propagation), Constant Evaluation, Dead Code Elimination
+-Optimizations: Value Numbering, Constant Evaluation (Identities, Folding, Propagation), Dead Code Elimination
+-Basic Register Allocation
+-Assembly Code Generation for MIPS simulators
 
 Prerequisites: gcc, autotools, bison, flex, dejaGNU
 
